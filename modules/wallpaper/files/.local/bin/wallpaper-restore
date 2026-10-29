@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Restore the last wallpaper at login (or pick a random one on first run).
+set -euo pipefail
+
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/current-wallpaper"
+
+# Wait up to ~10s for awww-daemon to accept requests.
+for _ in $(seq 1 50); do
+  awww query >/dev/null 2>&1 && break
+  sleep 0.2
+done
+
+if [[ -f "$cache" ]]; then
+  last="$(head -n1 -- "$cache")"
+  if [[ -n "$last" && -f "$last" ]]; then
+    # Fast path: only set the image; palette files already exist on disk.
+    awww img "$last" --transition-type fade --transition-duration 0.6 || true
+    "$HOME/.local/bin/wayfire-theme-apply" || true
+    exit 0
+  fi
+fi
+
+exec "$HOME/.local/bin/wallpaper-pick" --random

@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Review with --check. Apply on the host with sudo desktop-login-sddm --apply.
+set -euo pipefail
+case "${1:---check}" in
+  --check)
+    printf 'Gestor predeterminado: %s\n' "$(readlink -f /etc/systemd/system/display-manager.service || true)"
+    printf 'Otros gestores habilitados:\n'
+    find /etc/systemd/system -type l \( -name 'ly*.service' -o -name 'gdm.service' -o -name 'lightdm.service' -o -name 'greetd.service' -o -name 'lxdm.service' -o -name 'xdm.service' -o -name 'slim.service' \) -print
+    exit 0 ;;
+  --apply) ;;
+  *) printf 'Uso: %s --check|--apply\n' "$0" >&2; exit 2 ;;
+esac
+if (( EUID != 0 )); then
+  printf 'Ejecuta en tu terminal: sudo %q --apply\n' "$0" >&2
+  exit 1
+fi
+systemctl cat sddm.service >/dev/null
+backup="/var/backups/raccon-login-$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$backup"
+cp -a /etc/systemd/system/display-manager.service "$backup/" 2>/dev/null || true
+systemctl list-unit-files --type=service --no-pager > "$backup/unit-files.txt"
+systemctl list-units --type=service --all --no-pager > "$backup/units.txt"
+# Match explicit manager names, including every installed Ly instance.
+mapfile -t others < <(
+  { systemctl list-unit-files --type=service --no-legend --no-pager;
+    systemctl list-units --type=service --all --plain --no-legend --no-pager;
+    find /etc/systemd/system -type l -name '*.service' -printf '%f\n'; } |
+  awk '$1 ~ /^(ly(@[^ ]*)?|gdm|lightdm|greetd|lxdm|xdm|slim)\.service$/ {print $1}' | sort -u
+)
+# Preserve any logged-in user's work; a disabled manager cannot return at boot.
+sessions=$(loginctl list-sessions --no-legend --no-pager | awk '{print $1}')
+for unit in "${others[@]}"; do
+  [[ "$unit" == 'ly@.service' ]] && continue
+  systemctl disable "$unit"
+  owner=${unit%%@*}; owner=${owner%.service}
+  in_use=false
+  for session in $sessions; do
+    service=$(loginctl show-session "$session" -p Service --value)
+    class=$(loginctl show-session "$session" -p Class --value)
+    if [[ "$service" == "$owner"* && "$class" != greeter ]]; then in_use=true; fi
+  done
+  if [[ "$in_use" == true ]]; then
+    printf '%s deshabilitado; sigue activo para conservar sesiones. Reinicia después de guardar tu trabajo.\n' "$unit"
+  else
+    systemctl stop "$unit"
+  fi
+done
+systemctl enable --force sddm.service
+systemctl daemon-reload
+[[ "$(readlink -f /etc/systemd/system/display-manager.service)" == */sddm.service ]]
+printf '\nSDDM habilitado como único gestor de acceso. Respaldo: %s\n' "$backup"
+systemctl is-enabled sddm.service
+for unit in "${others[@]}"; do
+  [[ "$unit" == 'ly@.service' ]] && continue
+  printf '%s: ' "$unit"
+  systemctl is-enabled "$unit" || true
+done

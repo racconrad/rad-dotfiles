@@ -1,0 +1,7 @@
+configuration {
+  modi: "drun,run,window";
+  show-icons: true;
+  font: "Inter 12";
+  terminal: "@RDOT_TERMINAL@";
+}
+@theme "@RDOT_HOME@/.config/rofi/clipboard.rasi"

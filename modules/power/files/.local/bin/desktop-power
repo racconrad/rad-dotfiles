@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""CLI entry point. Implementation lives in ~/.local/lib/desktop_power/."""
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path.home() / '.local/lib'))
+from desktop_power.controller import main
+
+if __name__ == '__main__':
+    try:
+        main(sys.argv[1:])
+    except (KeyboardInterrupt, BrokenPipeError):
+        pass

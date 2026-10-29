@@ -1,0 +1,130 @@
+{
+  "explorer.confirmDelete": false,
+  "workbench.iconTheme": "icons",
+  "editor.fontFamily": "JetBrainsMono Nerd Font, monospace",
+  "editor.fontLigatures": "'zero', 'ss02', 'ss03', 'ss04', 'ss05', 'calt'",
+  "editor.fontSize": 12,
+  "editor.language.colorizedBracketPairs": [
+    [
+      "[",
+      "]"
+    ],
+    [
+      "{",
+      "}"
+    ],
+    [
+      "<",
+      "/>"
+    ],
+    [
+      "</",
+      ">"
+    ],
+    [
+      "(",
+      ")"
+    ]
+  ],
+  "editor.bracketPairColorization.independentColorPoolPerBracketType": true,
+  "editor.codeActions.triggerOnFocusChange": true,
+  "editor.cursorSmoothCaretAnimation": "on",
+  "editor.guides.bracketPairs": "active",
+  "editor.lineNumbers": "interval",
+  "editor.renderWhitespace": "boundary",
+  "editor.tabSize": 2,
+  "window.autoDetectColorScheme": true,
+  "workbench.editor.tabActionLocation": "left",
+  "workbench.list.smoothScrolling": true,
+  "workbench.sideBar.location": "right",
+  "workbench.startupEditor": "newUntitledFile",
+  "workbench.tree.expandMode": "singleClick",
+  "workbench.tree.indent": 10,
+  "debug.onTaskErrors": "showErrors",
+  "explorer.confirmDragAndDrop": false,
+  "liveServer.settings.donotShowInfoMsg": true,
+  "workbench.editor.wrapTabs": true,
+  "workbench.editor.pinnedTabSizing": "compact",
+  "workbench.editor.pinnedTabsOnSeparateRow": true,
+  "workbench.editor.labelFormat": "short",
+  "eslint.format.enable": true,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "codeium.snoozeTime": 120,
+  "editor.minimap.enabled": false,
+  "git.openRepositoryInParentFolders": "never",
+  "editor.unicodeHighlight.ambiguousCharacters": false,
+  "editor.unicodeHighlight.nonBasicASCII": false,
+  "workbench.preferredDarkColorTheme": "Neon City",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "workbench.editor.empty.hint": "hidden",
+  "workbench.navigationControl.enabled": false,
+  "terminal.integrated.enableMultiLinePasteWarning": "never",
+  "security.workspace.trust.untrustedFiles": "open",
+  "explorer.confirmPasteNative": false,
+  "lövelauncher.saveAllOnLaunch": true,
+  "window.commandCenter": false,
+  "workbench.secondarySideBar.defaultVisibility": "hidden",
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[scss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[astro]": {
+    "editor.defaultFormatter": "astro-build.astro-vscode"
+  },
+  "prettier.useTabs": true,
+  "prettier.tabWidth": 4,
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "extensions.ignoreRecommendations": true,
+  "dart.debugExternalPackageLibraries": true,
+  "dart.debugSdkLibraries": false,
+  "window.menuBarVisibility": "compact",
+  "chat.commandCenter.enabled": false,
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "http.systemCertificatesNode": true,
+  "diffEditor.codeLens": true,
+  "diffEditor.ignoreTrimWhitespace": false,
+  "editor.smoothScrolling": true,
+  "terminal.integrated.smoothScrolling": true,
+  "editor.cursorWidth": 3,
+  "editor.cursorBlinking": "expand",
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "ridiculousCoding.chars": false,
+  "ridiculousCoding.shake": false,
+  "ridiculousCoding.sound": false,
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "typescript.experimental.useTsgo": true,
+  "github.copilot.enable": {
+    "*": false,
+    "plaintext": false,
+    "markdown": false,
+    "scminput": false
+  },
+  "workbench.productIconTheme": "fluent-icons",
+  "workbench.preferredLightColorTheme": "Atom One Dark",
+  "terminal.integrated.gpuAcceleration": "off",
+  "workbench.colorCustomizations": {
+    "terminal.background": "#00000000",
+    "sideBar.background": "#00000000",
+    "sideBarSectionHeader.background": "#00000000",
+    "panel.background": "#00000000",
+    "quickInput.background": "#000000a6"
+  },
+  "workbench.browser.openLocalhostLinks": false
+}

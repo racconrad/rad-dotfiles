@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+"""Reproduce selector mapping in private headless Wayfire instances only."""
+import configparser
+import datetime
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import signal
+import socket
+import subprocess
+import tempfile
+import time
+
+
+HOME = Path.home()
+
+
+def snapshot_selector(destination):
+    source = HOME / '.config/desktop-style'
+    shutil.copytree(source, destination)
+    state = json.loads((HOME / '.local/state/desktop-style/ui.json').read_text())
+    state.update(busy=False, notice='')
+    text = (source / 'eww.yuck').read_text()
+    # Freeze the listener: no desktop-style commands run in the test session.
+    text, count = re.subn(
+        r'^\(deflisten ui[^\n]*\)\s*\n',
+        lambda _: '(defvar ui ' + json.dumps(json.dumps(state, ensure_ascii=False)) + ')\n',
+        text, count=1)
+    if count != 1:
+        raise RuntimeError('No se pudo aislar el listener del selector')
+    text = re.sub(r':onclick "(?:[^"\\]|\\.)*"', ':onclick "true"', text)
+    (destination / 'eww.yuck').write_text(text)
+
+
+def config_for(case, destination):
+    config = configparser.ConfigParser(interpolation=None, strict=False)
+    config.read(HOME / '.config/wayfire.ini')
+    plugins = config.get('core', 'plugins').split()
+    # Do not launch session daemons, commands, lock screens or desktop shells.
+    excluded = {'autostart', 'command', 'idle', 'session-lock', 'wayfire-shell'}
+    plugins = ['ipc', 'ipc-rules'] if case == 'minimal' else [p for p in plugins if p not in excluded]
+    for section in list(config.sections()):
+        if section.startswith('output:') or section in excluded:
+            config.remove_section(section)
+    config['core']['plugins'] = ' '.join(plugins)
+    config['core']['xwayland'] = 'false'
+    config['output:HEADLESS-1'] = {'mode': '1280x900', 'scale': '1'}
+    with destination.open('w') as stream:
+        config.write(stream)
+    return plugins
+
+
+def stop(process):
+    if process is None:
+        return
+    # Only processes launched by this test have these private process groups.
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    try:
+        process.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait(timeout=3)
+
+
+def run_case(case, report):
+    folder = report / case
+    folder.mkdir()
+    result = {'case': case, 'cycles': 0, 'status': 'starting'}
+    compositor = daemon = None
+    with tempfile.TemporaryDirectory(prefix='style-diag-') as temporary:
+        runtime = Path(temporary)
+        private_config = runtime / 'selector'
+        snapshot_selector(private_config)
+        result['plugins'] = config_for(case, folder / 'wayfire.ini')
+        env = dict(os.environ)
+        for key in ('WAYLAND_DISPLAY', 'DISPLAY', 'WAYFIRE_SOCKET', 'GTK_MODULES',
+                    'WAYFIRE_CONFIG_FILE', 'WAYLAND_SOCKET'):
+            env.pop(key, None)
+        env.update(XDG_RUNTIME_DIR=str(runtime), WLR_BACKENDS='headless',
+                   WLR_HEADLESS_OUTPUTS='1', LIBGL_ALWAYS_SOFTWARE='1',
+                   XDG_SESSION_TYPE='wayland', GDK_BACKEND='wayland',
+                   DBUS_SESSION_BUS_ADDRESS='unix:path=' + str(runtime / 'no-session-bus'))
+        try:
+            with (folder / 'wayfire.log').open('w') as log:
+                compositor = subprocess.Popen(
+                    ['/usr/bin/wayfire', '-d', '-c', str(folder / 'wayfire.ini')],
+                    env=env, stdin=subprocess.DEVNULL, stdout=log,
+                    stderr=subprocess.STDOUT, start_new_session=True)
+            display = None
+            for _ in range(100):
+                display = next((p for p in runtime.glob('wayland-*') if p.is_socket()), None)
+                if display or compositor.poll() is not None:
+                    break
+                time.sleep(.1)
+            if display is None or compositor.poll() is not None:
+                raise RuntimeError('El compositor aislado no pudo iniciar')
+            env['WAYLAND_DISPLAY'] = display.name
+            with (folder / 'eww.log').open('w') as log:
+                daemon = subprocess.Popen(
+                    ['eww', '-c', str(private_config), 'daemon', '--no-daemonize'],
+                    env=env, stdin=subprocess.DEVNULL, stdout=log,
+                    stderr=subprocess.STDOUT, start_new_session=True)
+
+            def eww(*args):
+                completed = subprocess.run(
+                    ['eww', '--no-daemonize', '-c', str(private_config), *args],
+                    env=env, capture_output=True, text=True, timeout=5)
+                with (folder / 'commands.log').open('a') as log:
+                    log.write(f'{args}: {completed.returncode}\n{completed.stdout}{completed.stderr}\n')
+                return completed
+
+            for _ in range(10):
+                if eww('ping').returncode == 0:
+                    break
+                if daemon.poll() is not None or compositor.poll() is not None:
+                    raise RuntimeError('Eww o Wayfire terminó durante el arranque')
+                time.sleep(.2)
+            else:
+                raise RuntimeError('Eww no respondió en la sesión aislada')
+            for _ in range(3):
+                eww('open', 'styles')
+                time.sleep(1)
+                if compositor.poll() is not None:
+                    raise RuntimeError('Wayfire cayó al abrir el selector')
+                if 'styles:' not in eww('active-windows').stdout:
+                    raise RuntimeError('El selector no llegó a abrirse')
+                eww('close', 'styles')
+                time.sleep(.4)
+                if compositor.poll() is not None:
+                    raise RuntimeError('Wayfire cayó al cerrar el selector')
+                result['cycles'] += 1
+            result['status'] = 'passed'
+        except Exception as exc:
+            result['status'] = 'failed'
+            result['error'] = str(exc)
+        finally:
+            result['compositor_exit_before_cleanup'] = compositor.poll() if compositor else None
+            result['eww_exit_before_cleanup'] = daemon.poll() if daemon else None
+            stop(daemon)
+            stop(compositor)
+    (folder / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
+    return result
+
+
+def main():
+    # Fail clearly before starting anything when run from a restricted agent.
+    with tempfile.TemporaryDirectory(prefix='style-diag-preflight-') as path:
+        with socket.socket(socket.AF_UNIX) as probe:
+            try:
+                probe.bind(str(Path(path) / 'test.sock'))
+            except PermissionError:
+                raise SystemExit('El entorno bloquea sockets. Ejecutá desktop-style-diagnose desde tu terminal normal.')
+    report = HOME / '.local/state/desktop-style' / ('isolated-' + datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
+    report.mkdir(mode=0o700, parents=True)
+    print('Prueba aislada; no se abre el selector en tu escritorio.', flush=True)
+    results = []
+    for case in ('minimal', 'desktop-plugins'):
+        print('Probando: ' + case, flush=True)
+        results.append(run_case(case, report))
+    (report / 'summary.json').write_text(json.dumps(results, indent=2) + '\n')
+    print('Registros: ' + str(report), flush=True)
+    for result in results:
+        print(f"{result['case']}: {result['status']}, {result['cycles']} aperturas verificadas")
+    print('Un resultado correcto aquí no descarta un fallo exclusivo de la sesión real.')
+
+
+if __name__ == '__main__':
+    main()

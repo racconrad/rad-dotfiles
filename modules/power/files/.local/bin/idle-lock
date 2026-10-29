@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+"""Lock after inactivity unless the persistent Working mode is selected."""
+import json
+import os
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path.home() / '.local/lib'))
+from desktop_power.storage import STATE, read_json
+
+
+if __name__ == '__main__':
+    mode = read_json(STATE / 'preference.json').get('mode', 'auto')
+    allowed = mode != 'working'
+    if '--check' in sys.argv:
+        print(json.dumps({'mode': mode, 'lock_on_idle': allowed}))
+    elif allowed:
+        os.execl(str(Path.home() / '.local/bin/lock'), 'lock')

@@ -1,0 +1,106 @@
+{
+  "profiles": {
+    "Personal": {
+      "label": "Personal",
+      "description": "Main layout. Command, photo and note widgets start disabled.",
+      "widgets": 11,
+      "active_widgets": 5,
+      "requires": [
+        "widgets-minecraft"
+      ]
+    },
+    "Trabajo": {
+      "label": "Trabajo",
+      "description": "Work: clock, tasks, habits, system and app chest.",
+      "widgets": 5,
+      "active_widgets": 5,
+      "requires": []
+    },
+    "Gaming": {
+      "label": "Gaming",
+      "description": "Gaming: compact hardware and music in the corners.",
+      "widgets": 3,
+      "active_widgets": 3,
+      "requires": [
+        "widgets-music"
+      ]
+    },
+    "Dashboard": {
+      "label": "Dashboard",
+      "description": "Dashboard: clock, music, app chest, system and disks.",
+      "widgets": 5,
+      "active_widgets": 5,
+      "requires": [
+        "widgets-music"
+      ]
+    },
+    "Cyberpunk": {
+      "label": "Cyberpunk",
+      "description": "Cyberpunk: clock, processes, cat, GitHub and system.",
+      "widgets": 5,
+      "active_widgets": 5,
+      "requires": [
+        "widgets-github"
+      ]
+    },
+    "silly": {
+      "label": "silly",
+      "description": "Playful layout; command and photo widgets start disabled.",
+      "widgets": 9,
+      "active_widgets": 4,
+      "requires": []
+    }
+  },
+  "themes": {
+    "personal": {
+      "label": "Personal raccoon",
+      "description": "Your current global widget appearance."
+    },
+    "quiet": {
+      "label": "Quiet",
+      "description": "Minimal cards, no ambient effects."
+    },
+    "pixel": {
+      "label": "Pixel",
+      "description": "Pixel skin with a subtle accent and deep background."
+    },
+    "terminal": {
+      "label": "Terminal",
+      "description": "Terminal-style widgets with no ambient motion."
+    }
+  },
+  "motions": {
+    "personal": {
+      "label": "Personal / 60 FPS",
+      "description": "Your current entry/exit effects, workspace timing and concurrency."
+    },
+    "balanced": {
+      "label": "Balanced / 24 FPS",
+      "description": "Short fades and lower refresh rate."
+    },
+    "quiet": {
+      "label": "Quiet / no transitions",
+      "description": "Disable transitions for a quieter desktop."
+    }
+  },
+  "defaults": {
+    "profile": "keep",
+    "profiles": [
+      "Personal",
+      "Trabajo",
+      "Gaming",
+      "Dashboard",
+      "Cyberpunk",
+      "silly"
+    ],
+    "theme": "personal",
+    "motion": "personal",
+    "install": "auto",
+    "components": [
+      "widgets-profiles",
+      "widgets-themes",
+      "widgets-motion",
+      "widgets-palette"
+    ]
+  }
+}

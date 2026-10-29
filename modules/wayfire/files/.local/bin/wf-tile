@@ -1,0 +1,585 @@
+#!/usr/bin/env python3
+"""Hyprland-style tiling actions for Wayfire's simple-tile, via the Wayfire IPC.
+
+usage: wf-tile focus  left|right|up|down   nearest window (tiled or floating)
+       wf-tile swap   left|right|up|down   tiled: swap; floating: move by a step
+       wf-tile resize left|right|up|down   tiled: split ratio; floating: right/down
+                                           grow, left/up shrink the right/bottom edge
+       wf-tile toggle         focused window: comfortable floating <-> tiling
+       wf-tile arrange        rebuild current tiles as Dwindle
+       wf-tile repair         refresh tiled geometry without losing layout
+       wf-tile watch          resident automatic Dwindle insertion
+       wf-tile togglesplit
+       wf-tile retile         re-attach windows that fell out of tiling
+       wf-tile mode tile|float|toggle   tiling vs floating, current workspace only
+       wf-tile adopt <view-id>          float a new window opened on a floating workspace
+       wf-tile preselect left|right|up|down|cancel
+       wf-tile move left|right|up|down   move into a new split, instead of swapping
+       wf-tile resize-mode             arrows resize; Enter/Escape finish
+       wf-tile undo | redo | ratio
+       wf-tile favorite save|load
+       wf-tile scratch assign|toggle|release [1..3]
+       wf-tile gaps toggle | status
+"""
+import json
+import copy
+from pathlib import Path
+import tempfile
+import subprocess
+import os
+import re
+import socket
+import struct
+import sys
+
+RESIZE_STEP = 0.05
+MIN_PERCENT = 0.1
+FLOAT_MOVE_STEP = 60      # px per Super+Alt+Arrow on a floating window
+FLOAT_RESIZE_STEP = 60    # px per Super+Shift+Arrow on a floating window
+FLOAT_MIN_W, FLOAT_MIN_H = 240, 160
+
+
+class IPC:
+    def __init__(self):
+        path = os.environ.get("WAYFIRE_SOCKET")
+        if not path:
+            run = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+            socks = [f for f in os.listdir(run) if f.startswith("wayfire-") and f.endswith(".socket")]
+            path = os.path.join(run, socks[0])
+        self.sock = socket.socket(socket.AF_UNIX)
+        self.sock.settimeout(3)
+        self.sock.connect(path)
+        self.path = path
+
+    def close(self):
+        self.sock.close()
+
+    def _recv(self, n):
+        buf = b""
+        while len(buf) < n:
+            chunk = self.sock.recv(n - len(buf))
+            if not chunk:
+                raise ConnectionError("wayfire socket closed")
+            buf += chunk
+        return buf
+
+    def call(self, method, data=None):
+        msg = json.dumps({"method": method, "data": data or {}}).encode()
+        self.sock.sendall(struct.pack("<I", len(msg)) + msg)
+        (length,) = struct.unpack("<I", self._recv(4))
+        if length > 4 * 1024 * 1024:
+            raise ValueError("Wayfire IPC reply too large")
+        return json.loads(self._recv(length))
+
+
+def center(g):
+    return g["x"] + g["width"] / 2, g["y"] + g["height"] / 2
+
+
+def pick_neighbor(src, candidates, direction):
+    """Closest view whose center lies in `direction` from src's center."""
+    sx, sy = center(src)
+    best, best_score = None, None
+    for vid, g in candidates:
+        cx, cy = center(g)
+        dx, dy = cx - sx, cy - sy
+        main, cross = {
+            "left": (-dx, dy), "right": (dx, dy),
+            "up": (-dy, dx), "down": (dy, dx),
+        }[direction]
+        if main <= 1:
+            continue
+        score = main + 2 * abs(cross)
+        if best_score is None or score < best_score:
+            best, best_score = vid, score
+    return best
+
+
+def current_views(ipc):
+    out = ipc.call("window-rules/get-focused-output")["info"]
+    og = out["geometry"]
+    focused = ipc.call("window-rules/get-focused-view").get("info") or {}
+    views = []
+    for v in ipc.call("window-rules/list-views"):
+        if v.get("role") != "toplevel" or not v.get("mapped") or v.get("minimized"):
+            continue
+        if v.get("output-id") != out["id"] or v.get('wset-index') != out['wset-index']:
+            continue
+        cx, cy = center(v["geometry"])
+        if 0 <= cx < og["width"] and 0 <= cy < og["height"]:
+            views.append(v)
+    return out, focused, views
+
+
+def leaves(node, path=()):
+    if "view-id" in node:
+        yield node["view-id"], path
+        return
+    key = "vertical-split" if "vertical-split" in node else "horizontal-split"
+    for i, child in enumerate(node.get(key, [])):
+        yield from leaves(child, path + ((key, i),))
+
+
+def node_at(tree, path):
+    node = tree
+    for key, i in path:
+        node = node[key][i]
+    return node
+
+
+def get_layout(ipc, out):
+    ws = {"x": out["workspace"]["x"], "y": out["workspace"]["y"]}
+    res = ipc.call("simple-tile/get-layout", {"wset-index": out["wset-index"], "workspace": ws})
+    return ws, res.get("layout")
+
+
+def set_layout(ipc, out, ws, layout):
+    # Wayfire 0.11's single-view root builder forgets the child's parent.
+    # The next detach/set-layout then dereferences that null parent. Explicit
+    # split roots take its recursive builder, which wires every child correctly.
+    if 'view-id' in layout:
+        layout = {'vertical-split': [dict(layout, weight=1.0)]}
+    response = ipc.call("simple-tile/set-layout", {"wset-index": out["wset-index"], "workspace": ws, "layout": layout})
+    if response.get("result") != "ok":
+        raise RuntimeError(response.get("error", str(response)))
+
+
+def strip_geometry(node):
+    """Convert a get-layout tree into the shape set-layout expects."""
+    node.pop("geometry", None)
+    if "percent" in node:
+        node["weight"] = node.pop("percent")
+    for key in ("vertical-split", "horizontal-split"):
+        for child in node.get(key, []):
+            strip_geometry(child)
+    return node
+
+
+def prune_tree(node, removed=()):
+    """Preserve split ratios while dropping empty and single-child containers."""
+    if not node: return None
+    if 'view-id' in node:
+        return None if node['view-id'] in removed else copy.deepcopy(node)
+    key = next((key for key in ('vertical-split', 'horizontal-split') if key in node), None)
+    if not key: return None
+    children = [child for original in node[key] if (child := prune_tree(original, removed)) is not None]
+    if not children: return None
+    result = copy.deepcopy(node)
+    if len(children) == 1:
+        result = children[0]
+        for weight in ('percent', 'weight'):
+            if weight in node: result[weight] = node[weight]
+    else: result[key] = children
+    return result
+
+
+def insert_dwindle(tree, vid, anchor=None, direction=None):
+    """Bisect the selected leaf across the opposite axis, preserving all other tiles."""
+    tree = prune_tree(tree, {vid})
+    if not tree: return {'view-id': vid, 'weight': 1.0}
+    paths = dict(leaves(tree))
+    if anchor not in paths: anchor = next(reversed(paths))
+    path = paths[anchor]
+    previous = path[-1][0] if path else 'horizontal-split'
+    axis = (('vertical-split' if direction in ('left', 'right') else 'horizontal-split')
+            if direction else ('horizontal-split' if previous == 'vertical-split' else 'vertical-split'))
+    old = node_at(tree, path)
+    branch = {axis: [{'view-id': anchor, 'weight': 1.0}, {'view-id': vid, 'weight': 1.0}]}
+    if direction in ('left', 'up'): branch[axis].reverse()
+    for weight in ('percent', 'weight'):
+        if weight in old: branch[weight] = old[weight]
+    if path:
+        key, index = path[-1]
+        node_at(tree, path[:-1])[key][index] = branch
+    else: tree = branch
+    return tree
+
+
+def dwindle_layout(ids):
+    tree = None
+    for vid in ids: tree = insert_dwindle(tree, vid)
+    return strip_geometry(tree) if tree else {'vertical-split': []}
+
+
+def workspace_for(out, view):
+    og, cur = out['geometry'], out['workspace']
+    cx, cy = center(view['geometry'])
+    return dict(x=min(max(int((cx + cur['x'] * og['width']) // og['width']), 0), cur['grid_width'] - 1),
+                y=min(max(int((cy + cur['y'] * og['height']) // og['height']), 0), cur['grid_height'] - 1))
+
+
+def atomic_json(path, value):
+    path = Path(path);path.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix='.'+path.name, dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w') as stream: json.dump(value, stream)
+        os.replace(name, path)
+    finally:
+        if os.path.exists(name): os.unlink(name)
+
+
+def runtime_file(name):
+    return Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}')) / name
+
+
+def floating_geometry(view_id):
+    try: return json.loads(runtime_file('wf-tile-geometry.json').read_text()).get(str(view_id))
+    except (OSError, ValueError): return None
+
+
+def remember_geometry(view):
+    path = runtime_file('wf-tile-geometry.json')
+    try: data = json.loads(path.read_text())
+    except (OSError, ValueError): data = {}
+    data[str(view['id'])] = view['geometry']
+    atomic_json(path, dict(list(data.items())[-128:]))
+
+
+def cmd_toggle(ipc):
+    out, focused, _ = current_views(ipc)
+    if not focused or focused.get('role') != 'toplevel' or focused.get('fullscreen'): return
+    ws, layout = get_layout(ipc, out)
+    if focused['id'] in dict(leaves(layout or {})):
+        rest = prune_tree(layout, {focused['id']})
+        set_layout(ipc, out, ws, strip_geometry(rest) if rest else {'vertical-split': []})
+        make_floating(ipc, out, focused, 0, restore=True)
+    else:
+        remember_geometry(focused)
+        set_layout(ipc, out, ws, strip_geometry(insert_dwindle(layout, focused['id'])))
+    ipc.call('window-rules/focus-view', {'id': focused['id']})
+
+
+def cmd_arrange(ipc):
+    out, _, _ = current_views(ipc); ws, layout = get_layout(ipc, out)
+    if layout: set_layout(ipc, out, ws, dwindle_layout([vid for vid, _ in leaves(layout)]))
+
+
+def cmd_repair(ipc):
+    # Recreate tile nodes and their scale transforms; never detach/reattach other workspaces.
+    out, focused, _ = current_views(ipc); ws, layout = get_layout(ipc, out)
+    if layout:
+        set_layout(ipc, out, ws, strip_geometry(layout))
+        if focused: ipc.call('window-rules/focus-view', {'id': focused['id']})
+
+
+def cmd_focus(ipc, direction):
+    _, focused, views = current_views(ipc)
+    if not views:
+        return
+    if not focused or focused.get("id") not in {v["id"] for v in views}:
+        ipc.call("window-rules/focus-view", {"id": views[0]["id"]})
+        return
+    target = pick_neighbor(focused["geometry"],
+                           [(v["id"], v["geometry"]) for v in views if v["id"] != focused["id"]],
+                           direction)
+    if target is not None:
+        ipc.call("window-rules/focus-view", {"id": target})
+
+
+def floating_target(ipc, out, focused, layout):
+    """The focused view when it is a floating toplevel (not in the tile tree)."""
+    if not focused or focused.get("role") != "toplevel" or focused.get("fullscreen"):
+        return None
+    if layout and focused["id"] in dict(leaves(layout)):
+        return None
+    if focused.get("output-id") != out["id"]:
+        return None
+    return focused
+
+
+def configure(ipc, vid, x, y, w, h):
+    ipc.call("window-rules/configure-view", {"id": vid, "geometry": {
+        "x": int(x), "y": int(y), "width": int(w), "height": int(h)}})
+
+
+def float_move(ipc, out, view, direction):
+    wa, g = out["workarea"], view["geometry"]
+    dx, dy = {"left": (-1, 0), "right": (1, 0), "up": (0, -1), "down": (0, 1)}[direction]
+    x = g["x"] + dx * FLOAT_MOVE_STEP
+    y = g["y"] + dy * FLOAT_MOVE_STEP
+    # Keep the window inside the workarea (or pinned to its top-left if larger).
+    x = max(wa["x"], min(x, wa["x"] + wa["width"] - g["width"]))
+    y = max(wa["y"], min(y, wa["y"] + wa["height"] - g["height"]))
+    if (x, y) != (g["x"], g["y"]):
+        configure(ipc, view["id"], x, y, g["width"], g["height"])
+
+
+def float_resize(ipc, out, view, direction):
+    wa, g = out["workarea"], view["geometry"]
+    w, h = g["width"], g["height"]
+    if direction in ("left", "right"):
+        w += FLOAT_RESIZE_STEP if direction == "right" else -FLOAT_RESIZE_STEP
+        w = max(FLOAT_MIN_W, min(w, max(g["width"], wa["x"] + wa["width"] - g["x"])))
+    else:
+        h += FLOAT_RESIZE_STEP if direction == "down" else -FLOAT_RESIZE_STEP
+        h = max(FLOAT_MIN_H, min(h, max(g["height"], wa["y"] + wa["height"] - g["y"])))
+    if (w, h) != (g["width"], g["height"]):
+        configure(ipc, view["id"], g["x"], g["y"], w, h)
+
+
+def cmd_swap(ipc, direction):
+    out, focused, views = current_views(ipc)
+    ws, layout = get_layout(ipc, out)
+    floating = floating_target(ipc, out, focused, layout)
+    if floating:
+        float_move(ipc, out, floating, direction)
+        return
+    if not focused or not layout:
+        return
+    paths = dict(leaves(layout))
+    if focused["id"] not in paths:
+        return
+    tiled = [(v["id"], v["geometry"]) for v in views if v["id"] in paths and v["id"] != focused["id"]]
+    target = pick_neighbor(focused["geometry"], tiled, direction)
+    if target is None:
+        return
+    a, b = node_at(layout, paths[focused["id"]]), node_at(layout, paths[target])
+    a["view-id"], b["view-id"] = b["view-id"], a["view-id"]
+    set_layout(ipc, out, ws, strip_geometry(layout))
+    ipc.call("window-rules/focus-view", {"id": focused["id"]})
+
+
+def split_axis(parent, key):
+    """'x' when the parent's children sit side by side, 'y' when stacked."""
+    kids = parent[key]
+    if len(kids) < 2:
+        return None
+    g0, g1 = kids[0]["geometry"], kids[1]["geometry"]
+    return "x" if abs(g0["x"] - g1["x"]) > abs(g0["y"] - g1["y"]) else "y"
+
+
+def cmd_resize(ipc, direction):
+    out, focused, _ = current_views(ipc)
+    ws, layout = get_layout(ipc, out)
+    floating = floating_target(ipc, out, focused, layout)
+    if floating:
+        float_resize(ipc, out, floating, direction)
+        return
+    if not focused or not layout:
+        return
+    paths = dict(leaves(layout))
+    path = paths.get(focused["id"])
+    if path is None:
+        return
+    want_axis = "x" if direction in ("left", "right") else "y"
+    grow = 1 if direction in ("right", "down") else -1
+    # Walk up until a split along the requested axis is found.
+    for depth in range(len(path) - 1, -1, -1):
+        key, idx = path[depth]
+        parent = node_at(layout, path[:depth])
+        if split_axis(parent, key) != want_axis:
+            continue
+        kids = parent[key]
+        # Like Hyprland's resizeactive: right/down grow the focused branch,
+        # left/up shrink it; the next sibling (or previous one at the edge) absorbs it.
+        mine = kids[idx]
+        other = kids[idx + 1] if idx + 1 < len(kids) else kids[idx - 1]
+        delta = RESIZE_STEP * grow
+        if mine["percent"] + delta < MIN_PERCENT or other["percent"] - delta < MIN_PERCENT:
+            return
+        mine["percent"] += delta
+        other["percent"] -= delta
+        set_layout(ipc, out, ws, strip_geometry(layout))
+        return
+
+
+def cmd_togglesplit(ipc):
+    out, focused, _ = current_views(ipc)
+    ws, layout = get_layout(ipc, out)
+    if not focused or not layout:
+        return
+    path = dict(leaves(layout)).get(focused["id"])
+    if not path:
+        return
+    parent = node_at(layout, path[:-1])
+    key = path[-1][0]
+    other = "horizontal-split" if key == "vertical-split" else "vertical-split"
+    parent[other] = parent.pop(key)
+    set_layout(ipc, out, ws, strip_geometry(layout))
+
+
+def cmd_retile(ipc, all_views=False, skip_app_ids=()):
+    """Re-attach tiled views that fell out of every simple-tile layout.
+
+    Happens e.g. after changing the workspace grid size: views keep their tiled
+    state but no layout tree references them any more.
+    """
+    out = ipc.call("window-rules/get-focused-output")["info"]
+    og, cur = out["geometry"], out["workspace"]
+    grid_w, grid_h = cur["grid_width"], cur["grid_height"]
+    trees, known = {}, set()
+    for x in range(grid_w):
+        for y in range(grid_h):
+            ws = {"x": x, "y": y}
+            layout = ipc.call("simple-tile/get-layout", {"wset-index": out["wset-index"], "workspace": ws}).get("layout")
+            trees[(x, y)] = layout
+            if layout:
+                known.update(vid for vid, _ in leaves(layout))
+    orphans = {}
+    for v in ipc.call("window-rules/list-views"):
+        if v.get("role") != "toplevel" or not v.get("mapped") or v.get("minimized"):
+            continue
+        if v.get("wset-index") != out["wset-index"] or v["id"] in known:
+            continue
+        if not all_views and not v.get("tiled-edges"):
+            continue
+        if v.get("app-id") in skip_app_ids or v.get("title") in ("Picture-in-Picture", "Picture in picture"):
+            continue
+        cx, cy = center(v["geometry"])
+        x = int((cx + cur["x"] * og["width"]) // og["width"])
+        y = int((cy + cur["y"] * og["height"]) // og["height"])
+        x, y = min(max(x, 0), grid_w - 1), min(max(y, 0), grid_h - 1)
+        orphans.setdefault((x, y), []).append(v["id"])
+    for (x, y), vids in orphans.items():
+        layout = trees.get((x, y))
+        for vid in vids: layout = insert_dwindle(layout, vid)
+        set_layout(ipc, out, {'x':x, 'y':y}, strip_geometry(layout))
+        print(f"workspace {y * grid_w + x + 1}: re-tiled {vids}")
+    # set-layout already updates geometry for recovered windows. Rebuilding the
+    # current tree again does no recovery and needlessly detaches healthy tiles.
+
+
+FLOAT_STATE = os.path.expanduser(os.environ.get("WF_TILE_FLOAT_STATE", "~/.cache/wf-tile-floating.json"))
+INI = os.path.expanduser(os.environ.get("WAYFIRE_CONFIG_FILE", "~/.config/wayfire.ini"))
+
+
+def get_ini_option(section, key):
+    current = None
+    with open(INI) as f:
+        for line in f:
+            stripped = line.strip()
+            if stripped.startswith("[") and stripped.endswith("]"):
+                current = stripped[1:-1]
+            elif current == section and stripped.split("=", 1)[0].strip() == key:
+                return stripped.split("=", 1)[1].strip()
+    return None
+
+
+def notify(text):
+    if os.environ.get('WF_TILE_NO_NOTIFY') == '1': return
+    subprocess.Popen(['notify-send', '-t', '1400', '-a', 'wayfire', 'Wayfire', text],
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def load_floating():
+    try:
+        with open(FLOAT_STATE) as f:
+            return set(json.load(f))
+    except (OSError, ValueError):
+        return set()
+
+
+def save_floating(keys):
+    atomic_json(FLOAT_STATE, sorted(keys))
+
+def ws_key(wset, x, y):
+    return f"{wset}:{x}:{y}"
+
+
+def remove_view(node, vid):
+    """Drop one view-id from a get-layout tree (returns the pruned tree)."""
+    for key in ("vertical-split", "horizontal-split"):
+        if key in node:
+            node[key] = [remove_view(c, vid) for c in node[key] if c.get("view-id") != vid]
+    return node
+
+
+def float_geometry(out, view, n):
+    """A comfortable cascaded size inside the workarea, honoring the app's min size."""
+    wa = out["workarea"]
+    mins = view.get("min-size") or {}
+    w = min(max(int(wa["width"] * 0.6), mins.get("width", 0)), wa["width"])
+    h = min(max(int(wa["height"] * 0.65), mins.get("height", 0)), wa["height"])
+    x = wa["x"] + (wa["width"] - w) // 2 + 32 * (n % 4)
+    y = wa["y"] + (wa["height"] - h) // 2 + 24 * (n % 4)
+    x = max(wa["x"], min(x, wa["x"] + wa["width"] - w))
+    y = max(wa["y"], min(y, wa["y"] + wa["height"] - h))
+    return {"x": x, "y": y, "width": w, "height": h}
+
+
+def make_floating(ipc, out, view, n, restore=False):
+    # tiled-edges=0 is what tells the client it is no longer tiled; without it
+    # apps keep drawing as tiled (square, no CSD borders) and look deformed.
+    geometry = float_geometry(out, view, n)
+    saved = floating_geometry(view['id']) if restore else None
+    if isinstance(saved, dict) and all(isinstance(saved.get(k), (int, float)) for k in ('x','y','width','height')):
+        wa = out['workarea']
+        geometry = dict(saved)
+        geometry['width'] = max(1, min(geometry['width'], wa['width']))
+        geometry['height'] = max(1, min(geometry['height'], wa['height']))
+        for axis, size in (('x','width'), ('y','height')):
+            geometry[axis] = max(wa[axis], min(geometry[axis], wa[axis] + wa[size] - geometry[size]))
+    ipc.call("window-rules/configure-view", {"id": view["id"], "tiled-edges": 0,
+                                             "geometry": {key:int(value) for key,value in geometry.items()}})
+
+
+def cmd_mode(ipc, wanted, skip_ids=()):
+    """Switch the CURRENT workspace between tiling and free-floating window mode."""
+    out = ipc.call("window-rules/get-focused-output")["info"]
+    ws = {"x": out["workspace"]["x"], "y": out["workspace"]["y"]}
+    key = ws_key(out["wset-index"], ws["x"], ws["y"])
+    floating = load_floating()
+    current = "float" if key in floating else "tile"
+    if wanted == "toggle":
+        wanted = "float" if current == "tile" else "tile"
+    if wanted == current:
+        return
+    _, _, views = current_views(ipc)
+    if wanted == "float":
+        layout = ipc.call("simple-tile/get-layout", {"wset-index": out["wset-index"], "workspace": ws}).get("layout")
+        tiled = {vid for vid, _ in leaves(layout)} if layout else set()
+        set_layout(ipc, out, ws, {"vertical-split": []})
+        for n, v in enumerate(v for v in views if v["id"] in tiled and not v.get("fullscreen")):
+            make_floating(ipc, out, v, n, restore=True)
+        floating.add(key)
+        notify("Workspace flotante")
+    else:
+        floating.discard(key)
+        rule = get_ini_option("simple-tile", "tile_by_default") or ""
+        skip_apps = set(re.findall(r'app_id is "([^"]+)"', rule))
+        skip_titles = set(re.findall(r'title is "([^"]+)"', rule))
+        eligible = [v for v in views if v['id'] not in skip_ids and not v.get('fullscreen') and
+                    v.get('app-id') not in skip_apps and v.get('title') not in skip_titles]
+        for view in eligible:
+            if not view.get('tiled-edges'): remember_geometry(view)
+        vids = [view['id'] for view in eligible]
+        if vids:
+            set_layout(ipc, out, ws, dwindle_layout(vids))
+        notify("Workspace en tiling")
+    save_floating(floating)
+
+
+def cmd_adopt(ipc, vid, anchors=(), direction=None):
+    """Adopt only newly auto-tiled views. Explicit float exceptions remain untouched."""
+    view = ipc.call('window-rules/view-info', {'id': vid}).get('info')
+    if not view or not view.get('mapped') or view.get('role') != 'toplevel' or view.get('fullscreen'): return
+    out = ipc.call('window-rules/output-info', {'id': view['output-id']})
+    if 'info' in out: out = out['info']
+    if 'geometry' not in out: return
+    ws = workspace_for(out, view)
+    out['wset-index'] = view['wset-index']
+    layout = ipc.call('simple-tile/get-layout', {'wset-index': view['wset-index'], 'workspace': ws}).get('layout')
+    paths = dict(leaves(layout or {}))
+    if vid not in paths: return
+    floating = view['wset-index'] == 2 or ws_key(view['wset-index'], ws['x'], ws['y']) in load_floating()
+    if floating:
+        rest = prune_tree(layout, {vid})
+        set_layout(ipc, out, ws, strip_geometry(rest) if rest else {'vertical-split': []})
+        make_floating(ipc, out, view, 0)
+    else:
+        # A single tile already has the right shape. The native map callback may finish later.
+        if len(paths) < 2: return
+        anchor = next((candidate for candidate in anchors if candidate in paths and candidate != vid), None)
+        set_layout(ipc, out, ws, strip_geometry(insert_dwindle(layout, vid, anchor, direction)))
+
+
+
+def main(argv):
+    # Keep the tree/IPC primitives importable without GTK or daemon side effects.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'lib'))
+    from wf_tile.service import main as service_main
+    return service_main(sys.modules[__name__], argv)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

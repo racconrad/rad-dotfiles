@@ -1,0 +1,10 @@
+/* Waybar island surfaces. */
+.modules-left,
+.modules-right,
+#taskbar {
+  background: alpha(@surface_container, 0.78);
+  border: 1px solid alpha(@outline_variant, 0.45);
+  border-radius: 20px;
+  box-shadow: none;
+  transition: all 500ms cubic-bezier(0.25, 1, 0.5, 1);
+}

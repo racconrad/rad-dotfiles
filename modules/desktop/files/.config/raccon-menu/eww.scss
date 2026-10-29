@@ -1,0 +1,131 @@
+@import "palette";
+
+* { all: unset; font-family: "Inter", "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 13px; }
+window { background: transparent; color: $on_surface; }
+.panel, .side-panel { background: $island_background; border: 1px solid $island_outline;
+  border-radius: 20px; padding: 16px; transition: background-color 220ms ease-out, border-color 220ms ease-out; }
+/* The global style may change the shape; keep Waybar's live status outline. */
+.popup .panel, .popup .side-panel { border: 1px solid $island_outline; }
+.side-panel { margin-left: 4px; padding: 12px; }
+button { border-radius: 12px; padding: 9px 10px; color: $on_surface;
+  transition: background-color 120ms ease-out, color 120ms ease-out; }
+button:hover { background: rgba($primary, .16); }
+button:focus { box-shadow: inset 0 0 0 2px $primary; }
+button:active { background: rgba($primary, .28); }
+button:disabled { opacity: .5; }
+.title { font-size: 21px; font-weight: 600; letter-spacing: -.4px; }
+.avatar { border-radius: 12px; }
+.close { padding: 8px; color: $on_surface_variant; }
+.search-bar { padding: 11px 12px; border-radius: 12px; background: rgba($on_surface, .07); color: $on_surface_variant; }
+.app-search:focus { color: $on_surface; }
+.app-search { color: $on_surface; caret-color: $primary; min-height: 22px; }
+.app-search selection { background: $primary; color: $on_primary; }
+.daily-apps { padding: 2px 0; }
+.daily-app { min-height: 88px; padding: 13px 6px; background: rgba($primary, .09); }
+.daily-app image { color: $primary; transition: -gtk-icon-transform 140ms ease-out; }
+.daily-app:hover image { -gtk-icon-transform: scale(1.09); }
+.daily-app label { font-size: 12px; font-weight: 500; }
+.app-launch { padding: 10px; }
+.app-launch.first-match { background: rgba($primary, .12); }
+.app-launch image { color: $primary; }
+.no-results { padding: 18px 4px; }
+.quick { color: $on_surface_variant; padding: 8px; }
+.popup .quick, .popup .nav-tab { min-width: 22px; min-height: 22px; }
+.popup .mode-row, .popup .session-choice { min-width: 28px; min-height: 24px; }
+.quick label, .nav-tab label { font-size: 12px; }
+.utilities { padding-top: 1px; }
+.navigation { padding-top: 8px; border-top: 1px solid rgba($outline_variant, .4); }
+.nav-tab { padding: 9px; color: $on_surface_variant; }
+.nav-tab.current { color: $primary; background: rgba($primary, .13); }
+.side-title { font-size: 15px; font-weight: 600; padding: 4px 8px 8px; }
+.mode-row, .session-choice { padding: 10px 8px; }
+.mode-row.selected, .session-choice.selected { color: $primary; background: rgba($primary, .14); }
+.apply, .apply:hover { background: $primary; color: $on_primary; font-weight: 600; padding: 10px; margin-top: 6px; }
+.apply:focus { box-shadow: inset 0 0 0 2px $on_primary; }
+.confirmation { padding: 12px 4px 2px; border-top: 1px solid rgba($outline_variant, .5); margin-top: 8px; }
+.confirmation label { font-size: 12px; }
+.destructive, .destructive:hover { background: $error; color: $surface; font-weight: 600; }
+.muted { color: $on_surface_variant; }
+.error { color: $error; font-size: 12px; }
+scrollbar { background: transparent; }
+scrollbar slider { min-width: 4px; border-radius: 8px; background: rgba($secondary, .35); }
+.still, .still * { transition: none; animation: none; }
+
+@import "controls";
+@import "desktop-style";
+
+.popup .agenda-calendar { padding: 6px; font-size: 12px; }
+.popup .agenda-calendar:selected { background-color: $primary; color: $on_primary; }
+.popup .calendar-entry { padding: 8px; min-width: 0; }
+.popup .calendar-add { padding: 8px; }
+.popup .agenda-scroll { min-height: 120px; }
+.popup .agenda-event button, .popup .agenda-task { padding: 6px; }
+
+.dock-right .side-panel { margin-left: 0; margin-right: 4px; }
+
+
+/* Motion layer, after the theme import on purpose: styles such as Terminal set `transition: none` on
+   popup buttons and panels, which made every hover snap. input.c adds `enter` (start pose) for one
+   frame and `entering` (stagger delays) for the length of the entrance; `.still` keeps it all off. */
+$ease: cubic-bezier(.22, 1, .36, 1);
+$spring: cubic-bezier(.34, 1.45, .64, 1);
+.popup.motion button { transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out; }
+.popup.motion .daily-app { transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out,
+  opacity 260ms ease-out; }
+.popup.motion .daily-app image { transition: -gtk-icon-transform 420ms $spring; }
+.popup.motion .daily-app:hover image { -gtk-icon-transform: scale(1.24) rotate(-9deg); }
+.popup.motion .daily-app:active image { -gtk-icon-transform: scale(.88); transition-duration: 90ms; }
+.popup.motion .nav-tab image, .popup.motion .quick image, .popup.motion .close image { transition: -gtk-icon-transform 360ms $spring; }
+.popup.motion .nav-tab:hover image, .popup.motion .quick:hover image { -gtk-icon-transform: scale(1.18); }
+.popup.motion .close:hover image { -gtk-icon-transform: rotate(90deg); }
+.popup.motion .app-launch image { transition: -gtk-icon-transform 300ms $spring; }
+.popup.motion .app-launch:hover image, .popup.motion .app-launch.first-match image { -gtk-icon-transform: scale(1.15); }
+.popup.motion .header, .popup.motion .search-bar, .popup.motion .utilities, .popup.motion .navigation {
+  transition: opacity 240ms ease-out; }
+.popup.motion .search-bar.entering { transition-delay: 30ms; }
+.popup.motion .utilities.entering { transition-delay: 220ms; }
+.popup.motion .navigation.entering { transition-delay: 260ms; }
+.popup.motion .header.enter, .popup.motion .search-bar.enter, .popup.motion .utilities.enter,
+.popup.motion .navigation.enter, .popup.motion .daily-apps.enter .daily-app { opacity: 0; }
+.popup.motion .daily-apps.enter .daily-app image { -gtk-icon-transform: scale(.48) rotate(-22deg); }
+.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(1),
+.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(1) image { transition-delay: 0ms; }
+.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(2),
+.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(2) image { transition-delay: 28ms; }
+.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(3),
+.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(3) image { transition-delay: 56ms; }
+.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(1),
+.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(1) image { transition-delay: 84ms; }
+.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(2),
+.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(2) image { transition-delay: 112ms; }
+.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(3),
+.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(3) image { transition-delay: 140ms; }
+.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(1),
+.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(1) image { transition-delay: 168ms; }
+.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(2),
+.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(2) image { transition-delay: 196ms; }
+.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(3),
+.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(3) image { transition-delay: 224ms; }
+
+/* Shared interaction rhythm with the floating wallpaper/session cards. */
+.popup.motion .session-choice image, .popup.motion .mode-row image {
+  transition: -gtk-icon-transform 220ms $ease;
+}
+.popup.motion .session-choice:hover image, .popup.motion .mode-row:hover image { -gtk-icon-transform: scale(1.12); }
+.popup.motion button:active image { -gtk-icon-transform: scale(.92); transition-duration: 90ms; }
+/* Start pose is immediate; removing enter releases the staggered spring. */
+.popup.motion .daily-apps.enter .daily-app,
+.popup.motion .daily-apps.enter .daily-app image,
+.popup.motion .header.enter, .popup.motion .search-bar.enter,
+.popup.motion .utilities.enter, .popup.motion .navigation.enter { transition: none; }
+.popup.motion .search-bar image { transition: -gtk-icon-transform 350ms $spring; }
+.popup.motion .search-bar:hover image { -gtk-icon-transform: scale(1.16) rotate(-10deg); }
+@keyframes menu-select {
+  0% { -gtk-icon-transform: scale(.82) rotate(-8deg); }
+  65% { -gtk-icon-transform: scale(1.2) rotate(3deg); }
+  100% { -gtk-icon-transform: scale(1); }
+}
+.popup.motion .nav-tab.current image { animation: menu-select 360ms ease-out 1; }
+.popup.still, .popup.still * { transition: none; animation: none; -gtk-icon-transform: none; }
+
+.popup button:focus { box-shadow: inset 0 0 0 2px $outline_variant; }

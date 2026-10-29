@@ -1,0 +1,82 @@
+/* Same semantic palette, floating surface and typography as Waybar. */
+@define-color primary @primary;
+@define-color on_primary @on_primary;
+@define-color primary_container @primary_container;
+@define-color on_primary_container @on_primary_container;
+@define-color secondary @secondary;
+@define-color tertiary @tertiary;
+@define-color tertiary_container @tertiary_container;
+@define-color surface @surface;
+@define-color surface_container @surface_container;
+@define-color surface_container_high @surface_container_high;
+@define-color surface_container_highest @surface_container_highest;
+@define-color on_surface @on_surface;
+@define-color on_surface_variant @on_surface_variant;
+@define-color outline_variant @outline_variant;
+@define-color shadow @shadow;
+@define-color error @error;
+
+#desktop-menu { background: transparent; color: @on_surface; }
+#desktop-menu * { font-family: "Inter", "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 13px; }
+#desktop-menu .backdrop { background: transparent; }
+#desktop-menu .panel {
+  background: alpha(@surface_container, 0.94);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 6px 18px alpha(@shadow, 0.35);
+}
+#desktop-menu .title { font-size: 17px; font-weight: 600; color: @secondary; }
+#desktop-menu .hero { padding: 8px 10px 14px; }
+#desktop-menu .clock { font-size: 56px; font-weight: 300; letter-spacing: -1px; color: @primary; }
+#desktop-menu .muted { color: @on_surface_variant; font-size: 12px; }
+#desktop-menu .status { color: @secondary; font-size: 12px; }
+#desktop-menu .section { font-weight: 600; font-size: 15px; }
+#desktop-menu button {
+  background: transparent;
+  background-image: none;
+  color: @on_surface;
+  border: none;
+  border-radius: 13px;
+  padding: 10px 12px;
+  box-shadow: none;
+  text-shadow: none;
+  transition: background-color 160ms ease-out;
+}
+#desktop-menu button:hover { background: alpha(@primary, 0.12); }
+#desktop-menu button:focus { outline: 2px solid alpha(@primary, 0.80); outline-offset: -2px; }
+#desktop-menu button:disabled { opacity: 0.45; }
+#desktop-menu .quiet { color: @on_surface_variant; padding: 8px; }
+#desktop-menu stackswitcher { background: alpha(@surface_container_highest, 0.55); border-radius: 13px; padding: 3px; }
+#desktop-menu stackswitcher button { padding: 7px 18px; border-radius: 10px; color: @secondary; }
+#desktop-menu stackswitcher button:checked { background: @primary; color: @on_primary; }
+#desktop-menu .shortcut { padding: 14px 10px; }
+#desktop-menu .primary image { color: @primary; }
+#desktop-menu .secondary image { color: @secondary; }
+#desktop-menu .tertiary image { color: @tertiary; }
+#desktop-menu .app { min-width: 76px; min-height: 88px; }
+#desktop-menu flowboxchild { padding: 0; border-radius: 13px; background: transparent; }
+#desktop-menu flowboxchild:selected { background: alpha(@primary, 0.10); }
+#desktop-menu .music { background: alpha(@tertiary_container, 0.20); border-radius: 16px; padding: 16px; }
+#desktop-menu .music .section { color: @tertiary; }
+#desktop-menu .music button { padding: 8px 16px; color: @tertiary; }
+#desktop-menu .music button:hover { background: alpha(@tertiary, 0.12); }
+#desktop-menu entry {
+  background: alpha(@surface_container_highest, 0.60);
+  color: @on_surface;
+  border: none;
+  border-radius: 13px;
+  padding: 11px 14px;
+  caret-color: @primary;
+  box-shadow: none;
+}
+#desktop-menu entry:focus { box-shadow: inset 0 0 0 2px alpha(@primary, 0.8); }
+#desktop-menu entry selection { background: @primary; color: @on_primary; }
+#desktop-menu scrollbar { background: transparent; }
+#desktop-menu scrollbar slider { background: alpha(@secondary, 0.35); min-width: 5px; border-radius: 8px; }
+#desktop-menu .error { color: @error; }
+
+/* Energy-mode motion policy. */
+#desktop-menu.power-performance .panel, #desktop-menu.power-performance .panel * { animation: none; transition: none; }
+#desktop-menu.power-balanced .panel, #desktop-menu.power-balanced .panel * { transition-duration: 80ms; }
+
+#desktop-menu.power-working .panel, #desktop-menu.power-working .panel * { animation: none; transition: none; }

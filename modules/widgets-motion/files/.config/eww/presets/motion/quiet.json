@@ -1,0 +1,23 @@
+{
+  "anim_in": "none",
+  "anim_out": "none",
+  "size_mode": "stable",
+  "duration_in": 240,
+  "duration_out": 180,
+  "when": "never",
+  "workspace_delay": 150,
+  "delay_in": 60,
+  "max_parallel": 6,
+  "fps": 12,
+  "palette_animation": false,
+  "reload_in": true,
+  "reload_out": true,
+  "workspace_in": true,
+  "workspace_out": false,
+  "stagger": 24,
+  "jitter": 0,
+  "order": "left_to_right",
+  "stagger_in": true,
+  "stagger_out": true,
+  "type": "none"
+}

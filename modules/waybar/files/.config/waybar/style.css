@@ -1,0 +1,424 @@
+/* Waybar — macOS-style bottom dock in three floating islands.
+   Colors come from matugen (colors.css). Every motion uses one soft ease-out curve. */
+@import "colors.css";
+@import "islands.css";
+
+* {
+  font-family: "Inter", "JetBrainsMono Nerd Font Propo", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+}
+
+/* The bar itself is invisible: only the islands are drawn */
+window#waybar {
+  background: transparent;
+  color: @on_surface;
+}
+
+/* Reserve 8px inside the exclusive bar surface, above its 50px islands.
+   An unanchored top margin on a bottom bar does not reserve this gap. */
+window#waybar > box {
+  padding-top: 8px;
+}
+
+/* SIGUSR1 hide: waybar sets the window opacity to 0 at once, so hiding cannot
+   animate. While hidden the islands rest at opacity 0; on show the class is
+   removed and their 500ms transition fades them back in. */
+window#waybar.hidden .modules-left,
+window#waybar.hidden .modules-center,
+window#waybar.hidden .modules-right {
+  opacity: 0;
+}
+
+tooltip {
+  background: alpha(@surface_container_high, 0.95);
+  border: 1px solid alpha(@outline_variant, 0.6);
+  border-radius: 14px;
+}
+
+tooltip label {
+  color: @on_surface;
+  padding: 4px 8px;
+}
+
+/* ---------- Islands ---------- */
+.modules-left, .modules-right, #taskbar { padding: 0 6px; }
+
+.modules-left   { animation: none; }
+.modules-center { animation: none; }
+.modules-right  { animation: none; }
+
+/* ---------- Dock (center): app icons ---------- */
+/* Native taskbar .empty follows visible apps, including output moves. */
+#taskbar {
+  padding: 0 8px;
+}
+#taskbar.empty {
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-width: 0;
+  box-shadow: none;
+}
+
+#taskbar button {
+  padding: 4px 7px;
+  margin: 3px 1px;
+  border-radius: 14px;
+  background-color: transparent;
+  background-image: none;
+  -gtk-icon-transform: scale(1);
+  transition: none;
+}
+
+/* Hover keeps the icon within its fixed allocation. */
+#taskbar button:hover {
+  background-color: transparent;
+  -gtk-icon-transform: none;
+  padding: 4px 7px;
+}
+
+/* Active window uses a contained fill, without a clipped indicator. */
+#taskbar button.active {
+  background-color: alpha(@primary, 0.10);
+  background-image: none;
+}
+
+#taskbar button.minimized {
+  opacity: 0.45;
+}
+
+/* ---------- Left island ---------- */
+#custom-launcher {
+  font-family: "JetBrainsMono Nerd Font Propo";
+  font-size: 19px;
+  min-width: 26px;
+  color: @primary;
+  padding: 0 12px 0 10px;
+  margin: 7px 2px;
+  border-radius: 14px;
+  transition: none;
+}
+
+#custom-launcher:hover {
+  background-color: alpha(@primary, 0.15);
+}
+
+#workspaces {
+  margin: 8px 2px;
+  padding: 0 3px;
+  background: alpha(@surface_container_highest, 0.55);
+  border-radius: 13px;
+}
+
+#workspaces button {
+  font-family: "JetBrainsMono Nerd Font Propo";
+  font-size: 12px;
+  font-weight: 700;
+  color: @outline;
+  padding: 0 8px;
+  margin: 3px 1px;
+  border-radius: 10px;
+  background: transparent;
+  transition: none;
+}
+
+#workspaces button:hover {
+  color: @on_surface;
+  background: alpha(@primary, 0.15);
+}
+
+#workspaces button.focused,
+#workspaces button.active {
+  color: @on_primary;
+  background: @primary;
+  padding: 0 8px;
+}
+
+#workspaces button.urgent {
+  color: @on_error;
+  background: @error;
+}
+
+#custom-workspace-base {
+  font-family: "JetBrainsMono Nerd Font Propo";
+  font-size: 16px;
+  color: @primary;
+  padding: 0 8px 0 10px;
+  margin: 3px 1px;
+  border-radius: 10px;
+}
+
+#hardware {
+  background: alpha(@surface_container_highest, 0.42);
+  border: 1px solid alpha(@outline_variant, 0.32);
+  border-radius: 17px;
+  margin: 8px 3px;
+  padding: 0 3px;
+}
+
+#custom-hardware-toggle {
+  font-family: "JetBrainsMono Nerd Font Propo";
+  font-size: 16px;
+  color: @primary;
+  padding: 0 8px;
+  margin: 8px 1px;
+  border-radius: 12px;
+}
+
+#custom-hardware-toggle:hover {
+  background: alpha(@primary, 0.14);
+}
+
+.hw-child {
+  color: @on_surface_variant;
+}
+
+/* ---------- Right island: chips ---------- */
+#clock,
+#custom-music-open,
+#custom-music-prev,
+#custom-music-play,
+#custom-music-next,
+#tray,
+#cpu,
+#memory,
+#temperature,
+#disk,
+#custom-updates,
+#idle_inhibitor,
+#power-profiles-daemon,
+#backlight,
+#wireplumber,
+#bluetooth,
+#network,
+#battery,
+#custom-notification,
+#custom-power {
+  padding: 0 9px;
+  margin: 8px 1px;
+  border-radius: 13px;
+  color: @on_surface;
+  background: transparent;
+  transition: none;
+}
+
+#custom-music-open:hover,
+#custom-music-prev:hover,
+#custom-music-play:hover,
+#custom-music-next:hover,
+#cpu:hover,
+#memory:hover,
+#temperature:hover,
+#disk:hover,
+#custom-updates:hover,
+#idle_inhibitor:hover,
+#power-profiles-daemon:hover,
+#backlight:hover,
+#wireplumber:hover,
+#bluetooth:hover,
+#network:hover,
+#battery:hover,
+#custom-notification:hover {
+  background: alpha(@primary, 0.14);
+}
+
+#idle_inhibitor,
+#power-profiles-daemon,
+#bluetooth,
+#custom-notification,
+#custom-power,
+#cpu,
+#memory,
+#temperature,
+#disk,
+#custom-updates {
+  font-family: "JetBrainsMono Nerd Font Propo", "Inter";
+}
+
+#idle_inhibitor,
+#power-profiles-daemon,
+#custom-notification {
+  font-size: 15px;
+}
+
+#clock {
+  font-weight: 700;
+  padding: 0 13px;
+  color: @on_primary_container;
+  background: @primary_container;
+}
+
+/* Compact music buttons; hidden (empty) while the raccon-music card is open. */
+#custom-music-open,
+#custom-music-prev,
+#custom-music-play,
+#custom-music-next {
+  font-family: "JetBrainsMono Nerd Font Propo", "Inter";
+  font-size: 15px;
+  padding: 0 6px;
+  color: @on_surface_variant;
+}
+
+#custom-music-open.playing,
+#custom-music-play.playing {
+  color: @primary;
+}
+
+#temperature.critical {
+  color: @error;
+}
+
+#custom-updates {
+  color: @tertiary;
+}
+
+#idle_inhibitor.activated {
+  color: @on_tertiary_container;
+  background: alpha(@tertiary_container, 0.8);
+}
+
+#power-profiles-daemon.performance {
+  color: @error;
+}
+
+#power-profiles-daemon.power-saver {
+  color: @tertiary;
+}
+
+#wireplumber.muted,
+#network.disconnected,
+#bluetooth.off,
+#bluetooth.disabled {
+  color: @outline;
+}
+
+#bluetooth.connected,
+#battery.charging,
+#battery.plugged,
+#custom-notification.notification,
+#custom-notification.dnd-notification {
+  color: @primary;
+}
+
+#battery.warning:not(.charging) {
+  color: @on_tertiary_container;
+  background: alpha(@tertiary_container, 0.7);
+}
+
+#battery.critical:not(.charging) {
+  color: @on_error;
+  background: @error;
+  animation: soft-blink 1.6s ease-in-out infinite alternate;
+}
+
+#custom-power {
+  font-size: 14px;
+  color: @on_error_container;
+  background: alpha(@error_container, 0.6);
+  margin-right: 2px;
+}
+
+#custom-power:hover {
+  background: @error_container;
+}
+
+#tray > .passive {
+  -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+  -gtk-icon-effect: highlight;
+}
+
+/* Islands fade in softly when the bar starts */
+@keyframes dock-rise {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes soft-blink {
+  from { opacity: 1; }
+  to   { opacity: 0.6; }
+}
+
+/* Custom workspace buttons (custom/ws1..ws10, see wf-ws-watch): same look as #workspaces button */
+#custom-ws1, #custom-ws2, #custom-ws3, #custom-ws4, #custom-ws5, #custom-ws6, #custom-ws7, #custom-ws8, #custom-ws9, #custom-ws10 {
+  font-family: "JetBrainsMono Nerd Font Propo";
+  font-size: 12px;
+  font-weight: 700;
+  color: @outline;
+  padding: 0 8px;
+  margin: 3px 1px;
+  border-radius: 10px;
+  background: transparent;
+  transition: none;
+}
+#custom-ws1:hover, #custom-ws2:hover, #custom-ws3:hover, #custom-ws4:hover, #custom-ws5:hover, #custom-ws6:hover, #custom-ws7:hover, #custom-ws8:hover, #custom-ws9:hover, #custom-ws10:hover {
+  color: @on_surface;
+  background: alpha(@primary, 0.15);
+}
+#custom-ws1.occupied, #custom-ws2.occupied, #custom-ws3.occupied, #custom-ws4.occupied, #custom-ws5.occupied, #custom-ws6.occupied, #custom-ws7.occupied, #custom-ws8.occupied, #custom-ws9.occupied, #custom-ws10.occupied {
+  color: @on_surface;
+}
+#custom-ws1.active, #custom-ws2.active, #custom-ws3.active, #custom-ws4.active, #custom-ws5.active, #custom-ws6.active, #custom-ws7.active, #custom-ws8.active, #custom-ws9.active, #custom-ws10.active {
+  color: @on_primary;
+  background: @primary;
+  padding: 0 8px;
+}
+
+/* A short click does nothing; a completed 2s hold powers off. */
+#custom-power.holding {
+  color: @error;
+  background-color: alpha(@error, 0.10);
+}
+#custom-power.armed {
+  color: @surface;
+  background-color: @error;
+}
+
+#custom-desktop-mode { padding: 0 11px; margin: 8px 1px; border-radius: 13px; font-weight: 600; }
+#custom-desktop-mode:hover { background: alpha(@primary, 0.14); }
+
+/* Runtime mode overrides follow the base rules to preserve motion policy. */
+@import "desktop-state.css";
+
+/* The center container never paints an empty island, even during mode reloads.
+   Its visible taskbar owns the surface instead. */
+window#waybar .modules-center {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+}
+window#waybar #taskbar.empty {
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+}
+
+/* Native Waybar classes keep mode colors independent from battery charge.
+   Auto has its own icon/color even when it currently applies Total. */
+window#waybar #custom-desktop-mode.performance { color: @tertiary; }
+window#waybar #custom-desktop-mode.balanced { color: @secondary; }
+window#waybar #custom-desktop-mode.complete { color: @primary; }
+window#waybar #custom-desktop-mode.auto { color: @on_surface_variant; }
+/* Battery warnings take priority over mode color. */
+window#waybar #custom-desktop-mode.warning { color: @tertiary; }
+window#waybar #custom-desktop-mode.critical { color: @error; }
+window#waybar #custom-desktop-mode.applying {
+  background-color: alpha(@primary, 0.16);
+  transition: background-color 180ms ease, color 180ms ease;
+  animation: mode-pulse 700ms ease-in-out infinite alternate;
+}
+
+@keyframes mode-pulse {
+  from { opacity: 0.68; }
+  to { opacity: 1; }
+}
+
+@import "@RDOT_HOME@/.config/desktop-style/current/waybar.css";

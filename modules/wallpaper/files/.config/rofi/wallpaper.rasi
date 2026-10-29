@@ -1,0 +1,73 @@
+/* Wallpaper picker: a clean grid of thumbnails, styled like the waybar dock islands.
+   Colors come from matugen (colors.rasi). */
+@import "colors.rasi"
+
+* {
+    background-color: transparent;
+    text-color:       @fg;
+    font:             "Inter 11";
+}
+
+window {
+    width:            1180px;
+    location:         center;
+    anchor:           center;
+    border:           1px;
+    border-color:     @outline;
+    border-radius:    20px;
+    background-color: @bg;
+    padding:          20px;
+}
+
+mainbox {
+    children: [ listview ];
+}
+
+/* Hidden search: typing still filters by file name */
+inputbar {
+    enabled: false;
+}
+
+listview {
+    columns:       4;
+    lines:         3;
+    spacing:       14px;
+    fixed-height:  true;
+    fixed-columns: true;
+    cycle:         true;
+    scrollbar:     false;
+    flow:          horizontal;
+}
+
+element {
+    orientation:      vertical;
+    padding:          5px;
+    border-radius:    16px;
+    border:           2px;
+    border-color:     transparent;
+    background-color: transparent;
+    children:         [ element-icon ];
+}
+
+element normal.normal,
+element alternate.normal {
+    background-color: transparent;
+}
+
+element selected.normal {
+    border:           3px;
+    border-color:     @accent;
+    background-color: @accent-soft;
+}
+
+element-icon {
+    size:             250px;
+    border-radius:    12px;
+    horizontal-align: 0.5;
+}
+
+element-text {
+    enabled: false;
+}
+
+@import "@RDOT_HOME@/.config/desktop-style/current/rofi.rasi"

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Choose the matugen color scheme style and re-theme the desktop from the
+# current wallpaper.  usage: wallpaper-scheme [scheme-name]   (no arg = fuzzel menu)
+set -euo pipefail
+
+scheme_file="$HOME/.config/matugen/scheme"
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/current-wallpaper"
+
+schemes="scheme-monochrome   — black & white, elegant
+scheme-neutral      — soft greys with a hint of color
+scheme-expressive   — bold, shifted hues
+scheme-tonal-spot   — Material default
+scheme-content      — faithful to the wallpaper
+scheme-fidelity     — faithful, richer accents
+scheme-vibrant      — saturated
+scheme-rainbow      — colorful accents
+scheme-fruit-salad  — playful hues"
+
+choice="${1:-}"
+if [[ -z "$choice" ]]; then
+  current="$(cat -- "$scheme_file" 2>/dev/null || echo scheme-tonal-spot)"
+  choice="$(printf '%s\n' "$schemes" \
+    | fuzzel --dmenu --prompt "colors ($current)  " --width 52 --lines 9)" || exit 0
+  choice="${choice%% *}"
+fi
+[[ "$choice" == scheme-* ]] || { echo "wallpaper-scheme: unknown scheme '$choice'" >&2; exit 1; }
+
+mkdir -p -- "$(dirname -- "$scheme_file")"
+printf '%s\n' "$choice" > "$scheme_file"
+
+wallpaper="$(cat -- "$cache" 2>/dev/null || true)"
+[[ -n "$wallpaper" && -f "$wallpaper" ]] || exit 0
+exec "$HOME/.local/bin/wallpaper-theme" "$wallpaper"

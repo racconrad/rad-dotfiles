@@ -1,0 +1,35 @@
+(deflisten agenda :initial '{"day":1,"month":1,"year":2026,"date":"","events":[],"upcoming":[],"tasks":[],"error":""}'
+  "python3 $HOME/.local/lib/raccon_menu/calendar_data.py watch")
+
+(defwidget menu-calendar []
+  (box :class "calendar-panel" :orientation "v" :space-evenly false :spacing 10 :vexpand true
+    (box :space-evenly false :spacing 8
+      (label :class "side-title" :xalign 0 :hexpand true :text "Calendar")
+      (button :tooltip "Go to today" :onclick "python3 $HOME/.local/lib/raccon_menu/calendar_data.py today" :timeout "3s" (menu-icon :name "go-home-symbolic")))
+    (calendar :class "agenda-calendar" :day {agenda.day} :month {agenda.month} :year {agenda.year}
+      :show-heading true :show-day-names true :show-week-numbers false
+      :onclick "python3 $HOME/.local/lib/raccon_menu/calendar_data.py select {0} {1} {2}" :timeout "3s")
+    (label :class "muted" :xalign 0 :text {agenda.date})
+    (box :space-evenly false :spacing 6
+      (input :class "calendar-entry" :hexpand true :tooltip "Event for selected day · Enter to add")
+      (button :class "calendar-add" :tooltip "Add event" (menu-icon :name "list-add-symbolic")))
+    (label :class "error" :visible {agenda.error != ''} :text {agenda.error} :wrap true :limit-width 27)
+    (scroll :class "agenda-scroll" :vexpand true :height 120 :hscroll false :vscroll true
+      (box :orientation "v" :space-evenly false :spacing 8
+        (label :class "muted" :xalign 0 :visible {arraylength(agenda.events) == 0} :text "No events for this day.")
+        (for item in {agenda.events}
+          (box :class "agenda-event" :space-evenly false :spacing 6
+            (label :text {item.title} :xalign 0 :hexpand true :wrap true :limit-width 23)
+            (button :tooltip "Remove event" :onclick "python3 $HOME/.local/lib/raccon_menu/calendar_data.py remove ${item.token}" :timeout "3s"
+              (menu-icon :name "list-remove-symbolic"))))
+        (label :class "muted" :xalign 0 :visible {arraylength(agenda.upcoming) > 0} :text "Upcoming")
+        (for item in {agenda.upcoming}
+          (box :orientation "v" :space-evenly false :spacing 3
+            (label :class "muted" :xalign 0 :text {item.date})
+            (label :xalign 0 :wrap true :limit-width 28 :text {item.title})))
+        (label :class "muted" :xalign 0 :visible {arraylength(agenda.tasks) > 0} :text "Today’s tasks")
+        (for task in {agenda.tasks}
+          (button :class "agenda-task" :onclick "python3 $HOME/.local/lib/raccon_menu/calendar_data.py task ${task.token}" :timeout "8s"
+            (box :space-evenly false :spacing 8
+              (menu-icon :name {task.done ? 'checkbox-checked-symbolic' : 'checkbox-symbolic'})
+              (label :text {task.title} :xalign 0 :hexpand true :wrap true :limit-width 23))))))))

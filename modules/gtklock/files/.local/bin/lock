@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Lock the session with gtklock (powerbar: suspend/reboot/poweroff).
+# Config + matugen-themed CSS live in ~/.config/gtklock/.
+set -euo pipefail
+
+# Avoid stacking multiple lockers (swayidle + manual + power key).
+if pgrep -x gtklock >/dev/null 2>&1; then
+  exit 0
+fi
+
+exec gtklock -d

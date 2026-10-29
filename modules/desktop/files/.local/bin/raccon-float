@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+# Large floating widgets (own Eww instance):
+#   raccon-float wallpaper|session   toggle the card; it unfolds, then its body flows in
+#   raccon-float close                fold and close
+#   raccon-float set all|images|videos N  apply wallpaper N of that section (tiles call this)
+#   raccon-float run ACTION           session tile: first click arms, second click runs
+set -euo pipefail
+cfg="$HOME/.config/raccon-float"
+theme="$HOME/.config/raccon-menu"
+lib="$HOME/.local/lib/raccon_menu"
+stamp="${XDG_RUNTIME_DIR:-/tmp}/raccon-float.theme"
+e() { eww -c "$cfg" "$@"; }
+
+sync_theme() {
+# Shape tokens of the active desktop style, rewritten only when they change (Eww reloads on writes here).
+python3 - "$HOME/.config/desktop-style/current/tokens.json" "$cfg/_tokens.scss" <<'PY'
+import json, sys
+try:
+    t = json.load(open(sys.argv[1]))
+except (OSError, ValueError):
+    t = {}
+num = lambda key, default: t.get(key) if isinstance(t.get(key), (int, float)) else default
+font = str(t.get('font') or 'Inter').replace('"', '')
+text = (f'$radius: {num("radius", 20)}px;\n$control_radius: {num("control_radius", 12)}px;\n'
+        f'$border: {num("border", 0)}px;\n$opacity: {num("opacity", 1)};\n$font: "{font}";\n'
+        f'$panel_padding: {num("panel_padding", 16)}px;\n$control_padding: {num("control_padding", 8)}px;\n')
+try:
+    same = open(sys.argv[2]).read() == text
+except OSError:
+    same = False
+if not same:
+    open(sys.argv[2], 'w').write(text)
+PY
+# Eww only watches its own folder; reload when the shared theme files changed.
+if [[ ! -e $stamp || $theme/_palette.scss -nt $stamp || $theme/_desktop-style.scss -nt $stamp ]]; then
+  if e ping >/dev/null 2>&1; then e reload && touch "$stamp"; fi
+fi
+}
+
+close() {
+  local open
+  open=$(e active-windows 2>/dev/null | cut -d: -f1) || true
+  [[ -n $open ]] || return 0
+  # Fade the complete card first; collapsing the body while visible made the
+  # centered wallpaper window shrink/jump toward its header on close.
+  e update shown=false
+  if [[ $open == wallpaper ]]; then sleep 0.20; else sleep 0.32; fi
+  # shellcheck disable=SC2086 # one window id per word
+  e close $open
+  e update body=false armed=""
+  python3 "$lib/walls.py" preview-stop
+}
+
+case ${1:-} in
+  refresh)
+    sync_theme
+    if e ping >/dev/null 2>&1; then e reload; fi
+    exit ;;
+  close) close; exit ;;
+  disarm) e update armed=""; exit ;;
+  preview-stop) python3 "$lib/walls.py" preview-stop "${2:-}"; exit ;;
+  filter)
+    [[ ${2:-} =~ ^(all|images|videos)$ ]] || exit 2
+    python3 "$lib/walls.py" preview-stop
+    e update walls="$(python3 "$lib/walls.py" list "$2")"
+    exit ;;
+  preview|preview-hover)
+    [[ ${2:-} =~ ^(all|images|videos)$ && ${3:-} =~ ^[0-9]+$ ]] || exit 2
+    python3 "$lib/walls.py" "$1" "$2" "$3"
+    exit ;;
+  page)
+    [[ ${2:-} =~ ^(all|images|videos)$ && ${3:-} =~ ^[0-9]+$ ]] || exit 2
+    e update walls="$(python3 "$lib/walls.py" page "$2" "$3")"
+    exit ;;
+  set)
+    [[ ${2:-} =~ ^(all|images|videos)$ && ${3:-} =~ ^[0-9]+$ ]] || { echo "raccon-float: bad wallpaper" >&2; exit 2; }
+    python3 "$lib/walls.py" set "$2" "$3"
+    exit ;;
+  run)
+    action=${2:-}
+    [[ $action =~ ^(lock|suspend|logout|reboot|poweroff)$ ]] || { echo "raccon-float: bad action" >&2; exit 2; }
+    if [[ $action != lock && $(e get armed) != "$action" ]]; then
+      e update armed="$action"; exit
+    fi
+    close
+    case $action in
+      lock) exec "$HOME/.local/bin/lock" ;;
+      logout)
+        [[ ${XDG_SESSION_ID:-} =~ ^[A-Za-z0-9_-]+$ ]] || { echo "raccon-float: unknown session" >&2; exit 1; }
+        exec loginctl terminate-session "$XDG_SESSION_ID" ;;
+      *) exec systemctl "$action" ;;
+    esac ;;
+  wallpaper|session) name=$1 ;;
+  *) echo "usage: raccon-float wallpaper|session|close|set|run" >&2; exit 2 ;;
+esac
+
+if e active-windows 2>/dev/null | grep -q "^$name"; then close; exit; fi
+close  # only one card at a time
+module=$(python3 "$lib/keyboard_build.py")
+revision=$(stat -c %Y "$module")
+key_stamp="$HOME/.cache/raccon-float/keyboard.loaded"
+if [[ $(cat "$key_stamp" 2>/dev/null || true) != "$revision" ]]; then
+  e kill >/dev/null 2>&1 || true
+fi
+if ! e ping >/dev/null 2>&1; then
+  GTK_MODULES="$module" RACCON_FLOAT_KEYS=1 LANGUAGE=en_US:en LC_MESSAGES=en_US.UTF-8 eww -c "$cfg" daemon </dev/null &>/dev/null
+  e ping >/dev/null
+  printf '%s' "$revision" > "$key_stamp"
+  touch "$stamp"
+fi  # detached pipes: the daemon must not hold our stdout
+sync_theme
+style=$(grep -oP '^\s*"style"\s*:\s*"\K[\w-]+' "$HOME/.config/desktop-style/current/tokens.json" 2>/dev/null || echo default)
+if [[ $name == wallpaper ]]; then
+  python3 "$lib/walls.py" preview-stop
+  e update walls="$(python3 "$lib/walls.py")"
+else
+  e update who="$(printf '{"user":"%s","host":"%s","uptime":"%s"}' \
+    "$(getent passwd "$USER" | cut -d: -f5 | cut -d, -f1 | sed 's/["\\]//g' | grep . || echo "$USER")" \
+    "$(cat /etc/hostname 2>/dev/null || uname -n)" "$(LC_ALL=C uptime -p | sed 's/^up //')")"
+fi
+e update armed="" shown=false body=false
+e open "$name" --arg style="$style"
+sleep 0.05  # let the first frame map collapsed so the entrance is visible
+e update shown=true; sleep 0.12
+e update body=true

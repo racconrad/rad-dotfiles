@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Clipboard history with image previews (cliphist + rofi).
+#   Enter        copy the entry back to the clipboard
+#   Shift+Delete delete the entry
+#   Alt+Delete   wipe the whole history
+set -euo pipefail
+
+thumbs="${XDG_CACHE_HOME:-$HOME/.cache}/cliphist-thumbs"
+theme="$HOME/.config/rofi/clipboard.rasi"
+mkdir -p -- "$thumbs"
+
+if ! command -v rofi >/dev/null 2>&1; then
+  cliphist list | fuzzel --dmenu --prompt "clip  " | cliphist decode | wl-copy
+  exit 0
+fi
+
+while true; do
+  mapfile -t entries < <(cliphist list)
+  (( ${#entries[@]} )) || { notify-send -t 1200 "Clipboard" "History is empty" 2>/dev/null || true; exit 0; }
+
+  # Rows are streamed to rofi: bash strings cannot hold the NUL that marks the icon.
+  list_rows() {
+    local line id content meta ext dims thumb
+    for line in "${entries[@]}"; do
+      id="${line%%$'\t'*}"
+      content="${line#*$'\t'}"
+      if [[ "$content" =~ ^\[\[\ binary\ data\ (.*)\ \]\]$ ]]; then
+        meta="${BASH_REMATCH[1]}"                      # e.g. "54 KiB png 800x600"
+        ext="$(awk '{print $3}' <<<"$meta")"
+        dims="$(awk '{print $4}' <<<"$meta")"
+        thumb="$thumbs/$id.${ext:-png}"
+        [[ -s "$thumb" ]] || printf '%s\n' "$line" | cliphist decode > "$thumb" 2>/dev/null || true
+        printf '󰋩  Image  %s\0icon\x1f%s\n' "${dims:-}" "$thumb"
+      else
+        content="${content//$'\n'/ }"
+        printf '%s\n' "${content:0:120}"
+      fi
+    done
+  }
+
+  set +e
+  index="$(list_rows | rofi -dmenu -i -show-icons -format i -p "󰅍" \
+    -theme "$theme" \
+    -kb-delete-entry "Control+Alt+Shift+Delete" -kb-custom-1 "shift+Delete" -kb-custom-2 "alt+Delete" \
+    -mesg "Enter copy · Shift+Del delete · Alt+Del clear all")"
+  rc=$?
+  set -e
+
+  case $rc in
+    0)
+      [[ -n "$index" ]] || exit 0
+      printf '%s\n' "${entries[$index]}" | cliphist decode | wl-copy
+      exit 0
+      ;;
+    10)  # delete one entry, then show the list again
+      [[ -n "$index" ]] && printf '%s\n' "${entries[$index]}" | cliphist delete
+      ;;
+    11)  # wipe everything
+      cliphist wipe
+      rm -f -- "$thumbs"/*
+      exit 0
+      ;;
+    *) exit 0 ;;
+  esac
+done

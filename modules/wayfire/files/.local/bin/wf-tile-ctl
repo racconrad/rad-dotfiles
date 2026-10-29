@@ -1,0 +1,9 @@
+#!/bin/sh
+# Hotkeys use a tiny native sender; Python starts only for bootstrap/recovery.
+client="${XDG_CACHE_HOME:-$HOME/.cache}/wf-tile/client"
+if [ -x "$client" ]; then
+    "$client" "$@"
+    result=$?
+    [ "$result" -eq 75 ] || exit "$result"
+fi
+exec "$(dirname "$0")/wf-tile" "$@"

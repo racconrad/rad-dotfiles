@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "name": "Dashboard",
+  "desc": "Dashboard: clock, music, app chest, system and disks.",
+  "animation": {
+    "anim_in": "zoom",
+    "anim_out": "fade",
+    "duration_in": 280,
+    "duration_out": 220,
+    "when": "workspace",
+    "order": "left_to_right"
+  },
+  "widgets": [
+    {
+      "id": "reloj",
+      "window": "clock",
+      "show": true,
+      "anchor": "top-left",
+      "x": 60,
+      "y": 90,
+      "opts": {
+        "skin": "global",
+        "anim": "global",
+        "width": "240",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "musica",
+      "window": "music",
+      "show": true,
+      "anchor": "top-left",
+      "x": 60,
+      "y": 270,
+      "opts": {
+        "skin": "global",
+        "width": "420",
+        "always": "yes",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "cofre",
+      "window": "chest",
+      "show": true,
+      "anchor": "bottom-left",
+      "x": 60,
+      "y": 30,
+      "opts": {
+        "skin": "global",
+        "workspace": "Todos",
+        "launchers": "[]"
+      }
+    },
+    {
+      "id": "sistema",
+      "window": "system",
+      "show": true,
+      "anchor": "top-right",
+      "x": 60,
+      "y": 90,
+      "opts": {
+        "skin": "global",
+        "width": "360",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "discos",
+      "window": "disks",
+      "show": true,
+      "anchor": "top-right",
+      "x": 60,
+      "y": 280,
+      "opts": {
+        "skin": "global",
+        "width": "360",
+        "workspace": "Todos",
+        "mounts": "/"
+      }
+    }
+  ]
+}

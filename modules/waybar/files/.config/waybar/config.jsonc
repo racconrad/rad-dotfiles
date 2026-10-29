@@ -1,0 +1,397 @@
+{
+  "layer": "top",
+  "position": "bottom",
+  "height": 58,
+  "margin-top": 0,
+  "margin-left": 14,
+  "margin-right": 14,
+  "margin-bottom": 10,
+  "spacing": 4,
+  "reload_style_on_change": true,
+  "modules-left": [
+    "group/workspaces",
+    "custom/tiling"
+  ],
+  "modules-center": [
+    "wlr/taskbar"
+  ],
+  "modules-right": [
+    "group/quick-terminal",
+    "group/music",
+    "tray",
+    "group/hardware",
+    "custom/updates",
+    "idle_inhibitor",
+    "backlight",
+    "wireplumber",
+    "bluetooth",
+    "network",
+    "custom/desktop-mode",
+    "clock",
+    "custom/power"
+  ],
+  "group/quick-terminal": {
+    "orientation": "horizontal",
+    "modules": [
+      "custom/quick-terminal",
+      "custom/quick-terminal-close"
+    ]
+  },
+  "custom/quick-terminal": {
+    "exec": "~/.local/bin/raccon-term indicator",
+    "exec-if": "test -x ~/.local/bin/raccon-term",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 9,
+    "format": "{}",
+    "tooltip": true,
+    "on-click": "~/.local/bin/raccon-term toggle",
+    "on-click-middle": "~/.local/bin/raccon-term hide",
+    "on-click-right": "~/.local/bin/raccon-term close"
+  },
+  "custom/quick-terminal-hide": {
+    "exec": "~/.local/bin/raccon-term indicator hide",
+    "exec-if": "test -x ~/.local/bin/raccon-term",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 9,
+    "format": "{}",
+    "tooltip": true,
+    "on-click": "~/.local/bin/raccon-term hide"
+  },
+  "custom/quick-terminal-close": {
+    "exec": "~/.local/bin/raccon-term indicator close",
+    "exec-if": "test -x ~/.local/bin/raccon-term",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 9,
+    "format": "{}",
+    "tooltip": true,
+    "on-click": "~/.local/bin/raccon-term close"
+  },
+  "group/workspaces": {
+    "orientation": "horizontal",
+    "modules": [
+      "custom/workspace-base",
+      "custom/ws1",
+      "custom/ws2",
+      "custom/ws3",
+      "custom/ws4",
+      "custom/ws5",
+      "custom/ws6",
+      "custom/ws7",
+      "custom/ws8",
+      "custom/ws9",
+      "custom/ws10"
+    ]
+  },
+  "custom/tiling": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "~/.local/bin/wf-tile-mode status",
+    "on-click": "~/.local/bin/wf-tile-mode toggle",
+    "signal": 10,
+    "interval": 2,
+    "tooltip": true
+  },
+  "group/hardware": {
+    "orientation": "horizontal",
+    "drawer": {
+      "transition-duration": 250,
+      "children-class": "hw-child",
+      "click-to-reveal": true,
+      "transition-left-to-right": false
+    },
+    "modules": [
+      "custom/hardware-toggle",
+      "cpu",
+      "memory",
+      "temperature",
+      "disk#root",
+      "disk#home"
+    ]
+  },
+  "custom/hardware-toggle": {
+    "exec": "printf '󰒓'",
+    "interval": "once",
+    "format": "{}",
+    "tooltip": true,
+    "tooltip-format": "Hardware · click to show or hide"
+  },
+  "custom/ws1": {
+    "exec": "~/.local/bin/wf-ws-label 1",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "~/.local/bin/wf-ws goto 1"
+  },
+  "custom/workspace-base": {
+    "exec": "printf '󰍹'",
+    "interval": "once",
+    "format": "{}",
+    "tooltip": true,
+    "tooltip-format": "Workspaces"
+  },
+  "custom/ws2": {
+    "exec": "~/.local/bin/wf-ws-label 2",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "~/.local/bin/wf-ws goto 2"
+  },
+  "custom/ws3": {
+    "exec": "~/.local/bin/wf-ws-label 3",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "~/.local/bin/wf-ws goto 3"
+  },
+  "custom/ws4": {
+    "exec": "~/.local/bin/wf-ws-label 4",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "~/.local/bin/wf-ws goto 4"
+  },
+  "custom/ws5": {
+    "exec": "~/.local/bin/wf-ws-label 5",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "~/.local/bin/wf-ws goto 5"
+  },
+  "custom/ws6": {
+    "exec": "~/.local/bin/wf-ws-label 6",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "~/.local/bin/wf-ws goto 6"
+  },
+  "custom/ws7": {
+    "exec": "~/.local/bin/wf-ws-label 7",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "~/.local/bin/wf-ws goto 7"
+  },
+  "custom/ws8": {
+    "exec": "~/.local/bin/wf-ws-label 8",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "~/.local/bin/wf-ws goto 8"
+  },
+  "custom/ws9": {
+    "exec": "~/.local/bin/wf-ws-label 9",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "~/.local/bin/wf-ws goto 9"
+  },
+  "custom/ws10": {
+    "exec": "~/.local/bin/wf-ws-label 10",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 8,
+    "on-click": "~/.local/bin/wf-ws goto 10"
+  },
+  "wayfire/workspaces": {
+    "format": "{index}",
+    "disable-markup": true
+  },
+  "clock": {
+    "format": "{:%H:%M}",
+    "format-alt": "{:%a %d %b  %H:%M}",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>",
+    "calendar": {
+      "mode": "month",
+      "weeks-pos": "",
+      "on-scroll": 1,
+      "format": {
+        "months": "<b>{}</b>",
+        "days": "{}",
+        "weekdays": "<b>{}</b>",
+        "today": "<b><u>{}</u></b>"
+      }
+    },
+    "actions": {
+      "on-scroll-up": "shift_up",
+      "on-scroll-down": "shift_down"
+    },
+    "on-click": "~/.local/bin/desktop-panel calendar"
+  },
+  "group/music": {
+    "orientation": "horizontal",
+    "modules": [
+      "custom/music-open",
+      "custom/music-prev",
+      "custom/music-play",
+      "custom/music-next"
+    ]
+  },
+  "custom/music-open": {
+    "exec": "~/.local/bin/waybar-music open",
+    "return-type": "json",
+    "on-click": "~/.local/bin/raccon-music",
+    "on-click-right": "~/.local/bin/waybar-player"
+  },
+  "custom/music-prev": {
+    "exec": "~/.local/bin/waybar-music prev",
+    "return-type": "json",
+    "on-click": "playerctl previous"
+  },
+  "custom/music-play": {
+    "exec": "~/.local/bin/waybar-music play",
+    "return-type": "json",
+    "on-click": "playerctl play-pause"
+  },
+  "custom/music-next": {
+    "exec": "~/.local/bin/waybar-music next",
+    "return-type": "json",
+    "on-click": "playerctl next"
+  },
+  "tray": {
+    "icon-size": 16,
+    "spacing": 10
+  },
+  "wireplumber": {
+    "format": "{icon}  {volume}%",
+    "format-muted": "󰝟",
+    "format-icons": [
+      "󰕿",
+      "󰖀",
+      "󰕾"
+    ],
+    "on-click": "~/.local/bin/desktop-panel audio",
+    "on-click-right": "pavucontrol",
+    "on-scroll-up": "swayosd-client --output-volume raise",
+    "on-scroll-down": "swayosd-client --output-volume lower",
+    "max-volume": 150,
+    "on-click-middle": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+    "tooltip-format": "Volume: {volume}% · click: audio devices and settings"
+  },
+  "network": {
+    "format-wifi": "󰤨  {signalStrength}%",
+    "format-ethernet": "󰈀",
+    "format-disconnected": "󰤭",
+    "tooltip-format-wifi": "{essid} · {ipaddr}\nClick: Wi-Fi",
+    "tooltip-format-ethernet": "{ifname} · {ipaddr}",
+    "on-click": "~/.local/bin/desktop-panel connections",
+    "tooltip-format-disconnected": "Disconnected · click to view networks"
+  },
+  "cpu": {
+    "format": "󰻠 {usage}%",
+    "interval": 3,
+    "tooltip-format": "CPU · {usage}% · click: btop",
+    "on-click": "kitty -e btop"
+  },
+  "memory": {
+    "format": "󰍛 {percentage}%",
+    "interval": 5,
+    "tooltip-format": "RAM · {used:0.1f} / {total:0.1f} GiB"
+  },
+  "custom/power": {
+    "format": "⏻",
+    "tooltip": true,
+    "tooltip-format": "Session · lock, exit, reboot or power off",
+    "on-click": "~/.local/bin/raccon-float session"
+  },
+  "custom/launcher": {
+    "format": "Menu",
+    "tooltip": true,
+    "tooltip-format": "Raccon · Super to open\nRight click: pick wallpaper",
+    "on-click": "~/.local/bin/desktop-menu",
+    "on-click-right": "~/.local/bin/wallpaper-pick"
+  },
+  "temperature": {
+    "format": "󰔄 {temperatureC}°",
+    "critical-threshold": 85,
+    "interval": 5
+  },
+  "disk#root": {
+    "format": "󰋊 / {percentage_used}%",
+    "path": "/",
+    "interval": 60,
+    "tooltip-format": "/ · {used} used / {total}"
+  },
+  "disk#home": {
+    "format": "󰋜 {percentage_used}%",
+    "path": "@RDOT_HOME@",
+    "interval": 60,
+    "tooltip-format": "Home · {used} usados / {total}"
+  },
+  "custom/updates": {
+    "format": "󰚰 {}",
+    "return-type": "json",
+    "exec": "~/.local/bin/raccon-update check",
+    "interval": 7200,
+    "on-click": "kitty -e ~/.local/bin/raccon-update run",
+    "on-click-right": "kitty -e @RDOT_HOME@/projects/raccon-dots/rdot doctor",
+    "signal": 8
+  },
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "format-icons": {
+      "activated": "󰅶",
+      "deactivated": "󰾪"
+    },
+    "tooltip-format-activated": "Keep awake: ON",
+    "tooltip-format-deactivated": "Keep awake: OFF"
+  },
+  "backlight": {
+    "format": "{icon} {percent}%",
+    "format-icons": [
+      "󰃞",
+      "󰃟",
+      "󰃠"
+    ],
+    "on-scroll-up": "swayosd-client --brightness raise",
+    "on-scroll-down": "swayosd-client --brightness lower"
+  },
+  "bluetooth": {
+    "format": "󰂯",
+    "format-off": "",
+    "format-connected": "󰂱 {num_connections}",
+    "tooltip-format-connected": "{device_enumerate}",
+    "tooltip-format-enumerate-connected": "{device_alias} {device_battery_percentage}%",
+    "on-click": "~/.local/bin/desktop-panel bluetooth",
+    "format-disabled": "",
+    "format-no-controller": ""
+  },
+  "exclusive": true,
+  "wlr/taskbar": {
+    "ignore-list": [
+      "raccon-quick-terminal"
+    ],
+    "format": "{icon}",
+    "icon-size": 30,
+    "icon-theme": "Papirus-Dark",
+    "tooltip-format": "{title}",
+    "on-click": "activate",
+    "on-click-middle": "close",
+    "on-click-right": "minimize-raise",
+    "sort-by-app-id": true
+  },
+  "custom/desktop-mode": {
+    "exec": "~/.local/bin/desktop-power watch",
+    "return-type": "json",
+    "format": "{text}  {icon}",
+    "tooltip": true,
+    "on-click-right": "~/.local/bin/desktop-menu modes",
+    "exec-on-event": false,
+    "cursor": true,
+    "on-click": "~/.local/bin/desktop-menu modes",
+    "format-icons": {
+      "performance": "󰾆",
+      "balanced": "󰾅",
+      "complete": "󰓅",
+      "working": "󰲋",
+      "applying-0": "◴",
+      "applying-1": "◷",
+      "applying-2": "◶",
+      "applying-3": "◵",
+      "default": "",
+      "auto": "󰁪"
+    }
+  }
+}

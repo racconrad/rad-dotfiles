@@ -1,0 +1,67 @@
+# Desktop modes. "performance" means maximum battery saving here, not CPU turbo.
+[automation]
+poll_seconds = 5
+low_battery = 30           # Below this value: performance when unplugged.
+recovery_margin = 3        # Return to balanced at 33%, avoiding mode flapping.
+warning = 30
+critical = 15
+high = 80                  # Colour only; never notify at this threshold.
+notification_reset = 5
+
+# Keep animate loaded: unloading it during startup can leave rendering inhibited.
+# Zero animation_factor disables its matchers and durations instead.
+[profiles.performance]
+label = "Ahorro"
+bar_label = "Ahorro"
+description = "Sin animaciones ni widgets; efectos mínimos y fondos animados pausados."
+widgets = false
+animation_factor = 0.0
+ambient_effects = false
+animated_wallpaper = false
+cpu_profile = "power-saver"
+disable_plugins = ["extra-animations", "blur", "wobbly", "winshadows", "focus-change"]
+
+[profiles.balanced]
+label = "Equilibrado"
+bar_label = "Equilibrado"
+description = "Escritorio completo con transiciones breves, blur ligero y sin efectos continuos en widgets."
+widgets = true
+animation_factor = 0.45
+ambient_effects = false
+animated_wallpaper = true
+cpu_profile = "balanced"
+disable_plugins = []
+
+[profiles.complete]
+label = "Completo"
+bar_label = "Completo"
+description = "Todos tus widgets, animaciones y efectos originales."
+widgets = true
+animation_factor = 1.0
+ambient_effects = true
+animated_wallpaper = true
+# Full desktop effects do not require forcing CPU turbo. Change if desired.
+cpu_profile = "balanced"
+disable_plugins = []
+
+[profiles.working]
+label = "Trabajo"
+bar_label = "Trabajo"
+description = "Trabajo con agentes: sin bloqueo ni suspensión por inactividad, sin animaciones; energía balanceada."
+widgets = true
+animation_factor = 0.0
+ambient_effects = false
+animated_wallpaper = false
+cpu_profile = "balanced"
+disable_plugins = ["extra-animations", "wobbly", "focus-change"]
+
+[appearance]
+# Semantic wallpaper colours. Text labels remain available without colour vision.
+normal = "on_surface"
+high = "primary"
+warning = "tertiary"
+critical = "error"
+
+[wallpaper]
+# Only these user-owned processes are paused; only pauses made by us are resumed.
+processes = ["mpvpaper", "linux-wallpaperengine"]

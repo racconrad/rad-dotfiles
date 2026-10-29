@@ -1,0 +1,562 @@
+{
+  "defaults": [
+    "wayfire",
+    "waybar",
+    "desktop",
+    "power",
+    "themes",
+    "desktop-styles",
+    "wallpaper",
+    "shell",
+    "tools",
+    "nvim",
+    "audio",
+    "chat-theme",
+    "browser",
+    "filemanager"
+  ],
+  "choices": {
+    "terminal": {
+      "default": "kitty",
+      "options": [
+        "kitty",
+        "alacritty"
+      ]
+    },
+    "launcher": {
+      "default": "desktop-menu",
+      "options": [
+        "desktop-menu",
+        "fuzzel",
+        "rofi"
+      ]
+    },
+    "notifications": {
+      "default": "swaync",
+      "options": [
+        "swaync",
+        "mako"
+      ]
+    },
+    "lock": {
+      "default": "gtklock",
+      "options": [
+        "gtklock",
+        "swaylock"
+      ]
+    },
+    "shell": {
+      "default": "zsh",
+      "options": [
+        "zsh",
+        "fish"
+      ]
+    },
+    "browser": {
+      "default": "firefox",
+      "options": [
+        "firefox",
+        "chromium"
+      ]
+    },
+    "filemanager": {
+      "default": "dolphin",
+      "options": [
+        "dolphin",
+        "thunar"
+      ]
+    }
+  },
+  "modules": {
+    "base": {
+      "label": "Session environment and PATH",
+      "requires": [],
+      "packages": []
+    },
+    "wayfire": {
+      "label": "Wayfire window management, workspaces and effects",
+      "requires": [
+        "base",
+        "terminal",
+        "launcher",
+        "notifications",
+        "lock"
+      ],
+      "packages": [
+        "wayfire",
+        "wayfire-plugins-extra",
+        "gcc",
+        "python-gobject",
+        "python-cairo",
+        "gtk3",
+        "gtk-layer-shell",
+        "wf-shell",
+        "xorg-xwayland",
+        "xdg-desktop-portal-gtk",
+        "xdg-desktop-portal-wlr",
+        "polkit-kde-agent"
+      ],
+      "description": "Keyboard-driven tiling, workspaces, rounded decorations and compositor IPC."
+    },
+    "desktop": {
+      "label": "Raccoon app menu, panels, screenshots and clipboard",
+      "requires": [
+        "base",
+        "fuzzel",
+        "themes",
+        "wallpaper"
+      ],
+      "packages": [
+        "python-gobject",
+        "gtk3",
+        "gtk-layer-shell",
+        "wl-clipboard",
+        "cliphist",
+        "grim",
+        "slurp",
+        "swappy",
+        "rofi",
+        "swayosd",
+        "brightnessctl",
+        "playerctl",
+        "libnotify",
+        "pavucontrol",
+        "libpulse",
+        "networkmanager",
+        "bluez-utils",
+        "xdg-utils",
+        "btop",
+        "eww",
+        "gcc",
+        "pkgconf",
+        "ffmpeg",
+        "libjpeg-turbo"
+      ],
+      "description": "Eww Raccon Menu, deliberate PC mode and session controls, GTK audio/network/calendar panels, screenshots and clipboard."
+    },
+    "power": {
+      "label": "Battery-aware power and animation profiles",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "power-profiles-daemon",
+        "swayidle",
+        "python",
+        "libnotify"
+      ],
+      "description": "Switch desktop effects and CPU profile according to battery and charger."
+    },
+    "waybar": {
+      "label": "Waybar island dock and desktop controls",
+      "requires": [
+        "desktop",
+        "power"
+      ],
+      "packages": [
+        "waybar",
+        "pacman-contrib"
+      ],
+      "description": "The island dock with your raccoon, workspace buttons, media and power controls."
+    },
+    "themes": {
+      "label": "Material You, GTK / Qt themes, fonts and cursors",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "matugen",
+        "qt5ct",
+        "qt6ct",
+        "adw-gtk-theme",
+        "papirus-icon-theme",
+        "bibata-cursor-theme",
+        "inter-font",
+        "ttf-fira-sans",
+        "ttf-jetbrains-mono-nerd",
+        "noto-fonts-emoji"
+      ],
+      "description": "Material You templates, GTK/Qt colors, matching fonts, icons and cursors."
+    },
+    "wallpaper": {
+      "label": "Wallpaper picker, transitions and dynamic colors",
+      "requires": [
+        "themes",
+        "fuzzel"
+      ],
+      "packages": [
+        "awww",
+        "waypaper",
+        "rofi",
+        "ffmpeg",
+        "mpvpaper"
+      ],
+      "description": "Choose images or videos, restore them at login and regenerate the desktop palette."
+    },
+    "desktop-menu": {
+      "label": "Personal raccoon application menu",
+      "requires": [
+        "desktop"
+      ],
+      "packages": []
+    },
+    "fuzzel": {
+      "label": "Fuzzel application launcher",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "fuzzel"
+      ]
+    },
+    "rofi": {
+      "label": "Rofi application launcher",
+      "requires": [
+        "base",
+        "themes"
+      ],
+      "packages": [
+        "rofi"
+      ]
+    },
+    "kitty": {
+      "label": "Kitty terminal with dynamic colors and quick sidebar",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "kitty",
+        "python",
+        "ttf-jetbrains-mono-nerd"
+      ]
+    },
+    "alacritty": {
+      "label": "Alacritty terminal with Nord colors",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "alacritty"
+      ]
+    },
+    "swaync": {
+      "label": "SwayNC notification center",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "swaync"
+      ]
+    },
+    "mako": {
+      "label": "Lightweight Mako notifications",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "mako"
+      ]
+    },
+    "gtklock": {
+      "label": "Themed GTKLock screen locker",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "gtklock"
+      ]
+    },
+    "swaylock": {
+      "label": "Swaylock screen locker",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "swaylock"
+      ]
+    },
+    "zsh": {
+      "label": "Zsh, Starship, completion and plugins",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "zsh",
+        "starship",
+        "zoxide",
+        "fzf",
+        "fd",
+        "bat",
+        "eza",
+        "zsh-autosuggestions",
+        "zsh-syntax-highlighting",
+        "zsh-history-substring-search"
+      ]
+    },
+    "fish": {
+      "label": "Fish shell with Starship and zoxide",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "fish",
+        "starship",
+        "zoxide"
+      ]
+    },
+    "tools": {
+      "label": "Yazi, LazyGit, btop, Cava, Fastfetch and Plymouth video themes",
+      "requires": [
+        "base",
+        "git"
+      ],
+      "packages": [
+        "yazi",
+        "lazygit",
+        "btop",
+        "cava",
+        "fastfetch",
+        "git",
+        "ripgrep",
+        "fd",
+        "fzf",
+        "bat",
+        "eza",
+        "ffmpeg",
+        "plymouth"
+      ],
+      "description": "Your terminal toolkit: file navigation, Git UI, monitoring, visualizers and plymouth-from-video for boot animations from videos/GIFs."
+    },
+    "nvim": {
+      "label": "Neovim / LazyVim and Matugen colors",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "neovim",
+        "git",
+        "ripgrep",
+        "fd",
+        "unzip"
+      ],
+      "description": "LazyVim configuration and wallpaper-based colors. Plugin download is optional."
+    },
+    "audio": {
+      "label": "High-quality Bluetooth audio without headset switching",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "pipewire",
+        "pipewire-pulse",
+        "wireplumber"
+      ],
+      "description": "Keep Bluetooth audio in its quality profile while using the computer microphone."
+    },
+    "chat-theme": {
+      "label": "Personal Legcord CSS theme",
+      "requires": [
+        "base"
+      ],
+      "packages": [],
+      "description": "Apply your personal Legcord CSS theme."
+    },
+    "widgets": {
+      "label": "tinyWidgets runtime and personal defaults",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "eww",
+        "gtk3",
+        "gtk-layer-shell",
+        "python",
+        "python-gobject",
+        "python-cairo",
+        "inter-font",
+        "ttf-jetbrains-mono-nerd"
+      ]
+    },
+    "git": {
+      "label": "Git and Delta preferences",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "git",
+        "git-delta"
+      ]
+    },
+    "vscode": {
+      "label": "VS Code / Code OSS editor preferences",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "code"
+      ],
+      "description": "Your editor appearance and settings. Select extensions separately on App setup."
+    },
+    "firefox": {
+      "label": "Firefox web browser",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "firefox"
+      ]
+    },
+    "chromium": {
+      "label": "Chromium web browser",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "chromium"
+      ]
+    },
+    "dolphin": {
+      "label": "Dolphin file manager",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "dolphin"
+      ]
+    },
+    "thunar": {
+      "label": "Thunar file manager",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "thunar"
+      ]
+    },
+    "tinywidgets": {
+      "label": "tinyWidgets — your personal desktop companions",
+      "requires": [
+        "widgets"
+      ],
+      "packages": [],
+      "description": "Install the app when needed, then choose your layouts, themes and integrations."
+    },
+    "widgets-profiles": {
+      "label": "Your saved widget layouts",
+      "requires": [
+        "widgets"
+      ],
+      "packages": [],
+      "description": "Trabajo, Gaming, Dashboard, Cyberpunk, silly and your current Personal layout."
+    },
+    "widgets-themes": {
+      "label": "Personal themes and appearance",
+      "requires": [
+        "widgets"
+      ],
+      "packages": [],
+      "description": "Your clean / scan / transparent style, plus Quiet, Pixel and Terminal presets."
+    },
+    "widgets-motion": {
+      "label": "Your IN / OUT animation presets",
+      "requires": [
+        "widgets"
+      ],
+      "packages": [],
+      "description": "Personal 60 FPS, Balanced 24 FPS or Quiet transitions."
+    },
+    "widgets-palette": {
+      "label": "Wallpaper colors for widgets",
+      "requires": [
+        "widgets",
+        "themes"
+      ],
+      "packages": [],
+      "description": "Connect Matugen to the tinyWidgets palette without restarting windows."
+    },
+    "widgets-music": {
+      "label": "Music widgets and MPRIS controls",
+      "requires": [
+        "widgets"
+      ],
+      "packages": [
+        "playerctl"
+      ],
+      "description": "Read and control the active media player."
+    },
+    "widgets-github": {
+      "label": "GitHub activity and avatars",
+      "requires": [
+        "widgets"
+      ],
+      "packages": [
+        "github-cli",
+        "imagemagick"
+      ],
+      "description": "Show GitHub activity. Sign in separately with gh auth login."
+    },
+    "widgets-minecraft": {
+      "label": "Your animated Minecraft scene",
+      "requires": [
+        "widgets"
+      ],
+      "packages": [
+        "python-pillow"
+      ],
+      "description": "Enable the animated Pillow renderer; source assets stay in tinyWidgets."
+    },
+    "desktop-styles": {
+      "label": "Global desktop styles and Eww selector",
+      "requires": [
+        "wayfire",
+        "waybar",
+        "wallpaper",
+        "themes"
+      ],
+      "packages": [
+        "eww",
+        "python",
+        "python-gobject",
+        "gtk3",
+        "librsvg",
+        "fontconfig",
+        "adwaita-fonts",
+        "python-pillow"
+      ],
+      "description": "Monochrome, Terminal, Retro16, Glass, Modern, GNOME and Windows profiles; shares wallpaper colors and optionally integrates an installed tinyWidgets runtime."
+    }
+  },
+  "optional_packages": {
+    "jq": "JSON tools",
+    "curl": "HTTP command-line client",
+    "wget": "File downloads",
+    "rsync": "File synchronization",
+    "mpv": "Video and audio player",
+    "bluetuith": "Terminal Bluetooth manager"
+  },
+  "setup_actions": {
+    "vscode-extensions": {
+      "label": "Install personal VS Code extensions",
+      "module": "vscode",
+      "packages": []
+    },
+    "nvim-plugins": {
+      "label": "Download and synchronize Neovim plugins",
+      "module": "nvim",
+      "packages": []
+    },
+    "tinywidgets": {
+      "label": "Build and install tinyWidgets from its local source",
+      "module": "widgets",
+      "packages": [
+        "cargo",
+        "pkgconf",
+        "gcc",
+        "gtk3",
+        "gtk-layer-shell",
+        "python-gobject",
+        "python-cairo"
+      ]
+    }
+  }
+}

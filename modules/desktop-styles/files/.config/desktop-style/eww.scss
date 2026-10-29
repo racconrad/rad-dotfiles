@@ -1,0 +1,91 @@
+@import "@RDOT_HOME@/.config/desktop-style/palette";
+
+* { all: unset; font-family: "Inter", sans-serif; font-size: 13px; }
+window { background: transparent; color: $on_surface; }
+.style-selector { background: $surface; border: 1px solid $outline_variant; border-radius: 18px; padding: 26px; }
+.heading { font-size: 25px; font-weight: 600; letter-spacing: -.5px; }
+.subtitle, .caption { color: $on_surface_variant; }
+.close { padding: 10px; border-radius: 8px; }
+button { transition: background-color 100ms ease-out; }
+button:hover { background: $surface_container_high; }
+button:focus { box-shadow: inset 0 0 0 2px $primary; }
+button:disabled { opacity: .45; }
+.style-list { padding-right: 16px; border-right: 1px solid $outline_variant; }
+.style-option { padding: 11px 12px; border-radius: 8px; }
+.style-option.selected { background: $primary_container; color: $on_primary_container; }
+.option-name { font-size: 14px; font-weight: 600; }
+.option-status { font-size: 11px; color: $on_surface_variant; }
+.style-selector .style-option.frame-option { padding: 6px 2px; font-size: 11px; }
+.style-option.selected .option-status { color: $on_primary_container; }
+.preview-title { font-size: 19px; font-weight: 600; }
+.detail { font-size: 13px; }
+.caption { font-size: 11px; }
+.footer { padding-top: 14px; border-top: 1px solid $outline_variant; }
+.restore { padding: 11px 12px; border-radius: 8px; }
+.apply { padding: 12px 22px; background: $primary; color: $on_primary; border-radius: 8px; font-weight: 600; }
+.apply:hover { background: $on_primary_container; color: $primary_container; }
+.notice { font-size: 11px; color: $on_surface_variant; }
+
+@import "@RDOT_HOME@/.config/desktop-style/current/selector.scss";
+
+// Motion follows the native theme adapter, as in Raccon Menu.
+$spring: cubic-bezier(.2, .8, .2, 1);
+.style-selector.motion { transition: opacity 160ms ease-out; }
+.style-selector.motion button {
+  transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out;
+}
+.style-selector.motion .header, .style-selector.motion .preview-column,
+.style-selector.motion .footer, .style-selector.motion .theme-choice {
+  transition: opacity 220ms $spring, background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out;
+}
+.style-selector.motion .style-list.entering .theme-choice:nth-child(2) { transition-delay: 18ms; }
+.style-selector.motion .style-list.entering .theme-choice:nth-child(3) { transition-delay: 36ms; }
+.style-selector.motion .style-list.entering .theme-choice:nth-child(4) { transition-delay: 54ms; }
+.style-selector.motion .style-list.entering .theme-choice:nth-child(5) { transition-delay: 72ms; }
+.style-selector.motion .style-list.entering .theme-choice:nth-child(6) { transition-delay: 90ms; }
+.style-selector.motion .style-list.entering .theme-choice:nth-child(7) { transition-delay: 108ms; }
+.style-selector.motion .preview-column.entering { transition-delay: 40ms; }
+.style-selector.motion .footer.entering { transition-delay: 80ms; }
+.style-selector.motion .header.enter, .style-selector.motion .preview-column.enter,
+.style-selector.motion .footer.enter, .style-selector.motion .style-list.enter .theme-choice {
+  opacity: 0; transition: none;
+}
+.style-selector.motion .choice-icon image { transition: -gtk-icon-transform 220ms $spring; }
+.style-selector.motion .theme-choice:hover .choice-icon image,
+.style-selector.motion .theme-choice:focus .choice-icon image { -gtk-icon-transform: scale(1.18) rotate(-6deg); }
+.style-selector.motion .theme-choice:active .choice-icon image { -gtk-icon-transform: scale(.94); }
+.style-selector.motion button:active { opacity: .8; }
+.style-selector.motion.closing { opacity: 0; }
+.style-selector.compact-motion button, .style-selector.compact-motion .header,
+.style-selector.compact-motion .preview-column, .style-selector.compact-motion .footer,
+.style-selector.compact-motion .theme-choice { transition-duration: 140ms; }
+.style-selector.reduce-motion, .style-selector.reduce-motion *,
+.style-selector.still, .style-selector.still * { transition: none; animation: none; -gtk-icon-transform: none; }
+.style-selector.reduce-motion.closing, .style-selector.reduce-motion .enter,
+.style-selector.reduce-motion .style-list.enter .theme-choice { opacity: 1; }
+.style-selector .close { min-width: 16px; min-height: 16px; }
+.style-selector .style-option.frame-option { padding: 6px 2px; }
+.style-selector .apply:disabled { opacity: .6; }
+
+.style-selector .theme-choice { min-height: 36px; padding: 8px; }
+.style-selector .choice-icon { padding: 4px; }
+.style-selector .style-emblem { padding: 10px; border-radius: 10px; background: $primary_container; color: $on_primary_container; }
+.style-selector .close, .style-selector .restore, .style-selector .frame-toggle { min-width: 20px; min-height: 20px; padding: 10px; }
+.style-selector .apply { min-width: 36px; min-height: 24px; padding: 10px; }
+.style-selector .frame-option { min-height: 24px; padding: 8px; }
+.style-selector .style-option.selected image, .style-selector button.apply image,
+.style-selector button:hover image, .style-selector button:focus image { color: $on_primary; }
+.style-selector .frame-toggle.selected { background: $primary; color: $on_primary; }
+.style-selector .frame-toggle.selected image { color: $on_primary; }
+.style-selector .frame-picker { padding-top: 4px; }
+.style-selector .preview-stack { border-radius: 10px; }
+.style-selector.motion .apply.applying image { animation: style-applying 900ms linear infinite; }
+@keyframes style-applying { to { -gtk-icon-transform: rotate(360deg); } }
+.style-selector.still .apply image, .style-selector.reduce-motion .apply image { animation: none; }
+
+.style-selector.motion.reduce-motion .choice-icon image,
+.style-selector.motion.reduce-motion .theme-choice:hover .choice-icon image,
+.style-selector.motion.reduce-motion .theme-choice:focus .choice-icon image,
+.style-selector.motion.reduce-motion .theme-choice:active .choice-icon image {
+  transition: none; animation: none; -gtk-icon-transform: none;
+}

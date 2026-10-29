@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Set a wallpaper and re-theme the desktop.
+#   stills (jpg/png/webp/gif) -> awww with a smooth, randomly varied transition
+#   videos (mp4/webm/mkv/mov) -> mpvpaper through waypaper
+set -euo pipefail
+
+file="${1:-}"
+if [[ -z "$file" || ! -f "$file" ]]; then
+  echo "usage: wallpaper-set <image-or-video>" >&2
+  exit 1
+fi
+file="$(realpath -- "$file")"
+waypaper_ini="$HOME/.config/waypaper/config.ini"
+
+# Keep waypaper's state in sync so `waypaper --restore` brings back this wallpaper.
+remember() {
+  local backend="$1" escaped
+  [[ -f "$waypaper_ini" ]] || return 0
+  escaped="$(printf '%s' "$file" | sed 's/[&#\\]/\\&/g')"
+  sed -i -e "s#^wallpaper = .*#wallpaper = ${escaped}#" \
+         -e "s#^backend = .*#backend = ${backend}#" "$waypaper_ini"
+}
+
+case "${file,,}" in
+  *.mp4|*.webm|*.mkv|*.mov)
+    if command -v waypaper >/dev/null 2>&1; then
+      exec waypaper --wallpaper "$file" --backend mpvpaper   # post_command re-themes
+    fi
+    echo "wallpaper-set: waypaper/mpvpaper needed for video wallpapers" >&2
+    exit 1
+    ;;
+esac
+
+# Smooth ease-in-out curve shared by every transition.
+bezier=".65,0,.35,1"
+common=(--transition-fps 120 --transition-bezier "$bezier")
+
+case $((RANDOM % 3)) in
+  0) transition=(--transition-type grow --transition-pos "0.$((RANDOM % 80 + 10)),0.$((RANDOM % 80 + 10))"
+                 --transition-duration 1.8) ;;
+  1) transition=(--transition-type wave --transition-angle 30 --transition-wave 40,30
+                 --transition-duration 2.0) ;;
+  *) transition=(--transition-type wipe --transition-angle 135 --transition-duration 1.6) ;;
+esac
+
+# A running video wallpaper sits above awww: stop it first.
+power_mode="$(python3 - <<'PY'
+import json, os
+from pathlib import Path
+try:
+    root = Path(os.environ.get('XDG_STATE_HOME', str(Path.home()/'.local/state')))
+    print(json.loads((root/'desktop-power/status.json').read_text()).get('mode', 'complete'))
+except (OSError, ValueError, TypeError):
+    print('complete')
+PY
+)"
+case "$power_mode" in
+  performance) common=(--transition-fps 30); transition=(--transition-type none) ;;
+  balanced) common=(--transition-fps 30 --transition-bezier "$bezier"); transition=(--transition-type fade --transition-duration 0.3) ;;
+esac
+pkill -x mpvpaper 2>/dev/null || true
+pgrep -x awww-daemon >/dev/null || { setsid -f awww-daemon >/dev/null 2>&1; sleep 0.5; }
+
+awww img "$file" "${common[@]}" "${transition[@]}" || echo "wallpaper-set: awww failed" >&2
+remember awww
+
+exec "$HOME/.local/bin/wallpaper-theme" "$file"

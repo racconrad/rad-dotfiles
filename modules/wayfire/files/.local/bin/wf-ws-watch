@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""Workspace state for waybar's custom/ws1..ws10 buttons.
+
+Wayfire's built-in waybar module only knows one workspace set, so workspace 10
+(wset 2, see wf-ws) showed up as "1". This watcher follows Wayfire IPC, writes
+"current=N\noccupied=1 3 10" to $XDG_RUNTIME_DIR/wf-ws-state and pokes waybar
+with SIGRTMIN+8 so every custom/wsN module re-reads it (wf-ws-label N).
+"""
+import fcntl
+import json
+import os
+import socket
+import struct
+import subprocess
+import sys
+import time
+
+GRID_W = 3
+FLOAT_WSET = 2
+RUNTIME = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+STATE = os.path.join(RUNTIME, "wf-ws-state")
+EVENTS = ["wset-workspace-changed", "output-wset-changed", "view-mapped", "view-unmapped",
+          "view-workspace-changed", "view-wset-changed", "view-minimized"]
+
+
+def socket_path():
+    path = os.environ.get("WAYFIRE_SOCKET")
+    if path:
+        return path
+    socks = [f for f in os.listdir(RUNTIME) if f.startswith("wayfire-") and f.endswith(".socket")]
+    return os.path.join(RUNTIME, socks[0]) if socks else None
+
+
+class Conn:
+    def __init__(self, path):
+        self.sock = socket.socket(socket.AF_UNIX)
+        self.sock.connect(path)
+
+    def send(self, method, data=None):
+        body = json.dumps({"method": method, "data": data or {}}).encode()
+        self.sock.sendall(struct.pack("<I", len(body)) + body)
+
+    def _exact(self, n):
+        buf = b""
+        while len(buf) < n:
+            chunk = self.sock.recv(n - len(buf))
+            if not chunk:
+                raise ConnectionError("wayfire socket closed")
+            buf += chunk
+        return buf
+
+    def read(self):
+        (n,) = struct.unpack("<I", self._exact(4))
+        return json.loads(self._exact(n))
+
+    def call(self, method, data=None):
+        self.send(method, data)
+        return self.read()
+
+
+def state(path):
+    c = Conn(path)
+    try:
+        out = c.call("window-rules/get-focused-output")["info"]
+        views = c.call("window-rules/list-views")
+    finally:
+        c.sock.close()
+    ws, og = out["workspace"], out["geometry"]
+    current = 10 if out.get("wset-index") == FLOAT_WSET else ws["y"] * GRID_W + ws["x"] + 1
+    occupied = set()
+    for v in views:
+        if v.get("role") != "toplevel" or not v.get("mapped") or v.get("minimized"):
+            continue
+        if v.get("wset-index") == FLOAT_WSET:
+            occupied.add(10)
+            continue
+        if v.get("wset-index") != out.get("wset-index") or v.get("output-id") != out["id"]:
+            continue  # only the active wset's coordinates are relative to this viewport
+        g = v["geometry"]
+        x = ws["x"] + int((g["x"] + g["width"] / 2) // og["width"])
+        y = ws["y"] + int((g["y"] + g["height"] / 2) // og["height"])
+        if 0 <= x < GRID_W and 0 <= y < GRID_W:
+            occupied.add(y * GRID_W + x + 1)
+    return current, sorted(occupied)
+
+
+def publish(path, last):
+    try:
+        cur, occ = state(path)
+    except (OSError, ValueError, KeyError, ConnectionError):
+        return last
+    text = f"current={cur}\noccupied={' '.join(map(str, occ))}\n"
+    if text != last:
+        tmp = STATE + ".tmp"
+        with open(tmp, "w") as fh:
+            fh.write(text)
+        os.replace(tmp, STATE)
+        subprocess.run(["pkill", "-RTMIN+8", "-x", "waybar"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return text
+
+
+def main():
+    lock = open(os.path.join(RUNTIME, "wf-ws-watch.lock"), "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return 0
+    last, failures = None, 0
+    while True:
+        path = socket_path()
+        try:
+            events = Conn(path)
+            events.call("window-rules/events/watch", {"events": EVENTS})
+            failures = 0
+            last = publish(path, None)
+            events.sock.settimeout(5)
+            while True:
+                try:
+                    events.read()
+                except socket.timeout:
+                    pass  # periodic re-check (e.g. after waybar restarts)
+                    last = publish(path, None if not os.path.exists(STATE) else last)
+                    continue
+                time.sleep(0.03)  # coalesce bursts (map + focus + move)
+                last = publish(path, last)
+        except (OSError, TypeError, ConnectionError, ValueError):
+            failures += 1
+            if failures > 15:
+                return 0  # compositor gone
+            time.sleep(2)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

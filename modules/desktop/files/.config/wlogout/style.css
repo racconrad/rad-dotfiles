@@ -1,0 +1,39 @@
+/* wlogout — Material You colors from matugen */
+@import url("colors.css");
+
+* {
+  font-family: "Inter", sans-serif;
+  font-size: 15px;
+  background-image: none;
+  box-shadow: none;
+  transition: all 200ms ease;
+}
+
+window {
+  background-color: alpha(@scrim, 0.55);
+}
+
+button {
+  color: @on_surface;
+  background-color: alpha(@surface_container, 0.92);
+  border: 1px solid alpha(@outline_variant, 0.7);
+  border-radius: 24px;
+  margin: 10px;
+  background-repeat: no-repeat;
+  background-position: center 40%;
+  background-size: 22%;
+}
+
+button:focus,
+button:hover {
+  color: @on_primary_container;
+  background-color: @primary_container;
+  border-color: @primary;
+}
+
+#lock { background-image: image(url("/usr/share/wlogout/icons/lock.png")); }
+#logout { background-image: image(url("/usr/share/wlogout/icons/logout.png")); }
+#suspend { background-image: image(url("/usr/share/wlogout/icons/suspend.png")); }
+#hibernate { background-image: image(url("/usr/share/wlogout/icons/hibernate.png")); }
+#shutdown { background-image: image(url("/usr/share/wlogout/icons/shutdown.png")); }
+#reboot { background-image: image(url("/usr/share/wlogout/icons/reboot.png")); }

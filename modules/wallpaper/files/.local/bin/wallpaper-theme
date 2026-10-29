@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Regenerate the desktop palette from a wallpaper (image, gif or video).
+# Called by waypaper's post_command; also usable by hand: wallpaper-theme <file>
+set -euo pipefail
+
+file="${1:-}"
+if [[ -z "$file" || ! -f "$file" ]]; then
+  echo "usage: wallpaper-theme <wallpaper-file>" >&2
+  exit 1
+fi
+file="$(realpath -- "$file")"
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
+mkdir -p -- "$cache_dir"
+printf '%s\n' "$file" > "$cache_dir/current-wallpaper"
+
+# Videos and gifs: grab one frame so matugen and the 3D cube get a still image.
+still="$file"
+case "${file,,}" in
+  *.mp4|*.webm|*.mkv|*.mov|*.gif)
+    still="$cache_dir/wallpaper-frame.png"
+    ffmpeg -nostdin -loglevel error -y -ss 1 -i "$file" -frames:v 1 "$still" 2>/dev/null \
+      || ffmpeg -nostdin -loglevel error -y -i "$file" -frames:v 1 "$still"
+    ;;
+esac
+
+# Keep the 3D cube skydome in sync with the wallpaper.
+ini="$HOME/.config/wayfire.ini"
+if grep -q '^skydome_texture' "$ini"; then
+  escaped="$(printf '%s' "$still" | sed 's/[&#\\]/\\&/g')"
+  sed -i "s#^skydome_texture = .*#skydome_texture = ${escaped}#" "$ini"
+fi
+
+# Color scheme style (see wallpaper-scheme); default Material "tonal spot".
+scheme_file="$HOME/.config/matugen/scheme"
+scheme="$(cat -- "$scheme_file" 2>/dev/null || echo scheme-tonal-spot)"
+
+if command -v matugen >/dev/null 2>&1; then
+  matugen image "$still" -m dark -t "$scheme" --source-color-index 0 \
+    || matugen image "$still" -m dark -t "$scheme" --prefer saturation \
+    || echo "wallpaper-theme: matugen failed" >&2
+fi
+
+"$HOME/.local/bin/wayfire-theme-apply" || echo "wallpaper-theme: theme apply failed" >&2
+
+# Reapply the selected global appearance after Matugen regenerates its palette.
+if [[ -x "$HOME/.local/bin/desktop-style" ]]; then
+  "$HOME/.local/bin/desktop-style" wallpaper || echo "wallpaper-theme: desktop style failed" >&2
+fi

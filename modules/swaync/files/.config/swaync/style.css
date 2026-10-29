@@ -1,0 +1,60 @@
+/* Compact notifications; global appearance supplies palette and shape. */
+@import "colors.css";
+
+:root {
+  --notification-icon-size: 28px;
+  --notification-app-icon-size: 14px;
+  --notification-group-icon-size: 20px;
+  --font-size-body: 11px;
+  --font-size-summary: 12px;
+  --hover-transition: background 120ms ease-out;
+  --group-collapse-transition: opacity 160ms ease-out;
+}
+
+* { font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif; font-size: 12px; }
+notificationwindow, blankwindow { background: transparent; }
+.notification-row, .notification-row:focus, .notification-row:hover { outline: none; background: transparent; }
+.notification-row .notification-background { padding: 4px 6px; }
+.notification {
+  background: @surface_container;
+  color: @on_surface;
+  border: 1px solid @outline_variant;
+  border-radius: 12px;
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+}
+.notification .notification-default-action {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+}
+.notification .notification-content { padding: 8px; margin: 0; color: @on_surface; }
+.notification .summary { font-size: 12px; font-weight: 700; color: @on_surface; }
+.notification .body { font-size: 11px; color: @on_surface_variant; }
+.notification .time { font-size: 10px; font-weight: normal; color: @on_surface_variant; margin-right: 20px; }
+.notification .notification-action { margin: 2px; padding: 4px 7px; border: 1px solid @outline_variant; background: transparent; color: @on_surface; }
+.notification .notification-action:hover { background: @primary; color: @on_primary; }
+.notification.critical { border-color: @error; }
+.close-button { background: @surface_container_highest; color: @on_surface; border: none; border-radius: 8px; margin: 5px; padding: 0; min-width: 18px; min-height: 18px; box-shadow: none; }
+.close-button:hover { background: @error_container; color: @on_error_container; }
+
+/* Arrival: a short diagonal settle, rather than a large lateral sweep. */
+@keyframes notification-arrive {
+  from { opacity: 0.15; transform: translate(0, -6px) scale(0.96); }
+  to { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+.notification-row { animation: notification-arrive 180ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* History contains notification cards and the empty state only. */
+.control-center { background: @surface; color: @on_surface; border: 1px solid @outline_variant; border-radius: 14px; padding: 6px; }
+.control-center-list { background: transparent; padding: 0; }
+.control-center-list-placeholder { color: @on_surface_variant; opacity: 1; }
+.control-center .notification-group { margin: 0; padding: 0; }
+.control-center .notification-group-headers { padding: 4px 6px; }
+.control-center .notification-group-header { font-size: 11px; }
+.control-center scrollbar slider { min-width: 3px; background: @outline_variant; border-radius: 4px; }
+
+@import "@RDOT_HOME@/.config/desktop-style/current/swaync.css";

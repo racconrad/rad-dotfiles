@@ -1,0 +1,4 @@
+# lazygit: render diffs with delta (git-delta)
+git:
+  pagers:
+    - pager: delta --paging=never --line-numbers

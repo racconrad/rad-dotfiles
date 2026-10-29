@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "name": "raccon-dots",
+  "version": "0.3.0",
+  "requested": [
+    "terminal",
+    "shell",
+    "tools"
+  ],
+  "choices": {
+    "terminal": "kitty",
+    "launcher": "desktop-menu",
+    "notifications": "swaync",
+    "lock": "gtklock",
+    "shell": "zsh",
+    "browser": "firefox",
+    "filemanager": "dolphin"
+  },
+  "packages": true,
+  "extra_packages": [],
+  "setup": [],
+  "tinywidgets_source": "~/projects/tinyWidgets",
+  "widgets": {
+    "profile": "keep",
+    "profiles": [
+      "Personal",
+      "Trabajo",
+      "Gaming",
+      "Dashboard",
+      "Cyberpunk",
+      "silly"
+    ],
+    "theme": "personal",
+    "motion": "personal",
+    "install": "auto",
+    "components": [
+      "widgets-profiles",
+      "widgets-themes",
+      "widgets-motion",
+      "widgets-palette"
+    ]
+  },
+  "title": "Terminal essentials",
+  "description": "Terminal, shell and CLI tools without a graphical desktop."
+}

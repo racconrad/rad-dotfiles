@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "name": "Gaming",
+  "desc": "Gaming: compact hardware and music in the corners.",
+  "animation": {
+    "anim_in": "fade",
+    "anim_out": "fade",
+    "duration_in": 200,
+    "duration_out": 180,
+    "when": "workspace",
+    "order": "random"
+  },
+  "widgets": [
+    {
+      "id": "sistema",
+      "window": "system",
+      "show": true,
+      "anchor": "top-right",
+      "x": 40,
+      "y": 40,
+      "opts": {
+        "skin": "global",
+        "width": "320",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "discos",
+      "window": "disks",
+      "show": true,
+      "anchor": "top-right",
+      "x": 40,
+      "y": 210,
+      "opts": {
+        "skin": "global",
+        "width": "320",
+        "workspace": "Todos",
+        "mounts": "/"
+      }
+    },
+    {
+      "id": "musica",
+      "window": "music",
+      "show": true,
+      "anchor": "bottom-right",
+      "x": 40,
+      "y": 40,
+      "opts": {
+        "skin": "global",
+        "width": "360",
+        "workspace": "Todos"
+      }
+    }
+  ]
+}

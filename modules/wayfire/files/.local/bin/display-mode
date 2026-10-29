@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Projection menu for Wayfire: laptop-only / duplicate / extend / external-only.
+# Rewrites a managed [output:*] block in wayfire.ini; Wayfire hot-reloads it.
+# Usage: display-mode [laptop|mirror|extend-right|extend-left|external]
+set -euo pipefail
+
+CFG="$HOME/.config/wayfire.ini"
+BEGIN="# >>> display-mode (managed by ~/.local/bin/display-mode) >>>"
+END="# <<< display-mode <<<"
+
+internal=""; external=""
+for s in /sys/class/drm/card*-*/status; do
+  name="${s%/status}"; name="${name##*/}"; name="${name#card*-}"
+  [[ "$(cat "$s")" == connected ]] || continue
+  case "$name" in eDP*|LVDS*|DSI*) internal="$name" ;; *) [[ -z "$external" ]] && external="$name" ;; esac
+done
+
+notify() { notify-send -a "Pantallas" -i video-display "$1" "${2:-}" 2>/dev/null || true; }
+
+choice="${1:-}"
+if [[ -z "$choice" ]]; then
+  if [[ -z "$external" ]]; then
+    notify "Sin pantalla externa" "Conecta un monitor o proyector"
+    choice=laptop
+  else
+    sel=$(printf '%s\n' \
+      "󰌢  Solo laptop" \
+      "󰍺  Duplicar" \
+      "󰍹  Extender a la derecha" \
+      "󰍹  Extender a la izquierda" \
+      "󰶐  Solo pantalla externa" |
+      fuzzel --dmenu --prompt "Proyectar ($external): " --lines 5 --width 34) || exit 0
+    case "$sel" in
+      *"Solo laptop"*) choice=laptop ;;
+      *Duplicar*) choice=mirror ;;
+      *derecha*) choice=extend-right ;;
+      *izquierda*) choice=extend-left ;;
+      *externa*) choice=external ;;
+    esac
+  fi
+fi
+
+# Width of the internal panel in logical px (first listed mode / scale 1).
+iw=$(head -1 "/sys/class/drm/$(ls /sys/class/drm | grep -m1 -- "-$internal$")/modes" 2>/dev/null | cut -dx -f1)
+iw=${iw:-1920}
+ew=1920
+if [[ -n "$external" ]]; then
+  ew=$(head -1 "/sys/class/drm/$(ls /sys/class/drm | grep -m1 -- "-$external$")/modes" 2>/dev/null | cut -dx -f1)
+  ew=${ew:-1920}
+fi
+
+block() {
+  local imode="auto" ipos="0,0" emode="auto" epos="auto"
+  case "$choice" in
+    laptop)       emode="off" ;;
+    mirror)       emode="mirror $internal" ;;
+    extend-right) epos="$iw,0" ;;
+    extend-left)  ipos="$ew,0"; epos="0,0" ;;
+    external)     imode="off"; epos="0,0" ;;
+    *) echo "unknown mode: $choice" >&2; exit 1 ;;
+  esac
+  echo "$BEGIN"
+  echo "[output:$internal]"; echo "mode = $imode"; echo "position = $ipos"; echo
+  # Always write the HDMI/DP block so unplugged state stays consistent.
+  for out in ${external:-HDMI-A-1}; do
+    echo "[output:$out]"; echo "mode = $emode"; echo "position = $epos"
+  done
+  echo "$END"
+}
+
+tmp=$(mktemp)
+awk -v b="$BEGIN" -v e="$END" '$0==b{skip=1} !skip{print} $0==e{skip=0}' "$CFG" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > "$tmp"
+{ cat "$tmp"; echo; block; } > "$CFG.new"
+rm -f "$tmp"
+cat "$CFG.new" > "$CFG" && rm -f "$CFG.new"   # keep inode for Wayfire's watcher
+
+case "$choice" in
+  laptop) notify "Solo laptop" ;;
+  mirror) notify "Duplicando pantalla" "$internal → $external" ;;
+  extend-right) notify "Extendido" "$external a la derecha" ;;
+  extend-left) notify "Extendido" "$external a la izquierda" ;;
+  external) notify "Solo pantalla externa" "$external" ;;
+esac

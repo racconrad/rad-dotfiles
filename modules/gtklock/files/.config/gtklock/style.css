@@ -1,0 +1,58 @@
+/* gtklock — colors come from matugen (colors.css), same palette as waybar. */
+@import url("colors.css");
+
+window {
+  background-color: @surface;
+  font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
+  color: @on_surface;
+}
+
+#window-box {
+  background: alpha(@surface_container, 0.72);
+  border: 1px solid alpha(@primary, 0.18);
+  border-radius: 28px;
+  padding: 36px 48px;
+  box-shadow: 0 12px 40px alpha(black, 0.45);
+}
+
+#clock-label { font-size: 72px; font-weight: 300; color: @on_surface; }
+#date-label  { font-size: 18px; color: @on_surface_variant; margin-bottom: 12px; }
+
+#user-image  { border-radius: 999px; margin: 8px; }
+#user-name   { font-size: 16px; color: @primary; margin-bottom: 8px; }
+
+#input-field {
+  background: alpha(@surface_container_highest, 0.85);
+  color: @on_surface;
+  border: 1px solid alpha(@outline, 0.4);
+  border-radius: 14px;
+  padding: 8px 14px;
+  min-height: 36px;
+  caret-color: @primary;
+}
+#input-field:focus { border-color: @primary; }
+
+#unlock-button {
+  background: @primary;
+  color: @on_primary;
+  border: none;
+  border-radius: 14px;
+  min-width: 36px;
+}
+#unlock-button:hover { background: @primary_container; color: @on_primary_container; }
+
+#error-label   { color: @error; }
+#warning-label { color: @tertiary; }
+
+#powerbar-box { margin-top: 18px; }
+#powerbar-box button {
+  background: alpha(@surface_container_high, 0.9);
+  color: @on_surface;
+  border: none;
+  border-radius: 14px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0 6px;
+}
+#powerbar-box button:hover { background: alpha(@primary, 0.18); color: @primary; }
+#poweroff-button:hover { background: alpha(@error, 0.2); color: @error; }

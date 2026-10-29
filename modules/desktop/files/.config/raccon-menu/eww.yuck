@@ -1,0 +1,144 @@
+(include "controls.yuck")
+(include "calendar.yuck")
+; Compact daily launcher. desktop-power owns profile policy.
+(defvar page 0)
+(defvar prewarm false)
+(defvar selected "auto")
+(defvar revealed true)
+(defvar busy false)
+(defvar error "")
+(defvar confirmation "")
+(defvar query_empty false)
+(defvar apps "[]")
+(defvar favorites "[]")
+(defvar apps_loading false)
+(defpoll modes :initial '[{"id": "auto", "name": "Automatic", "icon": "preferences-system-symbolic", "description": ""}, {"id": "performance", "name": "Power saver", "icon": "battery-low-symbolic", "description": ""}, {"id": "balanced", "name": "Balanced", "icon": "power-profile-balanced-symbolic", "description": ""}, {"id": "complete", "name": "Full", "icon": "weather-clear-symbolic", "description": ""}, {"id": "working", "name": "Working", "icon": "computer-symbolic", "description": ""}]' :interval "30s"
+  "python3 $HOME/.local/lib/raccon_menu/backend.py modes-data")
+(defpoll catalogue :initial '{"apps":[],"favorites":[]}' :interval "5m"
+  "python3 $HOME/.local/lib/raccon_menu/backend.py catalogue")
+(deflisten desktop :initial '{"user":"","avatar":"","has_avatar":false,"mode_name":"Power mode","source":"","applying":false,"has_errors":false,"errors":"","ready":false,"motion":true,"duration":"220ms"}'
+  "python3 $HOME/.local/lib/raccon_menu/backend.py listen")
+
+(defwidget menu-icon [name ?size]
+  (image :icon name :icon-size {(size ?: 20) >= 28 ? "dnd" : (size ?: 20) >= 24 ? "large-toolbar" : "button"}))
+
+(defwidget menu-quick [name title icon]
+  (button :class "quick" :tooltip title :onclick "~/.local/bin/desktop-menu shortcut ${name}" :timeout "5s"
+    (menu-icon :name icon)))
+
+(defwidget menu-home []
+  (box :class "daily-apps" :orientation "v" :space-evenly true :spacing 8
+    (for row in {catalogue.favorites}
+      (box :space-evenly true :spacing 8
+        (for app in row
+          (button :class "daily-app" :tooltip {app.name}
+            :onclick "~/.local/bin/desktop-menu ${app.action} ${app.value}" :timeout "5s"
+            (menu-icon :name {app.icon} :size 32)))))))
+
+(defwidget menu-apps [content_height]
+  (box :orientation "v" :space-evenly false :spacing 4
+    (label :class "no-results muted" :visible false :wrap true :text "No matches. Try another name.")
+    (scroll :class "apps-scroll" :height content_height :hscroll false :vscroll true
+      (box :class "apps-list" :orientation "v" :space-evenly false :spacing 2
+        (for app in {catalogue.apps}
+          (button :class "app-launch" :tooltip {app.name}
+            :onclick "~/.local/bin/desktop-menu launch ${app.token}" :timeout "5s"
+            (box :space-evenly false :spacing 12
+              (label :class "search-key" :visible false :text {app.search})
+              (label :class "file-key" :visible false :text {app.has_file ? app.file : ''})
+              (image :class "app-icon" :icon {app.icon} :icon-size "large-toolbar")
+              (label :xalign 0 :hexpand true :limit-width 32 :text {app.name}))))))))
+
+(defwidget menu-modes []
+  (box :orientation "v" :space-evenly false :spacing 8
+    (label :class "side-title" :xalign 0 :text "Power")
+    (box :orientation "v" :space-evenly false :spacing 2
+      (for mode in modes
+        (button :class "mode-row ${selected == mode.id ? 'selected' : ''}" :active {!busy}
+          :tooltip "${mode.name} · ${mode.description}" :onclick "~/.local/bin/desktop-menu select ${mode.id}" :timeout "3s"
+          (box :space-evenly false :spacing 9
+            (menu-icon :name {mode.icon})
+            (image :visible {desktop.source == mode.id && !desktop.applying}
+              :icon "emblem-ok-symbolic" :icon-size "menu")))))
+    (button :class "apply" :tooltip {busy || desktop.applying ? "Applying…" : selected == desktop.source && !desktop.has_errors ? "Active mode" : "Apply mode"} :active {!busy && !desktop.applying && (selected != desktop.source || desktop.has_errors || !desktop.ready)}
+      :onclick "~/.local/bin/desktop-menu apply" :timeout "60s"
+      (image :icon {busy || desktop.applying ? "process-working-symbolic" : selected == desktop.source && !desktop.has_errors ? "emblem-ok-symbolic" : "object-select-symbolic"} :icon-size "button"))
+    (label :class "error" :visible {desktop.has_errors} :wrap true :limit-width 24
+      :text "Some settings are pending. Apply again." :tooltip {desktop.errors})))
+
+(defwidget session-choice [action title icon]
+  (button :class "session-choice ${confirmation == action ? 'selected' : ''}" :tooltip title
+    :onclick "~/.local/bin/desktop-menu confirm ${action}" :timeout "3s"
+    (menu-icon :name icon)))
+
+(defwidget menu-session []
+  (box :orientation "v" :space-evenly false :spacing 6
+    (label :class "side-title" :xalign 0 :text "Session")
+    (menu-quick :name "lock" :title "Lock" :icon "system-lock-screen-symbolic")
+    (session-choice :action "suspend" :title "Suspend" :icon "media-playback-pause-symbolic")
+    (session-choice :action "logout" :title "Log out" :icon "system-log-out-symbolic")
+    (session-choice :action "reboot" :title "Restart" :icon "system-reboot-symbolic")
+    (session-choice :action "poweroff" :title "Shut down" :icon "system-shutdown-symbolic")
+    (revealer :class "confirmation-reveal" :reveal {confirmation != ""}
+      :transition {desktop.motion ? "slidedown" : "none"} :duration {desktop.duration}
+      (box :class "confirmation" :orientation "v" :space-evenly false :spacing 8
+        (label :xalign 0 :wrap true :limit-width 23
+          :text {confirmation == "poweroff" ? "Shut down this computer?" : confirmation == "reboot" ? "Restart this computer?" : confirmation == "logout" ? "Log out of this session?" : "Suspend this computer?"})
+        (box :space-evenly true :spacing 4
+          (button :tooltip "Cancel" :onclick "~/.local/bin/desktop-menu confirm cancel" :timeout "3s" (menu-icon :name "go-previous-symbolic"))
+          (button :class "destructive" :tooltip "Confirm" :onclick "~/.local/bin/desktop-menu session-action ${confirmation}" :timeout "20s" (menu-icon :name "emblem-ok-symbolic")))))))
+
+(defwidget menu-nav [index name title icon]
+  (button :class "nav-tab tab-${name} ${page == index ? 'current' : ''}"
+    :onclick "~/.local/bin/desktop-menu tab ${name}" :timeout "3s" :tooltip title
+    (menu-icon :name icon)))
+
+(defwidget menu-panel [panel_width content_height]
+  (box :class "popup ${desktop.motion ? 'motion' : 'still'}" :space-evenly false :spacing 0
+    (label :class "initial-page" :visible false :text page)
+    (label :class "initial-hidden" :visible false :text prewarm)
+    (box :class "panel" :orientation "v" :space-evenly false :spacing 14 :width panel_width
+      (box :class "header" :space-evenly false :spacing 12
+        (image :class "avatar" :visible {desktop.has_avatar} :path {desktop.avatar ?: 'assets/empty.svg'}
+          :image-width 42 :image-height 42)
+        (label :class "title" :hexpand true :xalign 0 :limit-width 23 :text {desktop.user})
+        (button :class "close" :tooltip "Close · Esc" :onclick "~/.local/bin/desktop-menu close" :timeout "3s"
+          (menu-icon :name "window-close-symbolic")))
+      (box :class "search-bar" :space-evenly false :spacing 8
+        (menu-icon :name "system-search-symbolic")
+        (input :class "app-search" :hexpand true :tooltip "Type to search · Enter to open"))
+      (stack :class "pages" :selected {page == 1 ? 1 : 0} :same-size true
+        :transition {desktop.motion ? "slideleft" : "none"}
+        (menu-home)
+        (menu-apps :content_height content_height))
+      (label :class "error" :visible {error != ""} :xalign 0 :wrap true :limit-width 40 :text error)
+      (box :class "utilities" :space-evenly true :spacing 2
+        (menu-nav :index 5 :name "connections" :title "Wi-Fi" :icon "network-wireless-symbolic")
+        (menu-nav :index 4 :name "audio" :title "Audio" :icon "audio-volume-high-symbolic")
+        (menu-nav :index 6 :name "bluetooth" :title "Bluetooth" :icon "bluetooth-symbolic"))
+      (box :class "navigation" :space-evenly false :spacing 4
+        (menu-nav :index 1 :name "apps" :title "Apps" :icon "view-app-grid-symbolic")
+        (menu-nav :index 2 :name "modes" :title "Power mode" :icon "preferences-system-power-symbolic")
+        (box :hexpand true)
+        (box :visible {desktop.quick_terminal ?: false}
+          (menu-quick :name "quick-terminal" :title "Quick terminal · Super+F12" :icon "utilities-terminal-symbolic"))
+        (menu-quick :name "notifications" :title "Notifications" :icon "preferences-system-notifications-symbolic")
+        (menu-nav :index 3 :name "session" :title "Session" :icon "system-shutdown-symbolic")))
+    (revealer :class "side-revealer" :reveal {page >= 2} :transition {desktop.motion ? "slideright" : "none"}
+      :duration {desktop.duration} :valign "end"
+      (box :class "side-panel" :orientation "v" :space-evenly false :width 200
+        (stack :class "side-pages" :vexpand true :selected {page >= 2 ? page - 2 : 0} :same-size false
+          :transition {desktop.motion ? "crossfade" : "none"}
+          (menu-modes)
+          (menu-session)
+          (menu-audio)
+          (menu-wifi)
+          (menu-bluetooth)
+          (menu-calendar))))))
+
+(defwindow raccon-menu [panel_width content_height]
+  :monitor 0
+  :geometry (geometry :x "4px" :y "78px" :width "1px" :height "1px" :anchor "bottom left")
+  :stacking "overlay" :exclusive false :focusable true :namespace "raccon-menu"
+  (revealer :class "shell-revealer" :reveal true :transition "slideup" :duration "220ms"
+    (menu-panel :panel_width panel_width :content_height content_height)))

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Waybar custom/wsN: print {"text","class"} for workspace N from wf-ws-watch's state.
+# Workspace 10 (floating desktop) only shows while active or holding windows.
+n="$1"
+state="${XDG_RUNTIME_DIR:-/tmp}/wf-ws-state"
+current=""; occupied=""
+# The watcher writes plain key=value data; occupied may contain spaces.
+if [[ -r "$state" ]]; then
+  while IFS='=' read -r key value; do
+    case "$key" in
+      current) current="$value" ;;
+      occupied) occupied="$value" ;;
+    esac
+  done < "$state"
+fi
+cls="empty"
+[[ " $occupied " == *" $n "* ]] && cls="occupied"
+[[ "$current" == "$n" ]] && cls="active"
+if [[ "$n" == 10 && "$cls" == "empty" ]]; then
+  printf '{"text":"","class":"empty"}\n'
+else
+  printf '{"text":"%s","class":"%s","tooltip":"Escritorio %s"}\n' "$n" "$cls" "$n"
+fi

@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""Focus indicator for Wayfire: fade unfocused windows, keep the focused one opaque.
+
+Inspired by the inactive-alpha IPC script used in bluebyt/Wayfire-dots.
+Runs as a long-lived daemon (started from [autostart]).
+"""
+import json
+import fcntl
+import os
+import socket
+import struct
+import threading
+import time
+import sys
+
+INACTIVE_ALPHA = 0.78
+ACTIVE_ALPHA = 1.0
+FADE_STEPS = 14
+FADE_TIME = 0.28  # seconds
+POWER_STATE = os.path.join(os.environ.get('XDG_STATE_HOME', os.path.expanduser('~/.local/state')), 'desktop-power/status.json')
+_power_checked = 0.0
+_power_factor = 1.0
+
+
+def animation_factor():
+    global _power_checked, _power_factor
+    now = time.monotonic()
+    if now - _power_checked < 0.5:
+        return _power_factor
+    _power_checked = now
+    try:
+        with open(POWER_STATE) as stream:
+            _power_factor = float(json.load(stream).get('policy', {}).get('animation_factor', 1))
+    except (OSError, ValueError, TypeError):
+        _power_factor = 1.0
+    return _power_factor
+
+
+def socket_path():
+    path = os.environ.get("WAYFIRE_SOCKET")
+    if path:
+        return path
+    run = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    return os.path.join(run, next(f for f in os.listdir(run) if f.startswith("wayfire-") and f.endswith(".socket")))
+
+
+class Conn:
+    def __init__(self):
+        self.sock = socket.socket(socket.AF_UNIX)
+        self.sock.connect(socket_path())
+        self.lock = threading.Lock()
+
+    def _recv(self, n):
+        buf = b""
+        while len(buf) < n:
+            chunk = self.sock.recv(n - len(buf))
+            if not chunk:
+                raise ConnectionError("wayfire socket closed")
+            buf += chunk
+        return buf
+
+    def send(self, method, data=None):
+        msg = json.dumps({"method": method, "data": data or {}}).encode()
+        self.sock.sendall(struct.pack("<I", len(msg)) + msg)
+
+    def read(self):
+        (length,) = struct.unpack("<I", self._recv(4))
+        return json.loads(self._recv(length))
+
+    def call(self, method, data=None):
+        with self.lock:
+            self.send(method, data)
+            return self.read()
+
+
+def is_toplevel(view):
+    return view and view.get("role") == "toplevel" and view.get("mapped") and view.get("layer") == "workspace"
+
+
+class FocusFx:
+    def __init__(self):
+        self.cmd = Conn()
+        self.focused = None
+        self.generation = {}
+
+    def get_alpha(self, vid):
+        res = self.cmd.call("wf/alpha/get-view-alpha", {"view-id": vid})
+        return float(res.get("alpha", 1.0))
+
+    def set_alpha(self, vid, alpha):
+        if animation_factor() == 0:
+            alpha = ACTIVE_ALPHA
+        self.cmd.call("wf/alpha/set-view-alpha", {"view-id": vid, "alpha": alpha})
+
+    def fade(self, vid, target):
+        factor = animation_factor()
+        if factor == 0:
+            self.set_alpha(vid, ACTIVE_ALPHA)
+            return
+        steps = max(2, round(FADE_STEPS * factor))
+        gen = self.generation.get(vid, 0) + 1
+        self.generation[vid] = gen
+
+        def run():
+            try:
+                start = self.get_alpha(vid)
+                for i in range(1, steps + 1):
+                    if self.generation.get(vid) != gen:
+                        return
+                    t = i / steps
+                    ease = 1 - (1 - t) ** 3  # ease-out cubic
+                    self.set_alpha(vid, start + (target - start) * ease)
+                    time.sleep(FADE_TIME * factor / steps)
+            except Exception:
+                pass  # view vanished mid-fade
+
+        threading.Thread(target=run, daemon=True).start()
+
+    def apply_all(self):
+        focused = (self.cmd.call("window-rules/get-focused-view").get("info") or {}).get("id")
+        self.focused = focused
+        for v in self.cmd.call("window-rules/list-views"):
+            if is_toplevel(v) and not v.get("fullscreen"):
+                self.set_alpha(v["id"], ACTIVE_ALPHA if v["id"] == focused else INACTIVE_ALPHA)
+
+    def on_focus(self, view):
+        if not is_toplevel(view):
+            return
+        new = view["id"]
+        if new == self.focused:
+            return
+        old, self.focused = self.focused, new
+        self.fade(new, ACTIVE_ALPHA)
+        if old is not None:
+            self.fade(old, INACTIVE_ALPHA)
+
+    def run(self):
+        self.apply_all()
+        events = Conn()
+        events.send("window-rules/events/watch", {"events": ["view-focused", "view-mapped"]})
+        events.read()  # ack
+        while True:
+            msg = events.read()
+            ev, view = msg.get("event"), msg.get("view")
+            if ev == "view-focused":
+                self.on_focus(view)
+            elif ev == "view-mapped" and is_toplevel(view):
+                if view["id"] != self.focused:
+                    self.set_alpha(view["id"], INACTIVE_ALPHA)
+
+
+if __name__ == "__main__":
+    lock_path = os.path.join(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'), 'wf-focus-fx.lock')
+    _instance_lock = open(lock_path, 'a')
+    try:
+        fcntl.flock(_instance_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        sys.exit(0)
+    while True:
+        try:
+            FocusFx().run()
+        except Exception:
+            time.sleep(2)  # compositor restarting / socket gone: retry

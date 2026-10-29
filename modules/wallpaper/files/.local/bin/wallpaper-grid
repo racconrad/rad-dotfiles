@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Clean wallpaper picker: a rofi grid of thumbnails only (images, gifs and videos).
+# Picking one hands it to wallpaper-set (awww for stills, mpvpaper for videos).
+set -euo pipefail
+
+dir="${WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}"
+thumbs="${XDG_CACHE_HOME:-$HOME/.cache}/wallpaper-thumbs"
+theme="$HOME/.config/rofi/wallpaper.rasi"
+mkdir -p -- "$thumbs"
+
+if ! command -v rofi >/dev/null 2>&1; then
+  exec "$HOME/.local/bin/wallpaper-pick"
+fi
+
+mapfile -d '' files < <(find "$dir" -maxdepth 1 -type f \
+  \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \
+     -o -iname '*.gif' -o -iname '*.mp4' -o -iname '*.webm' -o -iname '*.mkv' \) \
+  -print0 | sort -z)
+(( ${#files[@]} )) || { echo "wallpaper-grid: no wallpapers in $dir" >&2; exit 1; }
+
+# Square-ish thumbnails, cached by name; regenerated when the source is newer.
+thumb_for() {
+  local src="$1" out
+  out="$thumbs/$(basename -- "$src").png"
+  if [[ ! -s "$out" || "$src" -nt "$out" ]]; then
+    case "${src,,}" in
+      *.mp4|*.webm|*.mkv|*.gif) seek=(-ss 1) ;;
+      *) seek=() ;;
+    esac
+    ffmpeg -nostdin -loglevel error -y "${seek[@]}" -i "$src" -frames:v 1 \
+      -vf "scale=480:300:force_original_aspect_ratio=increase,crop=480:300" "$out" 2>/dev/null \
+      || ffmpeg -nostdin -loglevel error -y -i "$src" -frames:v 1 \
+        -vf "scale=480:300:force_original_aspect_ratio=increase,crop=480:300" "$out" 2>/dev/null \
+      || true
+  fi
+  printf '%s' "$out"
+}
+
+current="$(cat -- "${XDG_CACHE_HOME:-$HOME/.cache}/current-wallpaper" 2>/dev/null || true)"
+selected_row=0
+for i in "${!files[@]}"; do
+  if [[ "${files[$i]}" == "$current" ]]; then selected_row=$i; fi
+done
+
+# rofi dmenu rows: "<name>\0icon\x1f<thumbnail>". Bash strings cannot hold NUL,
+# so the rows are streamed straight into rofi instead of built in a variable.
+list_entries() {
+  local f
+  for f in "${files[@]}"; do
+    printf '%s\0icon\x1f%s\n' "$(basename -- "$f")" "$(thumb_for "$f")"
+  done
+}
+
+choice="$(list_entries | rofi -dmenu -i -show-icons \
+  -theme "$theme" -selected-row "$selected_row" -p "")" || exit 0
+[[ -n "$choice" ]] || exit 0
+
+exec "$HOME/.local/bin/wallpaper-set" "$dir/$choice"

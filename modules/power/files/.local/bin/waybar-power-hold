@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""Waybar press/release power gesture. Only a completed long press can power off."""
+import fcntl
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+HOLD_SECONDS = 2.0
+MAX_SECONDS = 12.0
+
+
+def runtime_dir():
+    root = Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}'))
+    path = root / 'waybar-power-hold'
+    path.mkdir(mode=0o700, parents=True, exist_ok=True)
+    return path
+
+
+def bar_context():
+    """Identify Waybar and timestamp its event child before Python startup delays."""
+    pid = os.getpid()
+    child_started = None
+    for _ in range(12):
+        try:
+            raw = Path(f'/proc/{pid}/stat').read_text()
+            end = raw.rindex(')')
+            name = raw[raw.index('(') + 1:end]
+            fields = raw[end + 2:].split()
+            if name == 'waybar':
+                return f'{pid}:{fields[19]}', child_started
+            child_started = int(fields[19]) / os.sysconf('SC_CLK_TCK')
+            pid = int(fields[1])
+            if pid <= 1:
+                break
+        except (OSError, ValueError, IndexError):
+            break
+    return None, None
+
+
+def clock():
+    # /proc process start times include suspend, as does CLOCK_BOOTTIME.
+    return time.clock_gettime(time.CLOCK_BOOTTIME)
+
+
+def load_state(path):
+    try:
+        value = json.loads(path.read_text())
+        return value if isinstance(value, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def poweroff():
+    result = subprocess.run(['systemctl', 'poweroff'], capture_output=True, text=True)
+    if result.returncode:
+        subprocess.run(['notify-send', '-u', 'critical', 'No se pudo apagar',
+                        result.stderr.strip() or 'Revisa los permisos de la sesión.'], check=False)
+        return False
+    return True
+
+
+def gesture(action, directory, now, owner, shutdown=poweroff):
+    """Serialized state transition; injectable clock/action for safe verification."""
+    state_file = directory / 'state.json'
+    with (directory / 'lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if action == 'press':
+            if owner:
+                tmp = directory / 'state.tmp'
+                tmp.write_text(json.dumps({'started': now, 'owner': owner}))
+                tmp.replace(state_file)
+            return False
+        state = load_state(state_file)
+        state_file.unlink(missing_ok=True)
+        if action != 'release' or not owner or state.get('owner') != owner:
+            return False
+        started = state.get('started')
+        if not isinstance(started, (int, float)):
+            return False
+        elapsed = now - started
+        if HOLD_SECONDS <= elapsed <= MAX_SECONDS:
+            return shutdown()
+    return False
+
+
+def status(directory, now):
+    state = load_state(directory / 'state.json')
+    started = state.get('started')
+    elapsed = now - started if isinstance(started, (int, float)) else -1
+    if 0 <= elapsed <= MAX_SECONDS:
+        if elapsed >= HOLD_SECONDS:
+            return {'text': '⏻', 'class': 'armed', 'tooltip': 'Suelta para apagar'}
+        return {'text': f'⏻ {HOLD_SECONDS - elapsed:.1f}', 'class': 'holding',
+                'tooltip': 'Mantén 2 segundos y suelta para apagar. Soltar antes cancela.'}
+    return {'text': '⏻', 'class': 'idle',
+            'tooltip': 'Mantén 2 segundos y suelta para apagar. Un clic no hace nada.'}
+
+
+def main():
+    action = sys.argv[1] if len(sys.argv) > 1 else 'watch'
+    directory = runtime_dir()
+    if action in ('press', 'release', 'cancel'):
+        owner, event_time = bar_context()
+        gesture(action, directory, event_time if event_time is not None else clock(), owner)
+    elif action == 'watch':
+        last = None
+        while True:
+            data = status(directory, clock())
+            if data != last:
+                print(json.dumps(data, ensure_ascii=False), flush=True)
+                last = data
+            time.sleep(0.1 if data['class'] != 'idle' else 0.3)
+    else:
+        raise SystemExit('Usage: waybar-power-hold [watch|press|release|cancel]')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (BrokenPipeError, KeyboardInterrupt):
+        pass

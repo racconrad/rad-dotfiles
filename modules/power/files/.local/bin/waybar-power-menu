@@ -1,0 +1,7 @@
+#!/bin/sh
+# Old callers now open the same deliberate selector as Raccon Menu.
+case "${1:-toggle}" in
+  close) exec "$HOME/.local/bin/desktop-menu" close ;;
+  toggle|select) exec "$HOME/.local/bin/desktop-menu" modes ;;
+  *) exit 2 ;;
+esac

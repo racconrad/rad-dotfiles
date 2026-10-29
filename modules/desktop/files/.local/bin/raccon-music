@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Toggle (or `close`) the floating music card on the bar's side (own Eww instance).
+set -euo pipefail
+cfg="$HOME/.config/raccon-music"
+theme="$HOME/.config/raccon-menu"
+stamp="${XDG_RUNTIME_DIR:-/tmp}/raccon-music.theme"
+# Flag read by waybar-music: Waybar hides its compact buttons while the card is open.
+flag="${XDG_RUNTIME_DIR:-/tmp}/raccon-music.open"
+if [[ ${1:-} == close ]] || eww -c "$cfg" active-windows 2>/dev/null | grep -q '^raccon-music'; then
+  rm -f "$flag"
+  exec eww -c "$cfg" close raccon-music
+fi
+module=$(python3 "$HOME/.local/lib/raccon_menu/keyboard_build.py")
+revision=$(stat -c %Y "$module")
+key_stamp="$HOME/.cache/raccon-float/music-keyboard.loaded"
+if [[ $(cat "$key_stamp" 2>/dev/null || true) != "$revision" ]]; then
+  eww -c "$cfg" kill >/dev/null 2>&1 || true
+fi
+if ! eww -c "$cfg" ping >/dev/null 2>&1; then
+  GTK_MODULES="$module" RACCON_FLOAT_KEYS=1 RACCON_KEYS_COMMAND=raccon-music eww -c "$cfg" daemon </dev/null &>/dev/null
+  eww -c "$cfg" ping >/dev/null
+  printf '%s' "$revision" > "$key_stamp"
+  touch "$stamp"
+fi
+# Eww only watches its own folder; reload when the shared theme files changed.
+if [[ ! -e $stamp || $theme/_palette.scss -nt $stamp || $theme/_desktop-style.scss -nt $stamp ]]; then
+  eww -c "$cfg" reload && touch "$stamp"
+fi
+pos=$(grep -oP '^\s*"position"\s*:\s*"\K\w+' "$HOME/.config/waybar/config.jsonc" 2>/dev/null || echo top)
+# Same offsets the menu uses next to Waybar.
+if [[ $pos == bottom ]]; then anchor="bottom right" y=4px; else anchor="top right" y=78px; fi
+touch "$flag"
+exec eww -c "$cfg" open raccon-music --arg anchor="$anchor" --arg y="$y"

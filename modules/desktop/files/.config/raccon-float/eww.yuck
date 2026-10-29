@@ -1,0 +1,108 @@
+; Large floating widgets: wallpaper picker and session. Own Eww instance: raccon-menu's native module claims every window of its instance.
+(defwidget menu-icon [name ?size]
+  (image :icon name :icon-size {(size ?: 20) >= 28 ? "dnd" : (size ?: 20) >= 24 ? "large-toolbar" : "button"}))
+
+(defvar walls '{"rows":[],"section":"all","page":0,"pages":1,"counts":{"all":0,"images":0,"videos":0}}')
+(deflisten desktop :initial '{"motion":true,"duration":"220ms"}'
+  "python3 $HOME/.local/lib/raccon_menu/backend.py listen")
+; The launcher opens windows collapsed, then flips these so the card rises and its body flows in after.
+(defvar shown false)
+(defvar body false)
+(deflisten video_preview :initial '{"active":false,"selection":"","clip":"","playback":"","message":""}'
+  "python3 $HOME/.local/lib/raccon_menu/wall_preview.py watch")
+(defvar armed "")
+
+(defvar who '{"user":"","host":"","uptime":""}')
+
+(defwidget float-head [title subtitle icon close]
+  (box :class "float-head" :space-evenly false :spacing 14
+    (box :class "float-badge" :valign "center" (menu-icon :name icon :size 28))
+    (box :orientation "v" :space-evenly false :hexpand true :valign "center"
+      (label :class "float-title" :xalign 0 :text title)
+      (label :class "float-subtitle muted" :xalign 0 :visible {subtitle != ""} :text subtitle))
+    (children)
+    (button :class "float-close" :valign "center" :halign "end" :tooltip "Close · Esc / Ctrl+W" :timeout "3s" :onclick close
+      (menu-icon :name "window-close-symbolic"))))
+
+(defwidget kind-tab [id title icon]
+  (button :class "nav-tab ${walls.section == id ? 'current' : ''}" :tooltip "${title} · ${walls.counts[id]}" :timeout "60s"
+    :onclick "$HOME/.local/bin/raccon-float filter ${id}"
+    (box :space-evenly false :spacing 7
+      (menu-icon :name icon)
+      (label :text {walls.counts[id]}))))
+
+; Preview is a sibling of Apply, so playing a video never applies it.
+(defwidget wall-tile [tile section]
+  (eventbox :class "wall-cell"
+    :onhover {tile.video ? "$HOME/.local/bin/raccon-float preview-hover ${section} ${tile.index} >/dev/null 2>&1 &" : ""}
+    :onhoverlost {tile.video ? "$HOME/.local/bin/raccon-float preview-stop ${section}:${tile.index}" : ""}
+    (overlay
+      (button :class "wall-tile ${tile.current ? 'current' : ''}"
+        :timeout "60s" :onclick "$HOME/.local/bin/raccon-float set ${section} ${tile.index}"
+        (box :class "wall-thumb" :style {tile.has_thumb ? "background-image: url(\"${tile.thumb}\");" : ""}
+          (label :class "preview-target" :visible false :text {tile.video ? "${section} ${tile.index}" : ""})
+          (image :visible {!tile.has_thumb} :icon "image-missing-symbolic" :icon-size "dnd")))
+      (box :class "video-marker" :visible {tile.video} :halign "end" :valign "end"
+        (menu-icon :name "video-x-generic-symbolic")))))
+
+
+(defwidget wall-grid []
+  (scroll :class "wall-scroll" :hscroll false :vscroll true :height 486 :width 904
+    (box :orientation "v" :space-evenly false :spacing 0 :valign "start"
+      (label :class "muted" :visible {walls.counts[walls.section] == 0} :text "No files in this category.")
+      (for row in {walls.rows}
+        (eventbox :class "wall-row wall-count-${row.count}" :halign "start"
+          (box :space-evenly false :spacing 0
+            (for tile in {row.tiles} (wall-tile :tile tile :section {walls.section}))))))))
+
+(defwidget wallpaper-card []
+  (box :class "panel float-card wallpaper-card" :orientation "v" :space-evenly false :spacing 16
+    (label :class "preview-playback" :visible false :text {video_preview.playback})
+    (label :class "preview-active" :visible false :text {video_preview.active ? "true" : "false"})
+    (float-head :title "Wallpapers" :subtitle "" :icon "preferences-desktop-wallpaper-symbolic"
+      :close "$HOME/.local/bin/raccon-float close")
+    (box :class "kind-tabs" :space-evenly false :spacing 4 :valign "center"
+        (kind-tab :id "all" :title "All" :icon "view-grid-symbolic")
+        (kind-tab :id "images" :title "Images" :icon "image-x-generic-symbolic")
+        (kind-tab :id "videos" :title "Videos" :icon "video-x-generic-symbolic"))
+    (revealer :reveal body :transition {desktop.motion ? "crossfade" : "none"} :duration "160ms"
+      (wall-grid))
+    (label :class "muted" :visible {video_preview.active && video_preview.clip == ""} :xalign 0 :text {video_preview.message})))
+
+
+; One click arms the tile, a second one runs it; lock needs no confirmation.
+(defwidget session-tile [action title icon order]
+  (revealer :reveal body :transition {desktop.motion ? "slideup" : "none"} :duration "${180 + order * 35}ms"
+    (button :class "session-tile ${action == 'poweroff' || action == 'reboot' ? 'danger' : ''} ${armed == action ? 'armed' : ''}"
+      :tooltip {armed == action ? "${title} · Click again to confirm" : title}
+      :timeout "20s" :onclick "$HOME/.local/bin/raccon-float run ${action}"
+      (box :class "session-body" :orientation "v" :space-evenly false :spacing 10
+        (box :class "session-icon" :halign "center" :valign "center" :vexpand true (menu-icon :name icon :size 32))
+        (label :class "session-title" :visible {armed == action} :text title)
+        (image :visible {armed == action} :icon "emblem-ok-symbolic" :icon-size "button")))))
+
+(defwidget session-card []
+  (box :class "panel float-card" :orientation "v" :space-evenly false :spacing 20
+    (float-head :title {who.user} :subtitle "${who.host} · up ${who.uptime}" :icon "avatar-default-symbolic"
+      :close "$HOME/.local/bin/raccon-float close")
+    (eventbox :class "session-row ${armed != '' ? 'has-armed' : ''}"
+      (box :space-evenly false :spacing 0
+        (session-tile :order 0 :action "lock" :title "Lock" :icon "system-lock-screen-symbolic")
+        (session-tile :order 1 :action "suspend" :title "Suspend" :icon "media-playback-pause-symbolic")
+        (session-tile :order 2 :action "logout" :title "Log out" :icon "system-log-out-symbolic")
+        (session-tile :order 3 :action "reboot" :title "Restart" :icon "system-reboot-symbolic")
+        (session-tile :order 4 :action "poweroff" :title "Shut down" :icon "system-shutdown-symbolic")))))
+
+; Sized to the card (a fullscreen surface repainted 1920x1080 on every animation frame).
+(defwidget float-stage [style]
+  (box :class "popup float-popup style-${style} ${desktop.motion ? 'motion' : 'still'} ${shown ? 'on' : ''}" (children)))
+
+(defwindow wallpaper [style]
+  :monitor 0 :geometry (geometry :anchor "center")
+  :stacking "overlay" :exclusive false :focusable true :namespace "raccon-float"
+  (float-stage :style style (wallpaper-card)))
+
+(defwindow session [style]
+  :monitor 0 :geometry (geometry :anchor "center")
+  :stacking "overlay" :exclusive false :focusable true :namespace "raccon-float"
+  (float-stage :style style (session-card)))

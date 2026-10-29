@@ -1,0 +1,8 @@
+# yazi: show hidden files, sort dirs first, preview images via kitty protocol.
+[mgr]
+show_hidden    = true
+sort_dir_first = true
+linemode       = "size"
+
+[opener]
+edit = [ { run = 'nvim %s', block = true, for = "unix" } ]

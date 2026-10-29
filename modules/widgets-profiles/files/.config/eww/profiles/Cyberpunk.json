@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "name": "Cyberpunk",
+  "desc": "Cyberpunk: clock, processes, cat, GitHub and system.",
+  "animation": {
+    "anim_in": "zap",
+    "anim_out": "melt",
+    "duration_in": 320,
+    "duration_out": 220,
+    "when": "workspace",
+    "order": "random"
+  },
+  "widgets": [
+    {
+      "id": "reloj",
+      "window": "clock",
+      "show": true,
+      "anchor": "top-left",
+      "x": 60,
+      "y": 80,
+      "opts": {
+        "skin": "global",
+        "anim": "global",
+        "width": "220",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "procesos",
+      "window": "procs",
+      "show": true,
+      "anchor": "top-left",
+      "x": 60,
+      "y": 250,
+      "opts": {
+        "skin": "global",
+        "anim": "global",
+        "width": "420",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "gato",
+      "window": "cat",
+      "show": true,
+      "anchor": "bottom-left",
+      "x": 60,
+      "y": 180,
+      "opts": {
+        "skin": "global",
+        "anim": "global",
+        "width": "280",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "github",
+      "window": "github",
+      "show": true,
+      "anchor": "top-right",
+      "x": 60,
+      "y": 80,
+      "opts": {
+        "skin": "global",
+        "anim": "global",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "sistema",
+      "window": "system",
+      "show": true,
+      "anchor": "bottom-right",
+      "x": 60,
+      "y": 60,
+      "opts": {
+        "skin": "global",
+        "anim": "global",
+        "width": "380",
+        "workspace": "Todos"
+      }
+    }
+  ]
+}

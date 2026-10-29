@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Pick a wallpaper from the wallpaper directory with fuzzel (or --random).
+set -euo pipefail
+
+dir="${WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}"
+
+mapfile -d '' files < <(find "$dir" -maxdepth 1 -type f \
+  \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.gif' -o -iname '*.mp4' -o -iname '*.webm' \) \
+  -print0 | sort -z)
+
+if (( ${#files[@]} == 0 )); then
+  echo "wallpaper-pick: no images in $dir" >&2
+  exit 1
+fi
+
+if [[ "${1:-}" == "--random" ]]; then
+  choice="${files[RANDOM % ${#files[@]}]}"
+else
+  name="$(for f in "${files[@]}"; do basename -- "$f"; done \
+    | fuzzel --dmenu --prompt "wallpaper  " --width 50)" || exit 0
+  [[ -n "$name" ]] || exit 0
+  choice="$dir/$name"
+fi
+
+exec "$HOME/.local/bin/wallpaper-set" "$choice"

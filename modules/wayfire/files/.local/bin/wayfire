@@ -1,0 +1,17 @@
+#!/bin/sh
+# Preserve the compositor's fatal trace across SDDM logins. No extra process.
+# Explicit diagnostic/nested invocations retain their caller's redirections.
+if [ "$#" -ne 0 ]; then
+    exec /usr/bin/wayfire "$@"
+fi
+umask 077
+state="${XDG_STATE_HOME:-$HOME/.local/state}/wayfire"
+if mkdir -p "$state"; then
+    log=$(mktemp "$state/session-$(date +%Y%m%d-%H%M%S).XXXXXX.log")
+    if [ -n "$log" ]; then
+        printf 'Wayfire session started %s\n' "$(date -Is)" >> "$log"
+        exec /usr/bin/wayfire >> "$log" 2>&1
+    fi
+fi
+# Logging failure must not prevent login.
+exec /usr/bin/wayfire

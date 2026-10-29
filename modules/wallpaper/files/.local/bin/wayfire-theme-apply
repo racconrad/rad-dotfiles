@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Rewrite the themed color keys of ~/.config/wayfire.ini from the matugen
+# palette (~/.config/matugen/out/wayfire-colors.sh). Only the listed
+# section/key pairs are touched; Wayfire reloads the file automatically.
+set -euo pipefail
+
+ini="${WAYFIRE_CONFIG_FILE:-$HOME/.config/wayfire.ini}"
+palette="$HOME/.config/matugen/out/wayfire-colors.sh"
+
+[[ -f "$ini" ]] || { echo "wayfire-theme-apply: $ini not found" >&2; exit 1; }
+[[ -f "$palette" ]] || { echo "wayfire-theme-apply: no palette yet ($palette)" >&2; exit 0; }
+
+# shellcheck source=/dev/null
+source "$palette"
+
+: "${WF_PRIMARY:?}" "${WF_ON_PRIMARY:?}" "${WF_SURFACE:?}" \
+  "${WF_SURFACE_CONTAINER:?}" "${WF_ON_SURFACE:?}" \
+  "${WF_ON_SURFACE_VARIANT:?}" "${WF_OUTLINE_VARIANT:?}"
+
+c() { printf '\\#%sff' "$1"; }
+ca() { printf '\\#%s%s' "$1" "$2"; }
+
+# section|key|value
+map="$(cat <<MAP
+core|background_color|$(c "$WF_SURFACE")
+pixdecor|fg_color|$(c "$WF_PRIMARY")
+pixdecor|bg_color|$(c "$WF_OUTLINE_VARIANT")
+pixdecor|effect_color|$(ca "$WF_PRIMARY" 99)
+winshadows|glow_color|$(ca "$WF_PRIMARY" cc)
+pixdecor|fg_text_color|$(c "$WF_ON_PRIMARY")
+pixdecor|bg_text_color|$(c "$WF_ON_SURFACE_VARIANT")
+simple-tile|preview_base_color|$(ca "$WF_PRIMARY" 33)
+simple-tile|preview_base_border|$(ca "$WF_PRIMARY" cc)
+move|preview_base_color|$(ca "$WF_PRIMARY" 33)
+move|preview_base_border|$(ca "$WF_PRIMARY" cc)
+vswitch|background|$(c "$WF_SURFACE")
+expo|background|$(c "$WF_SURFACE")
+scale|bg_color|$(ca "$WF_SURFACE_CONTAINER" e6)
+scale|text_color|$(c "$WF_ON_SURFACE")
+MAP
+)"
+
+tmp="$(mktemp)"
+trap 'rm -f -- "$tmp"' EXIT
+
+MAP="$map" awk '
+BEGIN {
+  n = split(ENVIRON["MAP"], lines, "\n")
+  for (i = 1; i <= n; i++) {
+    if (lines[i] == "") continue
+    split(lines[i], f, "|")
+    val[f[1] SUBSEP f[2]] = f[3]
+  }
+  section = ""
+}
+/^[[:space:]]*\[[^]]+\][[:space:]]*$/ {
+  s = $0
+  gsub(/^[[:space:]]*\[|\][[:space:]]*$/, "", s)
+  section = s
+  print
+  next
+}
+{
+  line = $0
+  if (match(line, /^[[:space:]]*[A-Za-z0-9_.-]+[[:space:]]*=/)) {
+    key = substr(line, RSTART, RLENGTH)
+    sub(/=$/, "", key)
+    gsub(/[[:space:]]/, "", key)
+    if ((section SUBSEP key) in val) {
+      print key " = " val[section SUBSEP key]
+      next
+    }
+  }
+  print line
+}
+' "$ini" > "$tmp"
+
+# Only write when something changed; keep the inode (cat >) for inotify.
+if ! cmp -s -- "$tmp" "$ini"; then
+  cat -- "$tmp" > "$ini"
+fi

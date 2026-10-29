@@ -1,0 +1,123 @@
+// Colours: the raccon-menu palette. Shape: the active desktop-style tokens (radius, border, font, padding,
+// opacity), written to _tokens.scss by raccon-float. No glows; tiles carry no outlines of their own.
+@import "../raccon-menu/palette";
+@import "tokens";
+$pill: if($control_radius == 0px, 0px, 99px);  // square styles stay square
+
+* { all: unset; font-family: $font, "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 13px; }
+window { background: transparent; color: $on_surface; }
+.muted { color: $on_surface_variant; }
+
+@import "../raccon-menu/desktop-style";
+
+/* Everything below follows the theme import on purpose: it outranks the desktop style's `transition: none`
+   on popup buttons, so motion works in every style, while sizes come from the same tokens the theme uses. */
+$ease: cubic-bezier(.22, 1, .36, 1);
+$spring: cubic-bezier(.34, 1.3, .64, 1);
+
+/* Entrance: the card rises 28px inside a fixed slot (top margin hands over to the bottom one),
+   so the window never resizes while it moves. */
+.popup.float-popup { padding: 0 12px; }
+.popup.float-popup .panel.float-card { background: rgba($surface_container, $opacity); border: $border solid $outline_variant;
+  border-radius: $radius; padding: $panel_padding + 10px; box-shadow: none; opacity: 0; margin-top: 28px; margin-bottom: 0;
+  transition: opacity 220ms ease-out, margin-top 300ms $ease, margin-bottom 300ms $ease; }
+.popup.float-popup.on .panel.float-card { opacity: 1; margin-top: 0; margin-bottom: 28px; }
+
+.popup.float-popup button { border: none; box-shadow: none; border-radius: $control_radius;
+  transition: background-color 180ms ease-out, color 180ms ease-out; }
+.popup.float-popup button:focus { box-shadow: none; }
+.popup.float-popup .float-badge { background: $primary_container; color: $on_primary_container; border-radius: $control_radius; padding: $control_padding + 4px; }
+.popup.float-popup .float-badge image { color: $on_primary_container; }
+.popup.float-popup .float-title { font-size: 22px; font-weight: 800; }
+.popup.float-popup .float-subtitle { font-size: 12px; }
+.popup.float-popup .float-close { padding: $control_padding + 2px; border-radius: $pill; background: $surface_container_high; }
+.popup.float-popup .nav-tab { padding: $control_padding + 2px $control_padding * 2; border-radius: $pill; background: $surface_container_high; }
+.popup.float-popup .nav-tab.current, .popup.float-popup .nav-tab.current label, .popup.float-popup .nav-tab.current image {
+  background: $primary; color: $on_primary; }
+.popup.float-popup button.float-close:hover, .popup.float-popup button.nav-tab:hover:not(.current) { background: $surface_container_highest; }
+.popup.float-popup button.float-close:hover image, .popup.float-popup button.nav-tab:hover:not(.current) label,
+.popup.float-popup button.nav-tab:hover:not(.current) image { color: $on_surface; }
+
+/* Horizontal accordion: widths balance within each row, including short pages.
+   The bitmap stays at one paint size; changing width reveals more of the crop.
+   Button padding owns the gap, keeping hover continuous between adjacent images. */
+.popup.float-popup button.wall-tile,
+.popup.float-popup button.wall-tile:hover, .popup.float-popup button.wall-tile:focus,
+.popup.float-popup button.wall-tile:active {
+  padding: 4px; background: transparent; border: none; box-shadow: none;
+}
+.wall-thumb { outline-color: $primary; background-color: $surface_container_high;
+  background-size: 340px 213px; background-repeat: no-repeat; background-position: center;
+  border-radius: $control_radius; min-width: 214px; min-height: 154px;
+  transition: min-width 280ms cubic-bezier(.22, 1, .36, 1), opacity 120ms ease-out; }
+.wall-row.expanded-row .wall-thumb { min-width: 178px; }
+.wall-count-1.expanded-row .wall-tile.expanded-tile .wall-thumb { min-width: 214px; }
+.wall-count-2.expanded-row .wall-tile.expanded-tile .wall-thumb { min-width: 250px; }
+.wall-count-3.expanded-row .wall-tile.expanded-tile .wall-thumb { min-width: 286px; }
+.wall-count-4.expanded-row .wall-tile.expanded-tile .wall-thumb { min-width: 322px; }
+.popup.float-popup button.wall-tile:active .wall-thumb { opacity: .76; }
+.popup.float-popup button.wall-tile:focus .wall-thumb { opacity: .88; }
+.popup.float-popup .panel.wallpaper-card { margin-top: 0; margin-bottom: 28px; transition: opacity 180ms ease-out; }
+.wall-pagination button:disabled { opacity: .4; }
+
+/* Session, 5 cells, same accordion. Once a tile is armed it keeps the wide cell and hover is ignored. */
+.popup.float-popup button.session-tile, .popup.float-popup button.session-tile:hover, .popup.float-popup button.session-tile:focus,
+.popup.float-popup button.session-tile:active { padding: 6px; background: transparent; border: none; box-shadow: none; }
+.session-body { background: $surface_container_high; border-radius: $control_radius; min-width: 150px; min-height: 180px;
+  padding: $panel_padding + 2px; transition: min-width 300ms $ease, background-color 180ms ease-out; }
+.session-row:not(.has-armed):hover .session-body, .session-row.has-armed .session-body { min-width: 120px; }
+.session-row:not(.has-armed):hover button.session-tile:hover .session-body,
+.session-row.has-armed button.session-tile.armed .session-body { min-width: 270px; background: $primary_container; }
+.session-icon { padding: 16px; border-radius: $pill; background: $surface_container_highest;
+  transition: background-color 180ms ease-out, padding 360ms $spring; }
+.session-icon image { transition: -gtk-icon-transform 360ms $spring; }
+.session-title { font-size: 15px; font-weight: 800; }
+.session-hint { font-size: 11px; }
+.popup.float-popup button.session-tile label, .popup.float-popup button.session-tile image { color: $on_surface; }
+.popup.float-popup button.session-tile .session-hint { color: $on_surface_variant; }
+.session-row:not(.has-armed):hover button.session-tile:hover .session-icon, .session-tile.armed .session-icon {
+  padding: 22px; background: $primary; }
+.popup.float-popup .session-row:not(.has-armed):hover button.session-tile:hover .session-icon image,
+.popup.float-popup button.session-tile.armed .session-icon image { -gtk-icon-transform: scale(1.25) rotate(-8deg); color: $on_primary; }
+.popup.float-popup .session-row:not(.has-armed):hover button.session-tile:hover label,
+.popup.float-popup button.session-tile.armed label { color: $on_primary_container; }
+@keyframes wobble { 0% { -gtk-icon-transform: rotate(0deg) scale(1.25); } 25% { -gtk-icon-transform: rotate(-12deg) scale(1.3); }
+  75% { -gtk-icon-transform: rotate(12deg) scale(1.3); } 100% { -gtk-icon-transform: rotate(0deg) scale(1.25); } }
+.popup.float-popup button.session-tile.armed .session-icon image { animation: wobble 420ms ease-out 1; }
+.session-row.has-armed button.session-tile.danger.armed .session-body { background: $error_container; }
+.session-tile.danger.armed .session-icon { background: $error; }
+.popup.float-popup button.session-tile.danger.armed .session-icon image { color: $on_error; }
+.popup.float-popup button.session-tile.danger.armed label { color: $on_error_container; }
+
+/* Keyboard feedback and reduced motion retain the selected/armed state. */
+.popup.float-popup button:focus { box-shadow: inset 0 0 0 2px $primary; }
+.popup.float-popup button.session-tile:focus .session-body { box-shadow: inset 0 0 0 2px $primary; }
+.popup.float-popup .float-close image { transition: -gtk-icon-transform 220ms $ease; }
+.popup.float-popup .float-close:hover image { -gtk-icon-transform: rotate(90deg); }
+.popup.float-popup.still, .popup.float-popup.still * { transition: none; animation: none; -gtk-icon-transform: none; }
+
+/* Fixed close target: no stretched pill, rotation, or inherited image transform. */
+.popup.float-popup button.float-close {
+  padding: 0; min-width: 32px; min-height: 32px; border-radius: $control_radius;
+}
+.popup.float-popup button.float-close image,
+.popup.float-popup button.float-close:hover image,
+.popup.float-popup button.float-close:active image {
+  -gtk-icon-transform: none; animation: none; transition: none;
+}
+.popup.float-popup button.video-preview {
+  margin: 10px; padding: 7px; min-width: 18px; min-height: 18px;
+  background: $surface_container; color: $on_surface; border-radius: $control_radius;
+}
+.popup.float-popup button.video-preview image { color: $on_surface; }
+.popup.float-popup button.video-preview:hover { background: $primary; }
+.popup.float-popup button.video-preview:hover image { color: $on_primary; }
+.wall-scroll scrollbar { background: transparent; }
+.wall-scroll scrollbar slider { min-width: 4px; background: $outline_variant; border-radius: $control_radius; }
+
+/* Keyboard focus is distinct from hover and remains visible on photographs. */
+.popup.float-popup button.wall-tile:focus .wall-thumb { opacity: 1; box-shadow: inset 0 0 0 3px $primary; }
+.popup.float-popup button.session-tile:focus .session-body { box-shadow: inset 0 0 0 3px $primary; }
+
+.video-marker { margin: 10px; padding: 6px; border-radius: $control_radius; background: $surface_container; }
+.popup.float-popup .video-marker image { color: $on_surface; }

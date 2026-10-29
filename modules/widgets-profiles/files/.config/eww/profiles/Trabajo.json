@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "name": "Trabajo",
+  "desc": "Work: clock, tasks, habits, system and app chest.",
+  "animation": {
+    "anim_in": "zoom",
+    "anim_out": "fade",
+    "duration_in": 280,
+    "duration_out": 220,
+    "when": "workspace",
+    "order": "top_to_bottom"
+  },
+  "widgets": [
+    {
+      "id": "reloj",
+      "window": "clock",
+      "show": true,
+      "anchor": "top-left",
+      "x": 60,
+      "y": 90,
+      "opts": {
+        "skin": "global",
+        "width": "240",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "tareas",
+      "window": "tasks",
+      "show": true,
+      "anchor": "top-left",
+      "x": 60,
+      "y": 280,
+      "opts": {
+        "skin": "global",
+        "width": "360",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "habitos",
+      "window": "habits",
+      "show": true,
+      "anchor": "top-left",
+      "x": 60,
+      "y": 620,
+      "opts": {
+        "skin": "global",
+        "width": "360",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "sistema",
+      "window": "system",
+      "show": true,
+      "anchor": "top-right",
+      "x": 60,
+      "y": 90,
+      "opts": {
+        "skin": "global",
+        "width": "360",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "cofre",
+      "window": "chest",
+      "show": true,
+      "anchor": "bottom-left",
+      "x": 60,
+      "y": 20,
+      "opts": {
+        "skin": "global",
+        "workspace": "Todos",
+        "launchers": "[]"
+      }
+    }
+  ]
+}

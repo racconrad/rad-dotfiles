@@ -1,0 +1,6 @@
+#!/bin/sh
+if [ "${1:-}" = --legacy ]; then
+    [ "${1:-}" = --legacy ] && shift
+    exec python3 "$HOME/.local/lib/raccon_menu/legacy_panel.py" "$@"
+fi
+exec python3 "$HOME/.local/lib/raccon_menu/panel_cli.py" "$@"

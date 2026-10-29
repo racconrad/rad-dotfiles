@@ -1,0 +1,196 @@
+; Service dropdowns share the main Raccon window.
+(defvar wifi_busy false)
+(defvar bt_busy false)
+(defvar outputs_open false)
+(defvar inputs_open false)
+(defvar wifi_selected '{"token":"","title":"","secured":false,"active":false,"signal":0,"security":""}')
+(deflisten audio :initial '{"available":false,"ready":false,"error":"","outputs":[],"inputs":[],"output":{"token":"","title":"Loading output…","volume":0,"mute":false},"input":{"token":"","title":"Loading microphone…","volume":0,"mute":false}}'
+ "python3 $HOME/.local/lib/raccon_menu/panels.py listen audio")
+(deflisten wifi :initial '{"available":false,"ready":false,"error":"","enabled":false,"networks":[],"rows":[],"list_page":0,"page_count":1,"total":0,"empty":true,"title":"Loading…"}'
+ "python3 $HOME/.local/lib/raccon_menu/panels.py listen connections")
+(deflisten bluetooth :initial '{"available":false,"ready":false,"error":"","enabled":false,"scanning":false,"devices":[],"rows":[],"list_page":0,"page_count":1,"total":0,"detail":{"token":"","title":"","icon":"bluetooth-symbolic","connected":false,"paired":false,"battery":"","address":"","trusted":false,"kind":"Device","signal":"No data"},"adapters":[],"empty":true,"title":"Loading…"}'
+ "python3 $HOME/.local/lib/raccon_menu/panels.py listen bluetooth")
+
+(defwidget glyph [name]
+ (image :icon name :icon-size "large-toolbar"))
+(defwidget sound-panel []
+ (box :orientation "v" :space-evenly false :spacing 8
+  (label :class "error" :visible {audio.error != ''} :wrap true :text {audio.error})
+  (box :space-evenly false :spacing 8
+   (button :timeout "35s" :class "mute" :active {audio.output.token != ''} :tooltip "Mute or unmute output"
+    :onclick "~/.local/bin/desktop-panel audio-mute output ${audio.output.token}"
+    (glyph :name {audio.output.mute ? 'audio-volume-muted-symbolic' : 'audio-volume-high-symbolic'}))
+   (button :timeout "35s" :class "device-toggle" :hexpand true :tooltip "Choose audio output"
+    :onclick "eww -c $HOME/.config/raccon-menu update outputs_open=${!outputs_open}"
+    (box :space-evenly false :spacing 6
+     (label :xalign 0 :hexpand true :limit-width 18 :text {audio.output.title})
+     (image :icon "pan-down-symbolic" :icon-size "menu")))
+   (label :class "volume-percent" :text "${audio.output.volume}%"))
+  (scale :class "output-volume" :min 0 :max 100 :value {audio.output.volume} :active {audio.output.token != ''})
+  (revealer :reveal outputs_open :transition "slidedown" :duration "140ms"
+   (scroll :height 90 :hscroll false
+    (box :orientation "v" :space-evenly false :spacing 2
+     (for device in {audio.outputs}
+      (button :timeout "35s" :class "device-row ${device.active ? 'selected' : ''}"
+       :onclick "~/.local/bin/desktop-panel audio-device output ${device.token}"
+       (label :xalign 0 :limit-width 24 :text {device.title}))))))
+  (box :class "mic-row" :space-evenly false :spacing 8
+   (button :timeout "35s" :class "mute" :active {audio.input.token != ''} :tooltip "Mute or unmute microphone"
+    :onclick "~/.local/bin/desktop-panel audio-mute input ${audio.input.token}"
+    (glyph :name {audio.input.mute ? 'microphone-sensitivity-muted-symbolic' : 'audio-input-microphone-symbolic'}))
+   (button :timeout "35s" :class "mic-choice" :tooltip {audio.input.title}
+    :onclick "eww -c $HOME/.config/raccon-menu update inputs_open=${!inputs_open}"
+    (image :icon "pan-down-symbolic" :icon-size "menu"))
+   (scale :class "input-volume" :hexpand true :min 0 :max 100 :value {audio.input.volume} :active {audio.input.token != ''})
+   (label :class "volume-percent" :text "${audio.input.volume}%"))
+  (revealer :reveal inputs_open :transition "slidedown" :duration "140ms"
+   (scroll :height 90 :hscroll false
+    (box :orientation "v" :space-evenly false :spacing 2
+     (for device in {audio.inputs}
+      (button :timeout "35s" :class "device-row ${device.active ? 'selected' : ''}"
+       :onclick "~/.local/bin/desktop-panel audio-device input ${device.token}"
+       (label :xalign 0 :limit-width 24 :text {device.title}))))))))
+
+(defwidget service-pages [kind index count total]
+ (box :class "service-pagination" :space-evenly false :spacing 6
+  (button :timeout "35s" :active {index > 0} :tooltip "Previous page"
+   :onclick "~/.local/bin/desktop-panel ${kind}-page previous"
+   (image :icon "go-previous-symbolic" :icon-size "menu"))
+  (label :hexpand true :class "muted" :text "${index + 1} / ${count} · ${total}")
+  (button :timeout "35s" :active {index + 1 < count} :tooltip "Next page"
+   :onclick "~/.local/bin/desktop-panel ${kind}-page next"
+   (image :icon "go-next-symbolic" :icon-size "menu"))))
+
+(defwidget wifi-list []
+ (box :orientation "v" :space-evenly false :spacing 8 :vexpand true
+  (label :class "muted" :visible {!wifi.ready} :wrap true :limit-width 23 :xalign 0 :text "Loading networks…")
+  (label :class "error" :visible {wifi.error != ''} :wrap true :limit-width 23 :text {wifi.error})
+  (label :class "muted" :visible {wifi.ready && wifi.available && !wifi.enabled} :wrap true :limit-width 23 :xalign 0 :text "Turn on Wi-Fi to see networks.")
+  (label :class "muted" :visible {wifi.ready && wifi.enabled && wifi.empty} :wrap true :limit-width 23 :xalign 0 :text "No networks. Scan to refresh.")
+  (box :orientation "v" :space-evenly false :spacing 5
+   (for network in {wifi.rows}
+    (button :timeout "35s" :class "network-row ${network.active ? 'selected' : ''}" :active {wifi.enabled && !wifi_busy}
+     :tooltip {network.title} :onclick "~/.local/bin/desktop-panel wifi-select ${network.token}"
+     (box :space-evenly false :spacing 7
+      (image :icon {network.signal >= 65 ? 'network-wireless-signal-excellent-symbolic' : network.signal >= 35 ? 'network-wireless-signal-good-symbolic' : 'network-wireless-signal-weak-symbolic'} :icon-size "menu")
+      (box :orientation "v" :space-evenly false :spacing 3 :hexpand true
+       (label :class "service-name" :xalign 0 :limit-width 16 :text {network.title})
+       (label :class "service-caption muted" :xalign 0 :limit-width 20 :text {network.active ? 'Connected' : network.secured ? 'Secured' : 'Open'}))
+      (label :class "service-signal muted" :text "${network.signal}%")))))
+  (box :vexpand true)
+  (service-pages :kind "wifi" :index {wifi.list_page} :count {wifi.page_count} :total {wifi.total})))
+
+(defwidget wifi-details []
+ (box :orientation "v" :space-evenly false :spacing 12
+  (button :timeout "35s" :class "cancel-wifi service-back" :tooltip "Back to networks" :active {!wifi_busy} :onclick "~/.local/bin/desktop-panel cancel-wifi"
+   (image :tooltip "Back to networks" :icon "go-previous-symbolic" :icon-size "menu"))
+  (image :icon "network-wireless-symbolic" :icon-size "dialog" :halign "start")
+  (label :class "detail-title" :xalign 0 :limit-width 20 :text {wifi_selected.title} :tooltip {wifi_selected.title})
+  (label :class "muted" :xalign 0 :limit-width 24 :text {wifi_selected.active ? 'Connected' : 'Disconnected'})
+  (detail-row :title "Security" :value {wifi_selected.security})
+  (detail-row :title "Signal" :value "${wifi_selected.signal}%")))
+
+(defwidget wifi-submit []
+ (button :timeout "35s" :class "wifi-connect apply" :tooltip {wifi_busy ? "Connecting…" : "Connect"} :active {!wifi_busy}
+  (image :icon {wifi_busy ? 'process-working-symbolic' : 'network-connect-symbolic'} :icon-size "button")))
+
+(defwidget wifi-connection []
+ (box :class "connection-form" :orientation "v" :space-evenly false :spacing 12 :vexpand true
+  (wifi-details)
+  (label :class "muted" :text "Password" :xalign 0)
+  (input :class "wifi-password" :active {!wifi_busy})
+  (box :vexpand true)
+  (wifi-submit)))
+
+(defwidget wifi-open-network []
+ (box :orientation "v" :space-evenly false :spacing 12 :vexpand true
+  (wifi-details)
+  (box :vexpand true)
+  (wifi-submit)))
+
+(defwidget wifi-connected []
+ (box :orientation "v" :space-evenly false :spacing 12 :vexpand true
+  (wifi-details)
+  (box :vexpand true)
+  (button :timeout "35s" :class "apply" :active {!wifi_busy}
+   :onclick "~/.local/bin/desktop-panel wifi-disconnect ${wifi_selected.token}" :tooltip "Disconnect" (image :icon "network-disconnect-symbolic" :icon-size "button"))))
+
+(defwidget wifi-panel []
+ (box :class "service-content service-full" :orientation "v" :space-evenly false :spacing 10 :vexpand true
+  (box :space-evenly false :spacing 6
+   (label :class "side-title" :text "Wi-Fi" :hexpand true :xalign 0)
+   (button :timeout "35s" :active {wifi.available && !wifi_busy} :tooltip "Scan networks"
+    :onclick "~/.local/bin/desktop-panel wifi-scan" (image :icon "view-refresh-symbolic" :icon-size "menu"))
+   (button :timeout "35s" :class "power ${wifi.enabled ? 'selected' : ''}" :active {wifi.available && !wifi_busy}
+    :tooltip {wifi.enabled ? 'Turn off Wi-Fi' : 'Turn on Wi-Fi'}
+    :onclick "~/.local/bin/desktop-panel wifi-power ${wifi.enabled ? 'off' : 'on'}"
+    (image :icon "system-shutdown-symbolic" :icon-size "menu")))
+  (label :class "muted service-caption" :visible wifi_busy :limit-width 24 :text "Applying changes…" :xalign 0)
+  (stack :class "wifi-views" :selected {wifi_selected.token == '' ? 0 : wifi_selected.active ? 3 : wifi_selected.secured ? 1 : 2} :same-size false :vexpand true
+   :transition {desktop.motion ? "slideleft" : "none"}
+   (wifi-list) (wifi-connection) (wifi-open-network) (wifi-connected))))
+
+(defwidget detail-row [title value]
+ (box :class "detail-row" :space-evenly false :spacing 6
+  (label :class "muted" :xalign 0 :hexpand true :text title)
+  (label :xalign 1 :limit-width 18 :text value :tooltip value)))
+
+(defwidget bluetooth-list []
+ (box :orientation "v" :space-evenly false :spacing 8 :vexpand true
+  (label :class "muted" :visible {!bluetooth.ready} :xalign 0 :limit-width 24 :text "Loading devices…")
+  (label :class "error" :visible {bluetooth.error != ''} :wrap true :limit-width 23 :text {bluetooth.error})
+  (label :class "muted" :visible {bluetooth.ready && bluetooth.available && !bluetooth.enabled} :wrap true :limit-width 23 :xalign 0 :text "Turn on Bluetooth to connect.")
+  (label :class "muted" :visible {bluetooth.ready && bluetooth.enabled && bluetooth.empty} :wrap true :limit-width 23 :xalign 0 :text "No devices. Scan to discover.")
+  (box :orientation "v" :space-evenly false :spacing 5
+   (for device in {bluetooth.rows}
+    (button :timeout "35s" :class "device-row ${device.connected ? 'selected' : ''}" :active {bluetooth.enabled && !bt_busy}
+     :tooltip {device.title} :onclick "~/.local/bin/desktop-panel bt-select ${device.token}"
+     (box :space-evenly false :spacing 7
+      (image :icon {device.icon} :icon-size "menu")
+      (box :orientation "v" :space-evenly false :spacing 3 :hexpand true
+       (label :class "service-name" :xalign 0 :limit-width 16 :text {device.title})
+       (label :class "service-caption muted" :xalign 0 :limit-width 20 :text {device.connected ? 'Connected' : device.paired ? 'Paired' : 'Available'}))
+      (label :class "service-signal muted" :text {device.battery})))))
+  (box :vexpand true)
+  (service-pages :kind "bt" :index {bluetooth.list_page} :count {bluetooth.page_count} :total {bluetooth.total})))
+
+(defwidget bluetooth-device []
+ (box :class "device-details" :orientation "v" :space-evenly false :spacing 11 :vexpand true
+  (button :timeout "35s" :class "service-back" :tooltip "Back to devices" :active {!bt_busy} :onclick "~/.local/bin/desktop-panel bt-back"
+   (image :tooltip "Back to devices" :icon "go-previous-symbolic" :icon-size "menu"))
+  (image :icon {bluetooth.detail.icon ?: 'bluetooth-symbolic'} :icon-size "dialog" :halign "start")
+  (label :class "detail-title" :xalign 0 :limit-width 20 :text {bluetooth.detail.title ?: ''} :tooltip {bluetooth.detail.title ?: ''})
+  (detail-row :title "Status" :value {bluetooth.detail.connected ? 'Connected' : 'Disconnected'})
+  (detail-row :title "Type" :value {bluetooth.detail.kind ?: ''})
+  (detail-row :title "Battery" :value {bluetooth.detail.battery ?: 'No data'})
+  (detail-row :title "Paired" :value {bluetooth.detail.paired ? 'Yes' : 'No'})
+  (detail-row :title "Signal" :value {bluetooth.detail.signal ?: 'No data'})
+  (label :class "service-caption muted" :xalign 0 :text {bluetooth.detail.address ?: ''})
+  (box :vexpand true)
+  (button :timeout "35s" :class "apply" :tooltip {bt_busy ? "Applying…" : bluetooth.detail.connected ? "Disconnect" : bluetooth.detail.paired ? "Connect" : "Pair"} :active {bluetooth.enabled && !bt_busy}
+   :onclick "~/.local/bin/desktop-panel bt-device ${bluetooth.detail.token}"
+   (image :icon {bt_busy ? 'process-working-symbolic' : bluetooth.detail.connected ? 'network-disconnect-symbolic' : bluetooth.detail.paired ? 'network-connect-symbolic' : 'insert-link-symbolic'} :icon-size "button"))))
+
+(defwidget bluetooth-panel []
+ (box :class "service-content service-full" :orientation "v" :space-evenly false :spacing 10 :vexpand true
+  (box :space-evenly false :spacing 6
+   (label :class "side-title" :text "Bluetooth" :hexpand true :xalign 0)
+   (button :timeout "35s" :active {bluetooth.available && bluetooth.enabled && !bt_busy} :tooltip "Scan for devices for 20 seconds"
+    :onclick "~/.local/bin/desktop-panel bt-scan" (image :icon "view-refresh-symbolic" :icon-size "menu"))
+   (button :timeout "35s" :class "power ${bluetooth.enabled ? 'selected' : ''}" :active {bluetooth.available && !bt_busy}
+    :tooltip {bluetooth.enabled ? 'Turn off Bluetooth' : 'Turn on Bluetooth'}
+    :onclick "~/.local/bin/desktop-panel bt-power ${bluetooth.enabled ? 'off' : 'on'}"
+    (image :icon "system-shutdown-symbolic" :icon-size "menu")))
+  (label :class "muted service-caption" :visible {bt_busy || bluetooth.scanning} :xalign 0 :limit-width 24
+   :text {bt_busy ? 'Applying changes…' : 'Scanning…'})
+  (stack :class "bluetooth-views" :selected {bluetooth.detail.token == '' ? 0 : 1} :same-size false :vexpand true
+   :transition {desktop.motion ? "slideleft" : "none"}
+   (bluetooth-list) (bluetooth-device))))
+
+(defwidget menu-audio []
+ (box :class "service-content" :orientation "v" :space-evenly false :spacing 8
+  (label :class "side-title" :xalign 0 :text "Audio")
+  (scroll :class "service-scroll" :height 220 :hscroll false (sound-panel))
+  (button :timeout "35s" :class "quiet" :onclick "~/.local/bin/desktop-panel advanced audio" :tooltip "Open audio mixer" (image :icon "preferences-system-symbolic" :icon-size "button"))))
+(defwidget menu-wifi [] (wifi-panel))
+(defwidget menu-bluetooth [] (bluetooth-panel))

@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "name": "raccon-dots",
+  "version": "0.3.0",
+  "requested": [
+    "wayfire",
+    "waybar",
+    "desktop",
+    "power",
+    "themes",
+    "wallpaper",
+    "shell",
+    "tools",
+    "nvim",
+    "audio",
+    "chat-theme",
+    "browser",
+    "filemanager",
+    "desktop-styles"
+  ],
+  "choices": {
+    "terminal": "kitty",
+    "launcher": "desktop-menu",
+    "notifications": "swaync",
+    "lock": "gtklock",
+    "shell": "zsh",
+    "browser": "firefox",
+    "filemanager": "dolphin"
+  },
+  "packages": false,
+  "extra_packages": [],
+  "setup": [],
+  "tinywidgets_source": "~/projects/tinyWidgets",
+  "widgets": {
+    "profile": "keep",
+    "profiles": [
+      "Personal",
+      "Trabajo",
+      "Gaming",
+      "Dashboard",
+      "Cyberpunk",
+      "silly"
+    ],
+    "theme": "personal",
+    "motion": "personal",
+    "install": "auto",
+    "components": [
+      "widgets-profiles",
+      "widgets-themes",
+      "widgets-motion",
+      "widgets-palette"
+    ]
+  }
+}

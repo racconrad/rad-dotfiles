@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""Suspend on battery after idle, unless Working is selected."""
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path.home() / '.local/lib'))
+from desktop_power.battery import read_battery
+from desktop_power.policy import should_suspend
+from desktop_power.storage import STATE, read_json
+
+
+if __name__ == '__main__':
+    try:
+        status = read_battery()
+    except OSError:
+        status = {'plugged': None, 'batteries': 0, 'percent': None}
+    preference = read_json(STATE / 'preference.json')
+    allowed = should_suspend(status, preference)
+    if '--check' in sys.argv:
+        print(json.dumps(dict(status, mode=preference.get('mode', 'auto'), suspend_on_idle=allowed)))
+    elif allowed:
+        subprocess.run(['systemctl', 'suspend'], check=True)

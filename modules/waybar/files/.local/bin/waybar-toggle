@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Turn waybar fully off (frees its screen space) or back on.
+# Stopping sets the supervisor's stop flag and kills the supervisor first,
+# so the crash-restart logic in launch.sh does not bring the bar back.
+set -euo pipefail
+
+run_dir="${XDG_RUNTIME_DIR:-/tmp}/waybar-supervisor"
+pid_file="$run_dir/pid"
+
+if pgrep -x waybar >/dev/null; then
+  mkdir -p -- "$run_dir"
+  touch -- "$run_dir/stop"
+  sup="$(cat -- "$pid_file" 2>/dev/null || true)"
+  # The supervisor's TERM trap also terminates its waybar child.
+  if [[ -n "$sup" ]]; then kill "$sup" 2>/dev/null || true; fi
+  pkill -x waybar 2>/dev/null || true
+  # Wait until it is really gone so a quick second press turns it back on.
+  for _ in $(seq 20); do pgrep -x waybar >/dev/null || break; sleep 0.1; done
+  pkill -9 -x waybar 2>/dev/null || true
+else
+  setsid -f "$HOME/.config/waybar/launch.sh" >/dev/null 2>&1
+fi

@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+.test-home/
+*.bak
+*.log
+.history/

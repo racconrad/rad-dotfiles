@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Crea un tema Plymouth en bucle a partir de un video o GIF.
+# Uso: plymouth-from-video <video|gif> <nombre> [fps=20] [alto=720] [segundos=6]
+set -euo pipefail
+
+[[ $# -ge 2 ]] || { echo "Uso: $0 <video|gif> <nombre> [fps=20] [alto=720] [segundos=6]"; exit 1; }
+src=$1 name=$2 fps=${3:-20} height=${4:-720} secs=${5:-6}
+[[ -f $src ]] || { echo "No existe: $src"; exit 1; }
+[[ $name =~ ^[a-z0-9_-]+$ ]] || { echo "Nombre solo con a-z 0-9 _ -"; exit 1; }
+for tool in ffmpeg ffprobe; do
+  command -v "$tool" >/dev/null || { echo "Falta $tool (instala: sudo pacman -S ffmpeg)"; exit 1; }
+done
+[[ $fps =~ ^[0-9]+$ ]] && (( fps >= 1 && fps <= 50 )) || { echo "fps debe ser 1-50 (Plymouth refresca a 50 Hz)"; exit 1; }
+[[ $height =~ ^[0-9]+$ ]] && (( height >= 16 && height <= 2160 )) || { echo "alto debe ser 16-2160"; exit 1; }
+[[ $secs =~ ^[0-9]+([.][0-9]+)?$ ]] && awk "BEGIN{exit !($secs > 0 && $secs <= 30)}" \
+  || { echo "segundos debe ser >0 y <=30 (todo va en el initramfs)"; exit 1; }
+
+# Acepta cualquier cosa que ffmpeg decodifique con pista de video: mp4, mkv, webm, mov, avi, gif, apng, png/jpg...
+if ! ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 "$src" 2>/dev/null | grep -q .; then
+  case ${src,,} in
+    *.webp) echo "Tu ffmpeg no decodifica este WebP. Conviértelo antes: magick '$src' animado.gif" ;;
+    *) echo "Formato no soportado o sin video: $src (ffprobe no encontró pista de video)" ;;
+  esac
+  exit 1
+fi
+
+out=$HOME/.local/share/plymouth-custom/$name
+rm -rf "$out"; mkdir -p "$out"
+
+# Los frames van dentro del initramfs: limitar fps/duración evita un arranque lento.
+ffmpeg -loglevel error -i "$src" -t "$secs" \
+  -vf "fps=$fps,scale=-2:'min($height,ih)':flags=lanczos" \
+  -start_number 0 "$out/frame-%d.png"
+frames=$(find "$out" -name 'frame-*.png' | wc -l)
+(( frames > 0 )) || { echo "ffmpeg no generó frames"; exit 1; }
+
+cat > "$out/$name.plymouth" <<EOF
+[Plymouth Theme]
+Name=$name
+Description=Animación custom desde $(basename "$src")
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/$name
+ScriptFile=/usr/share/plymouth/themes/$name/$name.script
+EOF
+
+cat > "$out/$name.script" <<EOF
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+
+frames = $frames;
+fps = $fps;
+for (i = 0; i < frames; i++)
+  img[i] = Image("frame-" + i + ".png");
+
+sprite = Sprite(img[0]);
+sprite.SetX(Window.GetX() + Window.GetWidth() / 2 - img[0].GetWidth() / 2);
+sprite.SetY(Window.GetY() + Window.GetHeight() / 2 - img[0].GetHeight() / 2);
+
+tick = 0;
+fun refresh_callback() {
+  # Plymouth llama a esto a 50 Hz
+  sprite.SetImage(img[Math.Int(tick * fps / 50) % frames]);
+  tick++;
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+EOF
+
+size=$(du -sh "$out" | cut -f1)
+echo "Tema '$name' creado: $frames frames, $size en $out"
+read -rp "¿Instalar y activar ahora? (pide sudo) [s/N] " ok
+if [[ $ok == [sS] ]]; then
+  sudo rm -rf "/usr/share/plymouth/themes/$name"
+  sudo cp -r "$out" "/usr/share/plymouth/themes/$name"
+  sudo plymouth-set-default-theme -R "$name"
+  echo "Listo. Se verá en el próximo arranque."
+else
+  echo "Para instalarlo luego:"
+  echo "  sudo cp -r $out /usr/share/plymouth/themes/ && sudo plymouth-set-default-theme -R $name"
+fi

@@ -1,0 +1,432 @@
+/**
+ * @name Material You Clean (Dynamic Matugen)
+ * @description Clean, minimalist, dynamic translucent Discord theme synchronized with the desktop wallpaper via Matugen.
+ * @author raccon
+ * @version 1.0.0
+ */
+
+/* ==========================================================================
+   DYNAMIC MATERIAL YOU PALETTE (Generated from: @RDOT_HOME@/Pictures/Wallpapers/wallpaper.png)
+   ========================================================================== */
+:root, .theme-dark, .theme-light {
+  /* --- Matugen Source Colors --- */
+  --matugen-primary: #ffb0cb;
+  --matugen-primary-rgb: 255, 176, 203;
+  --matugen-on-primary: #541d35;
+  --matugen-primary-container: #6f334b;
+  --matugen-on-primary-container: #ffd9e4;
+
+  --matugen-secondary: #e2bdc8;
+  --matugen-secondary-rgb: 226, 189, 200;
+  --matugen-tertiary: #f0bc95;
+  --matugen-tertiary-rgb: 240, 188, 149;
+
+  --matugen-surface: #191114;
+  --matugen-surface-rgb: 25, 17, 20;
+  --matugen-surface-low: #22191c;
+  --matugen-surface-low-rgb: 34, 25, 28;
+  --matugen-surface-lowest: #130c0f;
+  --matugen-surface-lowest-rgb: 19, 12, 15;
+  --matugen-surface-high: #31282a;
+  --matugen-surface-high-rgb: 49, 40, 42;
+  --matugen-surface-highest: #3c3235;
+  --matugen-surface-highest-rgb: 60, 50, 53;
+
+  --matugen-on-surface: #efdfe2;
+  --matugen-on-surface-variant: #d5c2c6;
+  --matugen-outline: #9d8c91;
+  --matugen-outline-rgb: 157, 140, 145;
+  --matugen-outline-variant: #514347;
+  --matugen-outline-variant-rgb: 81, 67, 71;
+  --matugen-error: #ffb4ab;
+
+  /* --- Translucent Glass Layers (Clean Aesthetic) --- */
+  --glass-bg-primary: rgba(var(--matugen-surface-rgb), 0.62);
+  --glass-bg-secondary: rgba(var(--matugen-surface-low-rgb), 0.68);
+  --glass-bg-tertiary: rgba(var(--matugen-surface-lowest-rgb), 0.74);
+  --glass-bg-floating: rgba(var(--matugen-surface-high-rgb), 0.90);
+  --glass-blur: blur(16px);
+
+  /* --- Discord Classic Theme Tokens --- */
+  --background-primary: var(--glass-bg-primary);
+  --background-secondary: var(--glass-bg-secondary);
+  --background-secondary-alt: var(--glass-bg-tertiary);
+  --background-tertiary: var(--glass-bg-tertiary);
+  --background-accent: rgba(var(--matugen-outline-variant-rgb), 0.22);
+  --background-floating: var(--glass-bg-floating);
+  --background-nested-floating: rgba(var(--matugen-surface-highest-rgb), 0.94);
+  --background-mobile-primary: var(--glass-bg-primary);
+  --background-mobile-secondary: var(--glass-bg-secondary);
+
+  --channeltextarea-background: rgba(var(--matugen-surface-high-rgb), 0.75);
+  --input-background: rgba(var(--matugen-surface-high-rgb), 0.75);
+  --modal-background: rgba(var(--matugen-surface-rgb), 0.94);
+  --modal-footer-background: rgba(var(--matugen-surface-low-rgb), 0.94);
+
+  /* --- Discord Modern Design Tokens --- */
+  --bg-base-primary: var(--glass-bg-primary);
+  --bg-base-secondary: var(--glass-bg-secondary);
+  --bg-base-tertiary: var(--glass-bg-tertiary);
+  --bg-surface-raised: rgba(var(--matugen-surface-rgb), 0.82);
+  --bg-surface-overlay: var(--glass-bg-floating);
+  --bg-mod-subtle: rgba(var(--matugen-primary-rgb), 0.08);
+  --bg-mod-normal: rgba(var(--matugen-primary-rgb), 0.15);
+  --bg-mod-strong: rgba(var(--matugen-primary-rgb), 0.24);
+  --bg-mod-faint: rgba(var(--matugen-primary-rgb), 0.04);
+
+  /* --- Text & Interactive Hierarchy --- */
+  --text-normal: var(--matugen-on-surface);
+  --text-primary: var(--matugen-on-surface);
+  --text-secondary: var(--matugen-on-surface-variant);
+  --text-muted: var(--matugen-on-surface-variant);
+  --text-link: var(--matugen-primary);
+  --text-positive: #a8d5a2;
+  --text-warning: #f3d38a;
+  --text-danger: var(--matugen-error);
+  --header-primary: var(--matugen-on-surface);
+  --header-secondary: var(--matugen-on-surface-variant);
+
+  --interactive-normal: var(--matugen-on-surface-variant);
+  --interactive-hover: var(--matugen-on-surface);
+  --interactive-active: var(--matugen-primary);
+  --interactive-muted: rgba(var(--matugen-outline-rgb), 0.5);
+
+  /* --- Brand & Accents --- */
+  --brand-experiment: var(--matugen-primary);
+  --brand-experiment-100: var(--matugen-primary-container);
+  --brand-experiment-200: var(--matugen-primary-container);
+  --brand-experiment-300: var(--matugen-primary);
+  --brand-experiment-400: var(--matugen-primary);
+  --brand-experiment-500: var(--matugen-primary);
+  --brand-experiment-560: var(--matugen-primary);
+  --brand-experiment-600: var(--matugen-primary-container);
+  --brand-500: var(--matugen-primary);
+  --brand-560: var(--matugen-primary);
+  --brand-600: var(--matugen-primary-container);
+  --bg-brand: var(--matugen-primary);
+
+  /* --- Borders, Dividers & Outlines --- */
+  --border-subtle: rgba(var(--matugen-outline-variant-rgb), 0.20);
+  --border-normal: rgba(var(--matugen-outline-rgb), 0.30);
+  --border-strong: rgba(var(--matugen-outline-rgb), 0.50);
+
+  /* --- Mentions --- */
+  --mention-background: rgba(var(--matugen-primary-rgb), 0.12);
+  --mention-foreground: var(--matugen-primary);
+  --mention-border: var(--matugen-primary);
+
+  /* --- Scrollbars --- */
+  --scrollbar-auto-thumb: rgba(var(--matugen-outline-rgb), 0.25);
+  --scrollbar-auto-track: transparent;
+  --scrollbar-thin-thumb: rgba(var(--matugen-outline-rgb), 0.20);
+  --scrollbar-thin-track: transparent;
+}
+
+/* ==========================================================================
+   WINDOW TRANSPARENCY & GLASS FOUNDATION
+   ========================================================================== */
+html, body, #app-mount,
+[class*="appMount_"],
+[class*="app_"],
+[class*="bg_"] {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Main layouts transparency */
+[class*="layers_"],
+[class*="layer_"],
+[class*="base_"] {
+  background: transparent !important;
+}
+
+/* Left Server List (Guilds) */
+nav[class*="guilds_"],
+[class*="guilds_"] {
+  background: var(--glass-bg-tertiary) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-right: 1px solid var(--border-subtle);
+}
+
+/* Channels Sidebar */
+[class*="sidebar_"],
+nav[class*="sidebar_"] {
+  background: var(--glass-bg-secondary) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-right: 1px solid var(--border-subtle);
+}
+
+/* Chat Main View */
+[class*="chat_"],
+[class*="chatContent_"],
+main[class*="chatContent_"] {
+  background: var(--glass-bg-primary) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+/* Members List */
+[class*="membersWrap_"],
+[class*="members_"],
+aside[class*="membersWrap_"] {
+  background: var(--glass-bg-secondary) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-left: 1px solid var(--border-subtle);
+}
+
+/* Top Navigation & Channel Header */
+[class*="title_"][class*="container_"],
+header[class*="header_"],
+[class*="subtitleContainer_"] {
+  background: var(--glass-bg-secondary) !important;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--border-subtle) !important;
+  box-shadow: none !important;
+}
+
+/* User Profile Panel at Bottom of Sidebar */
+[class*="panels_"] {
+  background: rgba(var(--matugen-surface-high-rgb), 0.65) !important;
+  backdrop-filter: var(--glass-blur);
+  border-top: 1px solid var(--border-subtle) !important;
+  border-radius: 12px 12px 0 0;
+  margin: 0 4px;
+}
+
+/* Direct Messages & Friends List */
+[class*="container_"][class*="themed_"],
+[class*="peopleColumn_"],
+[class*="nowPlayingColumn_"] {
+  background: transparent !important;
+}
+
+/* Voice Call Containers */
+[class*="callContainer_"],
+[class*="wrapper_"][class*="callContainer_"] {
+  background: var(--glass-bg-primary) !important;
+  backdrop-filter: var(--glass-blur);
+}
+
+/* Settings Full View */
+[class*="standardSidebarView_"] {
+  background: transparent !important;
+}
+
+[class*="sidebarRegion_"],
+[class*="sidebarRegionScroller_"] {
+  background: var(--glass-bg-secondary) !important;
+  backdrop-filter: var(--glass-blur);
+  border-right: 1px solid var(--border-subtle);
+}
+
+[class*="contentRegion_"],
+[class*="contentRegionScroller_"] {
+  background: var(--glass-bg-primary) !important;
+  backdrop-filter: var(--glass-blur);
+}
+
+/* ==========================================================================
+   CLEAN AESTHETIC ENHANCEMENTS (Distraction-Free)
+   ========================================================================== */
+
+/* Hide Nitro Gift Button & App Launcher Button in Chat Box */
+button[aria-label*="gift" i],
+button[aria-label*="regalo" i],
+button[aria-label*="Nitro" i],
+button[aria-label*="Open App Launcher" i],
+button[aria-label*="Abrir el iniciador de aplicaciones" i],
+[class*="buttons_"] > button[aria-label*="Apps" i],
+[class*="buttons_"] > [class*="appLauncher_"] {
+  display: none !important;
+}
+
+/* Clean, Floating Pill Chat Input Area */
+[class*="form_"] {
+  margin-top: 0 !important;
+  padding: 0 16px 16px 16px !important;
+}
+
+[class*="channelTextArea_"] {
+  background: rgba(var(--matugen-surface-high-rgb), 0.78) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.22) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+[class*="channelTextArea_"]:focus-within {
+  border-color: rgba(var(--matugen-primary-rgb), 0.5) !important;
+  box-shadow: 0 4px 24px rgba(var(--matugen-primary-rgb), 0.15) !important;
+}
+
+[class*="scrollableContainer_"] {
+  background: transparent !important;
+}
+
+/* Search Bar Pill */
+[class*="searchBar_"] {
+  background: rgba(var(--matugen-surface-lowest-rgb), 0.65) !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border-subtle) !important;
+}
+
+/* Channel Items Clean Spacing & Hover */
+[class*="channel_"] [class*="interactive_"] {
+  border-radius: 8px !important;
+  margin: 1px 4px !important;
+  padding: 0 8px !important;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+[class*="channel_"] [class*="interactive_"]:hover {
+  background-color: rgba(var(--matugen-primary-rgb), 0.10) !important;
+  color: var(--matugen-on-surface) !important;
+}
+
+[class*="channel_"] [class*="interactive_"][class*="selected_"] {
+  background-color: rgba(var(--matugen-primary-rgb), 0.18) !important;
+  color: var(--matugen-primary) !important;
+  font-weight: 600 !important;
+}
+
+/* Server Icons Smooth Interaction */
+[class*="blobContainer_"],
+[class*="listItem_"] {
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+[class*="blobContainer_"]:hover,
+[class*="listItem_"]:hover {
+  transform: scale(1.05);
+}
+
+[class*="pill_"] [class*="item_"] {
+  background-color: var(--matugen-primary) !important;
+  border-radius: 4px !important;
+}
+
+/* Messages Styling */
+[class*="message_"] {
+  transition: background-color 0.15s ease !important;
+  border-radius: 8px;
+}
+
+[class*="message_"]:hover {
+  background-color: rgba(var(--matugen-surface-high-rgb), 0.40) !important;
+}
+
+/* Mentions */
+[class*="message_"][class*="mentioned_"] {
+  background-color: rgba(var(--matugen-primary-rgb), 0.12) !important;
+  position: relative !important;
+}
+
+[class*="message_"][class*="mentioned_"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3.5px;
+  background-color: var(--matugen-primary) !important;
+  border-radius: 3px;
+}
+
+/* Embeds */
+[class*="embedFull_"] {
+  background: rgba(var(--matugen-surface-lowest-rgb), 0.70) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-left: 4px solid var(--matugen-primary) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18) !important;
+}
+
+/* Code Blocks */
+code, pre code, [class*="codeView_"] {
+  background-color: rgba(var(--matugen-surface-lowest-rgb), 0.85) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 8px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+}
+
+/* Autocomplete Popups */
+[class*="autocomplete_"] {
+  background-color: rgba(var(--matugen-surface-high-rgb), 0.94) !important;
+  backdrop-filter: blur(24px) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Popouts, Modals, Context Menus */
+[class*="menu_"],
+[class*="popout_"],
+[role="dialog"],
+[class*="modal_"],
+[class*="userProfileModalOuter_"],
+[class*="userProfileOuter_"] {
+  background-color: rgba(var(--matugen-surface-high-rgb), 0.94) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border: 1px solid rgba(var(--matugen-primary-rgb), 0.20) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Tooltips */
+[class*="tooltip_"] {
+  background-color: rgba(var(--matugen-surface-highest-rgb), 0.95) !important;
+  color: var(--matugen-on-surface) !important;
+  border-radius: 6px !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Buttons */
+[class*="lookFilled_"][class*="colorBrand_"],
+button[class*="lookFilled"][class*="colorBrand"] {
+  background-color: var(--matugen-primary) !important;
+  color: var(--matugen-on-primary) !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  transition: filter 0.15s ease, transform 0.15s ease !important;
+}
+
+[class*="lookFilled_"][class*="colorBrand_"]:hover,
+button[class*="lookFilled"][class*="colorBrand"]:hover {
+  filter: brightness(1.1) !important;
+  transform: translateY(-1px);
+}
+
+/* Badges & Indicators */
+[class*="unreadMentionsIndicator_"],
+[class*="badge_"],
+[class*="numberBadge_"] {
+  background-color: var(--matugen-primary) !important;
+  color: var(--matugen-on-primary) !important;
+  font-weight: bold !important;
+}
+
+/* Ultra-Clean Sleek Scrollbars */
+::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--matugen-outline-rgb), 0.28) !important;
+  border-radius: 10px !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--matugen-primary) !important;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}

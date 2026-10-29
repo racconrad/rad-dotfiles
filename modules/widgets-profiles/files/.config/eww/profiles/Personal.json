@@ -1,0 +1,239 @@
+{
+  "version": 1,
+  "name": "Personal",
+  "desc": "Main layout. Command, photo and note widgets start disabled.",
+  "animation": {
+    "anim_in": "slideleft",
+    "anim_out": "slideright",
+    "size_mode": "stable",
+    "duration_in": 240,
+    "duration_out": 180,
+    "when": "workspace",
+    "workspace_delay": 150,
+    "delay_in": 60,
+    "max_parallel": 6,
+    "fps": 60,
+    "palette_animation": true,
+    "reload_in": true,
+    "reload_out": true,
+    "workspace_in": true,
+    "workspace_out": false,
+    "stagger": 24,
+    "jitter": 0,
+    "order": "left_to_right",
+    "stagger_in": true,
+    "stagger_out": true,
+    "type": "slideleft"
+  },
+  "widgets": [
+    {
+      "id": "cofre",
+      "window": "chest",
+      "show": true,
+      "anchor": "bottom-left",
+      "x": 60,
+      "y": 30,
+      "opts": {
+        "frame_controls": "no",
+        "skin": "global",
+        "window_frame": "Sin marco",
+        "workspace": "Todos",
+        "launchers": "[]"
+      }
+    },
+    {
+      "id": "reloj",
+      "window": "clock",
+      "show": true,
+      "anchor": "top-left",
+      "x": 60,
+      "y": 90,
+      "opts": {
+        "anim": "global",
+        "border": "no",
+        "frame_controls": "no",
+        "skin": "global",
+        "width": "276",
+        "window_frame": "Sin marco",
+        "workspace": "Todos"
+      }
+    },
+    {
+      "id": "comando",
+      "window": "command",
+      "show": false,
+      "anchor": "bottom-right",
+      "x": 60,
+      "y": 30,
+      "opts": {
+        "anim": "global",
+        "anim_out": "global",
+        "border": "no",
+        "card_style": "Sin marco (transparente)",
+        "chars": "64",
+        "frame_controls": "no",
+        "fx": "global",
+        "header": "no",
+        "padding": "Compacto",
+        "skin": "global",
+        "width": "540",
+        "window_frame": "Sin marco",
+        "workspace": "Workspace 1"
+      }
+    },
+    {
+      "id": "foto",
+      "window": "photo",
+      "show": false,
+      "anchor": "top-left",
+      "x": 360,
+      "y": 216,
+      "opts": {
+        "anim": "global",
+        "anim_out": "global",
+        "border": "no",
+        "frame_controls": "no",
+        "fx": "global",
+        "height": "192",
+        "skin": "global",
+        "width": "200",
+        "window_frame": "Sin marco",
+        "workspace": "Workspace 1"
+      }
+    },
+    {
+      "id": "foto2",
+      "window": "photo",
+      "show": false,
+      "anchor": "top-left",
+      "x": 360,
+      "y": 488,
+      "opts": {
+        "anim": "global",
+        "anim_out": "global",
+        "border": "no",
+        "frame_controls": "no",
+        "fx": "global",
+        "height": "240",
+        "skin": "global",
+        "width": "352",
+        "window_frame": "Sin marco",
+        "workspace": "Workspace 1"
+      }
+    },
+    {
+      "id": "foto3",
+      "window": "photo",
+      "show": false,
+      "anchor": "top-left",
+      "x": 584,
+      "y": 352,
+      "opts": {
+        "anim": "global",
+        "anim_out": "global",
+        "border": "no",
+        "frame_controls": "no",
+        "fx": "global",
+        "height": "112",
+        "skin": "global",
+        "width": "128",
+        "window_frame": "Sin marco",
+        "workspace": "Workspace 1"
+      }
+    },
+    {
+      "id": "foto4",
+      "window": "photo",
+      "show": false,
+      "anchor": "top-left",
+      "x": 584,
+      "y": 216,
+      "opts": {
+        "anim": "global",
+        "anim_out": "global",
+        "border": "no",
+        "frame_controls": "no",
+        "fx": "global",
+        "height": "112",
+        "skin": "global",
+        "width": "128",
+        "window_frame": "Sin marco",
+        "workspace": "Workspace 1"
+      }
+    },
+    {
+      "id": "discos",
+      "window": "disks",
+      "show": true,
+      "anchor": "top-right",
+      "x": 60,
+      "y": 90,
+      "opts": {
+        "anim": "global",
+        "anim_out": "global",
+        "border": "no",
+        "frame_controls": "no",
+        "fx": "global",
+        "skin": "global",
+        "width": "276",
+        "window_frame": "Sin marco",
+        "workspace": "Workspace 1",
+        "mounts": "/"
+      }
+    },
+    {
+      "id": "sistema",
+      "window": "system",
+      "show": true,
+      "anchor": "top-left",
+      "x": 60,
+      "y": 216,
+      "opts": {
+        "anim": "global",
+        "anim_out": "global",
+        "border": "no",
+        "frame_controls": "no",
+        "fx": "global",
+        "skin": "global",
+        "width": "276",
+        "window_frame": "Sin marco",
+        "workspace": "Workspace 1"
+      }
+    },
+    {
+      "id": "minecraft",
+      "window": "minecraft",
+      "show": true,
+      "anchor": "top-left",
+      "x": 580,
+      "y": 260,
+      "opts": {
+        "anim": "global",
+        "anim_out": "global",
+        "frame_controls": "no",
+        "fx": "global",
+        "skin": "global",
+        "width": "392",
+        "window_frame": "Sin marco",
+        "workspace": "Workspace 8"
+      }
+    },
+    {
+      "id": "api4",
+      "window": "api",
+      "show": false,
+      "anchor": "top-left",
+      "x": 160,
+      "y": 360,
+      "opts": {
+        "anim": "global",
+        "anim_out": "global",
+        "frame_controls": "no",
+        "fx": "global",
+        "skin": "global",
+        "window_frame": "Sin marco",
+        "workspace": "Workspace 3"
+      }
+    }
+  ]
+}

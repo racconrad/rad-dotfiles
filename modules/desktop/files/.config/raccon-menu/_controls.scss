@@ -1,0 +1,29 @@
+/* Compact functional service controls inside the attached side panel. */
+.service-content .volume-percent { min-width: 32px; font-size: 11px; }
+.service-content .mute, .service-content .device-toggle { padding: 6px; }
+.service-content .mic-choice { padding: 4px 1px; }
+.service-content .mic-choice label { font-size: 10px; }
+.service-content .mic-row { padding-top: 3px; }
+.service-content .device-row, .service-content .network-row { padding: 8px 5px; }
+.service-content .power { padding: 7px; }
+.service-content .connection-form { padding: 0; }
+.service-content .wifi-password { padding: 9px; background: $surface_container_highest; color: $on_surface; caret-color: $primary; border-radius: 9px; }
+.service-content .wifi-password selection { background: $primary; color: $on_primary; }
+.service-content scale { padding: 5px 2px; min-height: 20px; }
+.service-content scale trough { background: $surface_container_highest; min-height: 4px; border-radius: 8px; }
+.service-content scale highlight { background: $primary; border-radius: 8px; }
+.service-content scale slider { background: $primary; min-width: 13px; min-height: 13px; border-radius: 8px; }
+.service-content .mic-row scale { min-width: 55px; }
+
+.service-content .power.selected { background: $primary; color: $on_primary; }
+
+/* Fixed page sizes keep every option and action visible, including Retro. */
+.service-full .network-row, .service-full .device-row { padding: 9px 7px; min-height: 32px; }
+.service-full .service-caption, .service-full .service-signal { font-size: 10px; }
+.service-full .service-name { font-size: 11px; }
+.service-full .service-pagination button { padding: 7px 10px; }
+.service-full .service-pagination label { font-size: 10px; }
+.service-full .service-back { padding: 7px; }
+.service-full .detail-title { font-size: 13px; font-weight: 700; }
+.service-full .detail-row label { font-size: 11px; }
+.service-full .wifi-password { min-width: 0; padding: 8px; }

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Screenshots: "area" -> slurp selection edited in swappy,
+#              "full" -> whole screen saved to ~/Pictures/Screenshots.
+set -euo pipefail
+
+dir="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+mkdir -p -- "$dir"
+
+case "${1:-}" in
+  area)
+    geom="$(slurp -d -b '#00000066' -c '#ffffffcc' -w 2)" || exit 0
+    grim -g "$geom" - | swappy -f -
+    ;;
+  full)
+    file="$dir/screenshot-$(date +%Y%m%d-%H%M%S).png"
+    grim "$file"
+    wl-copy --type image/png < "$file" || true
+    notify-send -a screenshot -i "$file" "Screenshot saved" "$(basename -- "$file")" || true
+    ;;
+  *)
+    echo "usage: screenshot area|full" >&2
+    exit 1
+    ;;
+esac
