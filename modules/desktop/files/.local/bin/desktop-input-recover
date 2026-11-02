@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Release only Raccon popup grabs; applications and widget daemons stay running.
+set -uo pipefail
+failed=0
+stopped=0
+for popup in raccon-menu desktop-style raccon-float raccon-music; do
+    config="$HOME/.config/$popup"
+    [[ -d "$config" ]] || continue
+    if ! message=$(eww --no-daemonize -c "$config" kill 2>&1); then
+        case "$message" in
+          *'No such file'*|*'Connection refused'*) ;;
+          *) printf '%s: %s\n' "$popup" "$message" >&2; failed=1 ;;
+        esac
+    else
+        stopped=$((stopped + 1))
+    fi
+done
+if (( failed && stopped == 0 )); then
+    echo 'Run desktop-input-recover from a terminal in your desktop session.' >&2
+    exit 1
+fi
+printf '%s Raccon popup daemons stopped. Open panels normally to load the updated adapters.\n' "$stopped"

@@ -2,6 +2,17 @@
 #include <gmodule.h>
 #include "navigation.h"
 #include "thumbnail_playback.h"
+extern void gtk_layer_set_keyboard_mode(GtkWindow *,gint) __attribute__((weak));
+extern gboolean gtk_layer_is_layer_window(GtkWindow *) __attribute__((weak));
+static gboolean release_keyboard(gpointer data) {
+    GtkWidget *window=data;
+    if(gtk_layer_set_keyboard_mode&&gtk_layer_is_layer_window&&gtk_layer_is_layer_window(GTK_WINDOW(window)))
+        gtk_layer_set_keyboard_mode(GTK_WINDOW(window),gtk_widget_get_mapped(window)?2:0);
+    return G_SOURCE_REMOVE;
+}
+static gboolean focus_acquired(GtkWidget *window,GdkEventFocus *event,gpointer unused) {
+    release_keyboard(window);return FALSE;
+}
 static void action(const gchar *name) {
     const gchar *command=g_strcmp0(g_getenv("RACCON_KEYS_COMMAND"),"raccon-music")==0?"raccon-music":"raccon-float";
     gchar *exe=g_build_filename(g_get_home_dir(),".local","bin",command,NULL);
@@ -130,6 +141,7 @@ static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *val
             g_signal_connect(w,"key-press-event",G_CALLBACK(keys),NULL);
             g_signal_connect(w,"key-release-event",G_CALLBACK(released),NULL);
             g_signal_connect(w,"focus-out-event",G_CALLBACK(focus_reset),NULL);
+            g_signal_connect(w,"focus-in-event",G_CALLBACK(focus_acquired),NULL);
             g_object_set_data(G_OBJECT(w),"float-keys",GINT_TO_POINTER(1));
         }
         GtkWidget *metadata=nav_find(w,"preview-playback");
@@ -139,6 +151,7 @@ static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *val
             play_update(G_OBJECT(metadata),NULL,NULL);
         }
         g_timeout_add_full(G_PRIORITY_DEFAULT,260,initial_focus,g_object_ref(w),g_object_unref);
+        g_timeout_add_full(G_PRIORITY_DEFAULT,120,release_keyboard,g_object_ref(w),g_object_unref);
     }
     return TRUE;
 }
