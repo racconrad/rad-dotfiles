@@ -5,3 +5,7 @@ __pycache__/
 *.bak
 *.log
 .history/
+
+# Internal notes stay local
+docs/
+INVENTORY.md
