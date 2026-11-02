@@ -1,0 +1,11 @@
+[SddmGreeterTheme]
+Name=Raccon
+Description=The Raccon desktop, from login onward
+Author=Raccon Dots
+Type=sddm-theme
+Version=1.0
+MainScript=Main.qml
+ConfigFile=theme.conf
+Screenshot=preview.png
+Theme-API=2.0
+QtVersion=6
