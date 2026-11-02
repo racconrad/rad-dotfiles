@@ -1,0 +1,25 @@
+; Shortcut viewer. input.c filters rows natively by `search-key`; no process per key.
+(defpoll shortcuts :initial '[]' :interval "600s"
+  "python3 $HOME/.local/lib/raccon_menu/shortcuts.py")
+
+(defwidget menu-shortcuts []
+  (box :class "shortcuts-panel ${(desktop.ascii ?: false) ? 'ascii' : ''}" :orientation "v" :space-evenly false :spacing 10 :vexpand true
+    (label :class "side-title" :xalign 0 :text {(desktop.ascii ?: false) ? '[ Shortcuts ]' : 'Shortcuts'})
+    (box :class "search-bar keys-bar" :space-evenly false :spacing 8
+      (box :visible {!(desktop.ascii ?: false)} (menu-icon :name "system-search-symbolic"))
+      (label :class "ascii-prompt" :visible {desktop.ascii ?: false} :text ">_")
+      (input :class "keys-search" :hexpand true :tooltip "Filter by key or action"))
+    (label :class "keys-empty muted" :visible false :wrap true :xalign 0 :text "No shortcuts match.")
+    (scroll :class "keys-scroll" :vexpand true :hscroll false :vscroll true
+      (box :class "keys-list" :orientation "v" :space-evenly false :spacing 10
+        (for section in shortcuts
+          (box :class "key-section" :orientation "v" :space-evenly false :spacing 2
+            (label :class "key-section-title" :xalign 0 :wrap true :limit-width 34
+              :text {(desktop.ascii ?: false) ? '## ' + section.title : section.title})
+            (for row in {section.rows}
+              (button :class "key-row" :tooltip "${row.keys} · ${row.action}"
+                (box :orientation "v" :space-evenly false :spacing 3
+                  (label :class "search-key" :visible false :text {row.search})
+                  (label :class "key-cap" :halign "start" :xalign 0 :wrap true :limit-width 34
+                    :text {(desktop.ascii ?: false) ? '[' + row.keys + ']' : row.keys})
+                  (label :class "key-action muted" :xalign 0 :wrap true :text {row.action}))))))))))

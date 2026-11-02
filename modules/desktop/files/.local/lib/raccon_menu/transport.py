@@ -3,12 +3,13 @@ import os
 import stat
 import time
 
-PAGES = {'home': '0', 'apps': '1', 'modes': '2', 'session': '3', 'audio': '4', 'connections': '5', 'bluetooth': '6', 'calendar': '7'}
+PAGES = {'home': '0', 'apps': '1', 'modes': '2', 'session': '3', 'audio': '4', 'connections': '5', 'bluetooth': '6', 'calendar': '7', 'shortcuts': '8'}
 
 
 def source_revision(source):
-    header = os.path.join(os.path.dirname(source), 'navigation.h')
-    return str(max(os.stat(source).st_mtime_ns, os.stat(header).st_mtime_ns if os.path.exists(header) else 0))
+    directory = os.path.dirname(source)
+    dependencies = [os.path.join(directory, name) for name in ('navigation.h', 'resident_surface.h', 'backend.py')]
+    return str(max([os.stat(source).st_mtime_ns] + [os.stat(p).st_mtime_ns for p in dependencies if os.path.exists(p)]))
 
 
 def send(command, runtime=None, source=None):
