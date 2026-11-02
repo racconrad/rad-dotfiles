@@ -102,7 +102,7 @@ def reconcile(previous, last_fingerprint=None, apply=True, retry=False):
     if apply:
         profile = config['profiles'][status['mode']]
         if profile_changed:
-            adapters = [('wayfire', lambda: effects.wayfire(profile, force=True)), ('cpu', lambda: effects.cpu(profile)),
+            adapters = [('widgets-policy', effects.widget_policy), ('wayfire', lambda: effects.wayfire(profile, force=True)), ('cpu', lambda: effects.cpu(profile)),
                         ('focus', lambda: effects.focus_fx(profile))]
             if profile['widgets']:
                 adapters.append(('widgets', lambda: effects.widgets(profile)))
@@ -250,12 +250,12 @@ def select_mode(mode=None):
 
 def bar_data(status, frame=0):
     if not status:
-        return {'text': '󰂑 …', 'class': 'pending', 'tooltip': 'Iniciando…'}
+        return {'text': '󰂑 …', 'class': 'pending', 'tooltip': 'Starting…'}
     if not status.get('mode'):
         return {'text': '󰂃 !', 'class': 'error', 'tooltip': escape('Config.: ' + str(status.get('errors', {})))}
     battery = status['battery']
     capacity = battery.get('percent')
-    percent = f"{capacity}%" if capacity is not None else 'Batería sin datos'
+    percent = f"{capacity}%" if capacity is not None else 'Battery: no data'
     # Nerd Font battery family shared with the rest of the dock.
     icons = ('󰁺', '󰁻', '󰁼', '󰁽', '󰁾', '󰁿', '󰂀', '󰂁', '󰂂', '󰁹')
     icon = icons[min(9, max(0, (int(capacity) - 1) // 10))] if capacity is not None else '󰂑'
@@ -264,15 +264,15 @@ def bar_data(status, frame=0):
     elif status['level'] == 'critical':
         icon = '󰂃'
     source = 'Auto' if status['source'] == 'auto' else 'Manual'
-    name = {'performance': 'Ahorro', 'balanced': 'Equilibrado', 'complete': 'Completo', 'working': 'Trabajo'}[status['mode']]
-    plugged = {True: 'Cargador', False: 'Batería', None: 'Sin conexión'}[battery.get('plugged')]
-    level = {'critical': ' · Crítica', 'warning': ' · Baja'}.get(status['level'], '')
-    tooltip = f"{name} · {source}\n{percent}{level} · {plugged}\nClic: elegir modo en Raccon Menu"
+    name = {'performance': 'Power Saver', 'balanced': 'Balanced', 'complete': 'Performance', 'working': 'Work'}[status['mode']]
+    plugged = {True: 'Plugged in', False: 'On battery', None: 'No charger'}[battery.get('plugged')]
+    level = {'critical': ' · Critical', 'warning': ' · Low'}.get(status['level'], '')
+    tooltip = f"{name} · {source}\n{percent}{level} · {plugged}\nClick: choose mode in Raccon Menu"
     if status.get('errors'):
-        tooltip += '\nPendiente: ' + ', '.join(status['errors'])
+        tooltip += '\nPending: ' + ', '.join(status['errors'])
     transition = bool(status.get('transition'))
     if transition:
-        tooltip += '\nAplicando modo…'
+        tooltip += '\nApplying mode…'
     return {'text': f"{icon} {percent if capacity is not None else '—'}",
             'alt': f'applying-{frame % 4}' if transition and status['policy']['animation_factor'] > 0 else ('auto' if status['source'] == 'auto' else status['mode']),
             'percentage': capacity or 0,
