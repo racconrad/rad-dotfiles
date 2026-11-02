@@ -1,37 +1,7 @@
-#!/usr/bin/env bash
-# Compact Waybar music button (open|prev|play|next). Empty output hides it:
-# no active player, or the raccon-music card is open (it owns the controls).
-set -uo pipefail
-mode=${1:?uso: waybar-music open|prev|play|next}
-flag="${XDG_RUNTIME_DIR:-/tmp}/raccon-music.open"
-case $mode in
-  open) tip="Mostrar tarjeta de música" ;; prev) tip="Anterior" ;;
-  next) tip="Siguiente" ;; play) tip="Reproducir / pausar" ;; *) exit 2 ;;
-esac
-
-last=unset status=""
-emit() {
-  local icon=""
-  if [[ $status == Playing || $status == Paused ]] && [[ ! -e $flag ]]; then
-    case $mode in
-      open) icon="󰝚" ;; prev) icon="󰒮" ;; next) icon="󰒭" ;;
-      play) [[ $status == Playing ]] && icon="󰏤" || icon="󰐊" ;;
-    esac
-  fi
-  [[ $icon == "$last" ]] && return
-  last=$icon
-  if [[ -z $icon ]]; then echo '{"text":""}'; else printf '{"text":"%s","tooltip":"%s","class":"%s"}\n' "$icon" "$tip" "${status,,}"; fi
-}
-
-emit
-while true; do
-  coproc PC { exec playerctl --follow status 2>/dev/null; }
-  while true; do
-    # Timeout (>128) only re-checks the card flag; other failures mean playerctl exited.
-    if IFS= read -r -t 0.5 line <&"${PC[0]}"; then status=$line
-    elif (( $? <= 128 )); then break
-    fi
-    emit
-  done
-  status=""; emit; sleep 2
-done
+#!/usr/bin/env python3
+"""Subscribe to the shared Waybar music status provider."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.home()/'.local/lib'))
+from raccon_music_status import main
+main()

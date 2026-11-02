@@ -1,6 +1,8 @@
 # Widgets flotantes grandes · Eww
 
-Dos tarjetas centradas, sin brillos. Siguen el tema activo de `desktop-style`: paleta de `raccon-menu/_palette.scss` y forma desde `desktop-style/current/tokens.json` (radio, radio de controles, borde, opacidad, fuente, rellenos). `raccon-float` reescribe `_tokens.scss` solo cuando esos tokens cambian; Terminal queda recto con borde de 1 px, los estilos redondeados quedan redondeados.
+Dos tarjetas centradas, sin brillos. Siguen el tema activo de `desktop-style`: colores y forma desde `desktop-style/current/tokens.json` (radio, radio de controles, borde, opacidad, fuente, rellenos). Sin perfil activo se usa la paleta de Waybar/Matugen. El backend compartido sincroniza `_palette.scss`, `_desktop-style.scss` y `_tokens.scss` dentro de la carpeta de la tarjeta solo cuando cambian; Eww detecta esas importaciones locales. Terminal queda recto con borde de 1 px, los estilos redondeados quedan redondeados.
+
+El listener de apariencia usa eventos de archivos y funciona aunque Raccon Menu esté oculto. Wallpaper, sesión y música adoptan el tema nuevo mientras están abiertos; los perfiles estrictos respetan su política de movimiento.
 
 ```sh
 raccon-float wallpaper   # Super+W · fondos: galería mixta con filtros Todos / Imágenes / Videos, clic aplica (wallpaper-set)

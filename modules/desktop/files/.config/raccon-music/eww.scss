@@ -1,5 +1,5 @@
 // Palette and theme are generated for raccon-menu; reuse them as-is.
-@import "../raccon-menu/palette";
+@import "palette";
 
 * { all: unset; font-family: "Inter", "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 13px; }
 window { background: transparent; color: $on_surface; }
@@ -25,6 +25,6 @@ button:active { background: rgba($primary, .28); }
 .music-hide:hover { opacity: 1; }
 .music-extra { padding-top: 2px; }
 
-@import "../raccon-menu/desktop-style";
+@import "desktop-style";
 
 .popup.music-popup button:focus { box-shadow: inset 0 0 0 2px $primary; }

@@ -6,6 +6,8 @@
   "python3 $HOME/.local/lib/raccon_menu/music.py")
 
 (defvar music_open false)
+(deflisten desktop :initial '{"style":"original","motion":true}'
+  "python3 $HOME/.local/lib/raccon_menu/backend.py listen-appearance")
 
 (defwidget music-button [icon tip cmd]
   (button :class "music-button" :tooltip tip :onclick cmd :timeout "3s" (menu-icon :name icon)))
@@ -39,4 +41,4 @@
   :monitor 0
   :geometry (geometry :x "4px" :y y :width "1px" :height "1px" :anchor anchor)
   :stacking "overlay" :exclusive false :focusable true :namespace "raccon-music"
-  (box :class "popup music-popup" (menu-music)))
+  (box :class "popup music-popup style-${desktop.style ?: 'original'} ${desktop.motion ? 'motion' : 'still'}" (menu-music)))

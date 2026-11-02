@@ -2,10 +2,11 @@
 (defwidget menu-icon [name ?size]
   (image :icon name :icon-size {(size ?: 20) >= 28 ? "dnd" : (size ?: 20) >= 24 ? "large-toolbar" : "button"}))
 
-(defvar walls '{"rows":[],"section":"all","page":0,"pages":1,"counts":{"all":0,"images":0,"videos":0}}')
+(deflisten walls :initial '{"rows":[],"section":"all","page":0,"pages":1,"counts":{"all":0,"images":0,"videos":0},"loading":true,"error":""}'
+  "python3 $HOME/.local/lib/raccon_menu/walls.py watch")
 (deflisten desktop :initial '{"motion":true,"duration":"220ms"}'
-  "python3 $HOME/.local/lib/raccon_menu/backend.py listen")
-; The launcher opens windows collapsed, then flips these so the card rises and its body flows in after.
+  "python3 $HOME/.local/lib/raccon_menu/backend.py listen-appearance")
+; Controls and body map together; missing previews arrive from the listener.
 (defvar shown false)
 (defvar body false)
 (deflisten video_preview :initial '{"active":false,"selection":"","clip":"","playback":"","message":""}'
@@ -38,6 +39,7 @@
     :onhoverlost {tile.video ? "$HOME/.local/bin/raccon-float preview-stop ${section}:${tile.index}" : ""}
     (overlay
       (button :class "wall-tile ${tile.current ? 'current' : ''}"
+        :active {!tile.current} :tooltip {tile.current ? "Current wallpaper" : "Apply wallpaper"}
         :timeout "60s" :onclick "$HOME/.local/bin/raccon-float set ${section} ${tile.index}"
         (box :class "wall-thumb" :style {tile.has_thumb ? "background-image: url(\"${tile.thumb}\");" : ""}
           (label :class "preview-target" :visible false :text {tile.video ? "${section} ${tile.index}" : ""})
@@ -49,7 +51,8 @@
 (defwidget wall-grid []
   (scroll :class "wall-scroll" :hscroll false :vscroll true :height 486 :width 904
     (box :orientation "v" :space-evenly false :spacing 0 :valign "start"
-      (label :class "muted" :visible {walls.counts[walls.section] == 0} :text "No files in this category.")
+      (label :class "muted" :visible {walls.error != ""} :text {walls.error})
+      (label :class "muted" :visible {walls.counts[walls.section] == 0 && !walls.loading && walls.error == ""} :text "No files in this category.")
       (for row in {walls.rows}
         (eventbox :class "wall-row wall-count-${row.count}" :halign "start"
           (box :space-evenly false :spacing 0
@@ -64,8 +67,9 @@
     (box :class "kind-tabs" :space-evenly false :spacing 4 :valign "center"
         (kind-tab :id "all" :title "All" :icon "view-grid-symbolic")
         (kind-tab :id "images" :title "Images" :icon "image-x-generic-symbolic")
-        (kind-tab :id "videos" :title "Videos" :icon "video-x-generic-symbolic"))
-    (revealer :reveal body :transition {desktop.motion ? "crossfade" : "none"} :duration "160ms"
+        (kind-tab :id "videos" :title "Videos" :icon "video-x-generic-symbolic")
+        (label :class "muted" :hexpand true :halign "end" :text {walls.loading ? "Loading previews…" : ""}))
+    (revealer :reveal body :transition "none" :duration "0ms"
       (wall-grid))
     (label :class "muted" :visible {video_preview.active && video_preview.clip == ""} :xalign 0 :text {video_preview.message})))
 
@@ -95,7 +99,7 @@
 
 ; Sized to the card (a fullscreen surface repainted 1920x1080 on every animation frame).
 (defwidget float-stage [style]
-  (box :class "popup float-popup style-${style} ${desktop.motion ? 'motion' : 'still'} ${shown ? 'on' : ''}" (children)))
+  (box :class "popup float-popup style-${desktop.style ?: style} ${desktop.motion ? 'motion' : 'still'} ${shown ? 'on' : ''}" (children)))
 
 (defwindow wallpaper [style]
   :monitor 0 :geometry (geometry :anchor "center")

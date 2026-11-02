@@ -6,35 +6,13 @@
 #   raccon-float run ACTION           session tile: first click arms, second click runs
 set -euo pipefail
 cfg="$HOME/.config/raccon-float"
-theme="$HOME/.config/raccon-menu"
 lib="$HOME/.local/lib/raccon_menu"
-stamp="${XDG_RUNTIME_DIR:-/tmp}/raccon-float.theme"
-e() { eww -c "$cfg" "$@"; }
+e() { eww --no-daemonize -c "$cfg" "$@"; }
 
 sync_theme() {
-# Shape tokens of the active desktop style, rewritten only when they change (Eww reloads on writes here).
-python3 - "$HOME/.config/desktop-style/current/tokens.json" "$cfg/_tokens.scss" <<'PY'
-import json, sys
-try:
-    t = json.load(open(sys.argv[1]))
-except (OSError, ValueError):
-    t = {}
-num = lambda key, default: t.get(key) if isinstance(t.get(key), (int, float)) else default
-font = str(t.get('font') or 'Inter').replace('"', '')
-text = (f'$radius: {num("radius", 20)}px;\n$control_radius: {num("control_radius", 12)}px;\n'
-        f'$border: {num("border", 0)}px;\n$opacity: {num("opacity", 1)};\n$font: "{font}";\n'
-        f'$panel_padding: {num("panel_padding", 16)}px;\n$control_padding: {num("control_padding", 8)}px;\n')
-try:
-    same = open(sys.argv[2]).read() == text
-except OSError:
-    same = False
-if not same:
-    open(sys.argv[2], 'w').write(text)
-PY
-# Eww only watches its own folder; reload when the shared theme files changed.
-if [[ ! -e $stamp || $theme/_palette.scss -nt $stamp || $theme/_desktop-style.scss -nt $stamp ]]; then
-  if e ping >/dev/null 2>&1; then e reload && touch "$stamp"; fi
-fi
+  # Local imports are rewritten only on actual palette/shape changes. Eww
+  # observes its own folder, including updates while the card is open.
+  python3 "$lib/backend.py" palette
 }
 
 close() {
@@ -52,6 +30,12 @@ close() {
 }
 
 case ${1:-} in
+  wallpaper|session|close|refresh|prepare)
+    exec 9>"${XDG_RUNTIME_DIR:-/tmp}/raccon-float-$(id -u).visibility.lock"
+    flock -n 9 || exit 0 ;;
+esac
+
+case ${1:-} in
   refresh)
     sync_theme
     if e ping >/dev/null 2>&1; then e reload; fi
@@ -62,7 +46,7 @@ case ${1:-} in
   filter)
     [[ ${2:-} =~ ^(all|images|videos)$ ]] || exit 2
     python3 "$lib/walls.py" preview-stop
-    e update walls="$(python3 "$lib/walls.py" list "$2")"
+    python3 "$lib/walls.py" request "$2"
     exit ;;
   preview|preview-hover)
     [[ ${2:-} =~ ^(all|images|videos)$ && ${3:-} =~ ^[0-9]+$ ]] || exit 2
@@ -70,7 +54,7 @@ case ${1:-} in
     exit ;;
   page)
     [[ ${2:-} =~ ^(all|images|videos)$ && ${3:-} =~ ^[0-9]+$ ]] || exit 2
-    e update walls="$(python3 "$lib/walls.py" page "$2" "$3")"
+    python3 "$lib/walls.py" request "$2" "$3"
     exit ;;
   set)
     [[ ${2:-} =~ ^(all|images|videos)$ && ${3:-} =~ ^[0-9]+$ ]] || { echo "raccon-float: bad wallpaper" >&2; exit 2; }
@@ -90,36 +74,37 @@ case ${1:-} in
         exec loginctl terminate-session "$XDG_SESSION_ID" ;;
       *) exec systemctl "$action" ;;
     esac ;;
+  prepare) name='' ;;
   wallpaper|session) name=$1 ;;
   *) echo "usage: raccon-float wallpaper|session|close|set|run" >&2; exit 2 ;;
 esac
 
-if e active-windows 2>/dev/null | grep -q "^$name"; then close; exit; fi
-close  # only one card at a time
+if [[ -n $name ]]; then
+  if e active-windows 2>/dev/null | grep -q "^$name"; then close; exit; fi
+  close  # only one card at a time
+fi
 module=$(python3 "$lib/keyboard_build.py")
-revision=$(stat -c %Y "$module")
+revision=$(stat -c '%y:%s' "$module" "$lib/walls.py" "$lib/wall_preview.py" "$lib/backend.py" "$HOME/.local/lib/raccon_events.py")
 key_stamp="$HOME/.cache/raccon-float/keyboard.loaded"
 if [[ $(cat "$key_stamp" 2>/dev/null || true) != "$revision" ]]; then
   e kill >/dev/null 2>&1 || true
 fi
 if ! e ping >/dev/null 2>&1; then
-  GTK_MODULES="$module" RACCON_FLOAT_KEYS=1 LANGUAGE=en_US:en LC_MESSAGES=en_US.UTF-8 eww -c "$cfg" daemon </dev/null &>/dev/null
+  GTK_MODULES="$module" RACCON_FLOAT_KEYS=1 LANGUAGE=en_US:en LC_MESSAGES=en_US.UTF-8 eww -c "$cfg" daemon 9>&- </dev/null &>/dev/null
   e ping >/dev/null
   printf '%s' "$revision" > "$key_stamp"
-  touch "$stamp"
 fi  # detached pipes: the daemon must not hold our stdout
 sync_theme
+[[ -n $name ]] || exit 0  # Login prepares code/CSS without showing a card.
 style=$(grep -oP '^\s*"style"\s*:\s*"\K[\w-]+' "$HOME/.config/desktop-style/current/tokens.json" 2>/dev/null || echo default)
 if [[ $name == wallpaper ]]; then
   python3 "$lib/walls.py" preview-stop
-  e update walls="$(python3 "$lib/walls.py")"
+  python3 "$lib/walls.py" request all
 else
   e update who="$(printf '{"user":"%s","host":"%s","uptime":"%s"}' \
     "$(getent passwd "$USER" | cut -d: -f5 | cut -d, -f1 | sed 's/["\\]//g' | grep . || echo "$USER")" \
     "$(cat /etc/hostname 2>/dev/null || uname -n)" "$(LC_ALL=C uptime -p | sed 's/^up //')")"
 fi
-e update armed="" shown=false body=false
+e update armed="" shown=false body=true
 e open "$name" --arg style="$style"
-sleep 0.05  # let the first frame map collapsed so the entrance is visible
-e update shown=true; sleep 0.12
-e update body=true
+e update shown=true body=true
