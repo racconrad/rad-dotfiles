@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "agents": [
+    "amp",
+    "cline",
+    "codex",
+    "cursor",
+    "droid",
+    "fx",
+    "gemini-cli",
+    "github-copilot",
+    "kilo",
+    "kimi-code-cli",
+    "opencode",
+    "pi",
+    "warp",
+    "zed",
+    "claude-code"
+  ],
+  "sources": {
+    "tt-a1i/archify": [
+      "archify"
+    ],
+    "juliusbrussee/caveman": [
+      "caveman",
+      "caveman-commit"
+    ],
+    "flutter/agent-plugins": [
+      "dart-resolve-package-conflicts",
+      "flutter-apply-architecture-best-practices",
+      "flutter-build-responsive-layout",
+      "flutter-fix-layout-issues",
+      "flutter-implement-json-serialization",
+      "flutter-use-http-package"
+    ],
+    "vercel-labs/skills": [
+      "find-skills"
+    ],
+    "anthropics/skills": [
+      "frontend-design"
+    ],
+    "pbakaus/impeccable": [
+      "impeccable"
+    ],
+    "antfu/skills": [
+      "pnpm"
+    ],
+    "dietrichgebert/ponytail": [
+      "ponytail",
+      "ponytail-audit",
+      "ponytail-debt",
+      "ponytail-gain",
+      "ponytail-help",
+      "ponytail-review"
+    ]
+  }
+}
