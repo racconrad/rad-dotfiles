@@ -68,6 +68,12 @@
     }
   },
   "modules": {
+    "ai": {
+      "label": "AI skills list (skills.sh)",
+      "requires": ["base"],
+      "packages": [],
+      "description": "Keeps only which skills.sh skills you use. The optional ai-skills setup downloads them again with npx skills; no MCP servers, app settings or credentials."
+    },
     "base": {
       "label": "Session environment and PATH",
       "requires": [],
@@ -94,7 +100,7 @@
         "xorg-xwayland",
         "xdg-desktop-portal-gtk",
         "xdg-desktop-portal-wlr",
-        "polkit-kde-agent"
+        "mate-polkit"
       ],
       "description": "Keyboard-driven tiling, workspaces, rounded decorations and compositor IPC."
     },
@@ -276,7 +282,7 @@
       ]
     },
     "zsh": {
-      "label": "Zsh, Starship, completion and plugins",
+      "label": "Zsh, Raccon prompt, completion and plugins",
       "requires": [
         "base"
       ],
@@ -523,7 +529,7 @@
         "adwaita-fonts",
         "python-pillow"
       ],
-      "description": "Monochrome, Terminal, Retro16, Glass, Modern, GNOME and Windows profiles; shares wallpaper colors and optionally integrates an installed tinyWidgets runtime."
+      "description": "Default, Transparent, Classic, Mono, Retro and Night; cached previews, shared wallpaper colors and optional integration with an installed tinyWidgets runtime."
     }
   },
   "optional_packages": {
@@ -544,6 +550,21 @@
       "label": "Download and synchronize Neovim plugins",
       "module": "nvim",
       "packages": []
+    },
+    "ai-skills": {
+      "label": "Download the listed AI skills with npx skills (needs Node.js)",
+      "module": "ai",
+      "packages": [
+        "nodejs",
+        "npm"
+      ]
+    },
+    "plymouth": {
+      "label": "Raccoon boot splash that types code (Plymouth, uses sudo)",
+      "module": "themes",
+      "packages": [
+        "plymouth"
+      ]
     },
     "tinywidgets": {
       "label": "Build and install tinyWidgets from its local source",
