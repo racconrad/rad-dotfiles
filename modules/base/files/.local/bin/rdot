@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+"""Open the local Raccon Dots checkout, without downloading or executing remote code."""
+import json
+import os
+from pathlib import Path
+import runpy
+import sys
+
+config = Path.home() / '.config/raccon-dots/master.json'
+try:
+    settings = json.loads(config.read_text()) if config.exists() else {}
+    repository = Path(os.environ.get('RACCON_DOTS_ROOT') or settings.get('repository')
+                      or str(Path.home() / 'projects/raccon-dots')).expanduser().resolve()
+    script = repository / 'scripts/master.py'
+    if not script.is_file() or not (repository / '.rdot').is_file():
+        raise ValueError('No encuentro Raccon Dots. Define RACCON_DOTS_ROOT o ejecuta ./rdot master desde el repositorio.')
+except (OSError, ValueError, TypeError) as error:
+    sys.exit(str(error))
+sys.path.insert(0, str(repository / 'scripts'))
+runpy.run_path(str(script), run_name='__main__')
