@@ -1,5 +1,6 @@
 {
-  "skin": "bento",
-  "fx": "focus",
-  "background": "surface"
+  "skin": "ascii",
+  "fx": "none",
+  "background": "surface",
+  "frame": "none"
 }
