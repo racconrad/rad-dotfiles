@@ -40,9 +40,19 @@ if command -v matugen >/dev/null 2>&1; then
     || echo "wallpaper-theme: matugen failed" >&2
 fi
 
-"$HOME/.local/bin/wayfire-theme-apply" || echo "wallpaper-theme: theme apply failed" >&2
-
-# Reapply the selected global appearance after Matugen regenerates its palette.
-if [[ -x "$HOME/.local/bin/desktop-style" ]]; then
-  "$HOME/.local/bin/desktop-style" wallpaper || echo "wallpaper-theme: desktop style failed" >&2
+# Run downstream re-theme hooks in parallel (wayfire.ini update and desktop-style).
+pids=()
+if [[ -x "$HOME/.local/bin/wayfire-theme-apply" ]]; then
+  "$HOME/.local/bin/wayfire-theme-apply" &
+  pids+=($!)
 fi
+
+if [[ -x "$HOME/.local/bin/desktop-style" ]]; then
+  "$HOME/.local/bin/desktop-style" wallpaper &
+  pids+=($!)
+fi
+
+# Await all parallel theme hooks
+for pid in "${pids[@]}"; do
+  wait "$pid" 2>/dev/null || true
+done

@@ -11,6 +11,19 @@ if [[ -z "$file" || ! -f "$file" ]]; then
 fi
 file="$(realpath -- "$file")"
 waypaper_ini="$HOME/.config/waypaper/config.ini"
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
+lock_dir="${XDG_RUNTIME_DIR:-$cache_dir}/raccon-wallpaper"
+mkdir -p -- "$lock_dir"
+chmod 700 -- "$lock_dir"
+exec 9>"$lock_dir/apply.lock"
+flock -x 9
+
+# Recheck AFTER acquiring the lock: concurrent clicks for one image/video must
+# not restart its backend or palette after the first request succeeds.
+current="$(cat -- "$cache_dir/current-wallpaper" 2>/dev/null || true)"
+if [[ -n "$current" ]] && [[ "$(realpath -- "$current" 2>/dev/null || true)" == "$file" ]]; then
+  exit 0
+fi
 
 # Keep waypaper's state in sync so `waypaper --restore` brings back this wallpaper.
 remember() {
@@ -24,7 +37,12 @@ remember() {
 case "${file,,}" in
   *.mp4|*.webm|*.mkv|*.mov)
     if command -v waypaper >/dev/null 2>&1; then
-      exec waypaper --wallpaper "$file" --backend mpvpaper   # post_command re-themes
+      # Keep the lock in this short-lived parent; never pass it to mpvpaper.
+      # Waypaper's post_command is asynchronous. Run the theme ourselves while
+      # holding the parent lock so a second click cannot race its cache update.
+      waypaper --wallpaper "$file" --backend mpvpaper --no-post-command 9>&-
+      "$HOME/.local/bin/wallpaper-theme" "$file" 9>&-
+      exit 0
     fi
     echo "wallpaper-set: waypaper/mpvpaper needed for video wallpapers" >&2
     exit 1
@@ -59,9 +77,12 @@ case "$power_mode" in
   balanced) common=(--transition-fps 30 --transition-bezier "$bezier"); transition=(--transition-type fade --transition-duration 0.3) ;;
 esac
 pkill -x mpvpaper 2>/dev/null || true
-pgrep -x awww-daemon >/dev/null || { setsid -f awww-daemon >/dev/null 2>&1; sleep 0.5; }
+pgrep -x awww-daemon >/dev/null || { setsid -f awww-daemon 9>&- >/dev/null 2>&1; sleep 0.5; }
 
-awww img "$file" "${common[@]}" "${transition[@]}" || echo "wallpaper-set: awww failed" >&2
+if ! awww img "$file" "${common[@]}" "${transition[@]}" 9>&-; then
+  echo "wallpaper-set: awww failed" >&2
+  exit 1
+fi
 remember awww
 
-exec "$HOME/.local/bin/wallpaper-theme" "$file"
+"$HOME/.local/bin/wallpaper-theme" "$file" 9>&-

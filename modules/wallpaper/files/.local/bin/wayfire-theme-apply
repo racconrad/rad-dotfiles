@@ -23,6 +23,9 @@ ca() { printf '\\#%s%s' "$1" "$2"; }
 # section|key|value
 map="$(cat <<MAP
 core|background_color|$(c "$WF_SURFACE")
+decoration|active_color|$(c "$WF_SURFACE_CONTAINER")
+decoration|inactive_color|$(c "$WF_SURFACE")
+decoration|font_color|$(c "$WF_ON_SURFACE")
 pixdecor|fg_color|$(c "$WF_PRIMARY")
 pixdecor|bg_color|$(c "$WF_OUTLINE_VARIANT")
 pixdecor|effect_color|$(ca "$WF_PRIMARY" 99)
