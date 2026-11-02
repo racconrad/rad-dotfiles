@@ -1,0 +1,9 @@
+[Plymouth Theme]
+Name=Raccon Code
+Description=The raccoon types code while the den boots
+ModuleName=script
+MonospaceFont=monospace 16
+
+[script]
+ImageDir=/usr/share/plymouth/themes/raccon-code
+ScriptFile=/usr/share/plymouth/themes/raccon-code/raccon-code.script

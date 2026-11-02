@@ -1,0 +1,166 @@
+# Raccon Code: a small raccoon types a few lines, squishes on each one, then boots.
+
+Window.SetBackgroundTopColor(0.086, 0.071, 0.118);
+Window.SetBackgroundBottomColor(0.043, 0.035, 0.063);
+
+font = "monospace 12";
+screen.w = Window.GetWidth();
+screen.h = Window.GetHeight();
+
+mode = Plymouth.GetMode();
+if (mode == "shutdown" || mode == "reboot") {
+    lines[0] = "$ raccon sleep";
+    lines[1] = "den.save();";
+    lines[2] = "raccoon.say(\"bye\");";
+    done_text = "shutting down";
+} else {
+    lines[0] = "$ raccon boot";
+    lines[1] = "den.mount(\"/home\");";
+    lines[2] = "raccoon.say(\"hi\");";
+    done_text = "booting";
+}
+count = 3;
+
+# Squash-and-stretch frames are scaled once here, not on every refresh.
+source = Image("raccoon.png");
+size = screen.h * 0.16 / source.GetHeight();
+if (size > 0.45) size = 0.45;
+squish[0].sx = 1.10; squish[0].sy = 0.88; squish[0].y = 0;
+squish[1].sx = 0.94; squish[1].sy = 1.08; squish[1].y = -6;
+squish[2].sx = 0.97; squish[2].sy = 1.04; squish[2].y = -9;
+squish[3].sx = 1.00; squish[3].sy = 1.00; squish[3].y = -5;
+squish[4].sx = 1.06; squish[4].sy = 0.94; squish[4].y = 0;
+squish[5].sx = 1.00; squish[5].sy = 1.00; squish[5].y = 0;
+frames = 6;
+for (i = 0; i < frames; i++)
+    squish[i].image = source.Scale(source.GetWidth() * size * squish[i].sx, source.GetHeight() * size * squish[i].sy);
+
+raccoon.sprite = Sprite();
+raccoon.bottom = screen.h * 0.47;
+raccoon.frame = frames - 1;
+raccoon.hold = 0;
+
+fun show_frame(index) {
+    image = squish[index].image;
+    raccoon.sprite.SetImage(image);
+    raccoon.sprite.SetPosition(screen.w / 2 - image.GetWidth() / 2, raccoon.bottom - image.GetHeight() + squish[index].y, 1);
+}
+show_frame(raccoon.frame);
+
+fun bounce() {
+    raccoon.frame = 0;
+    raccoon.hold = 0;
+    show_frame(0);
+}
+
+# The code block is centred on its widest line so typing does not shift it.
+line_h = Image.Text("M", 1, 1, 1, 1, font).GetHeight() * 1.3;
+code_w = Image.Text(done_text + "...", 1, 1, 1, 1, font).GetWidth();
+for (i = 0; i < count; i++) {
+    w = Image.Text(lines[i], 1, 1, 1, 1, font).GetWidth();
+    if (w > code_w) code_w = w;
+    rows[i] = Sprite();
+}
+code.x = screen.w / 2 - code_w / 2;
+code.y = raccoon.bottom + line_h * 0.8;
+for (i = 0; i < count; i++) rows[i].SetPosition(code.x, code.y + i * line_h, 2);
+
+status.sprite = Sprite();
+status.sprite.SetPosition(code.x, code.y + count * line_h, 2);
+
+cursor.sprite = Sprite(Image.Text("_", 0.71, 0.55, 1, 1, font));
+cursor.sprite.SetZ(3);
+
+fun row_image(text, index) {
+    if (index == 0) return Image.Text(text, 0.71, 0.55, 1, 1, font);
+    return Image.Text(text, 0.86, 0.84, 0.92, 1, font);
+}
+
+typing.line = 0;
+typing.chars = 0;
+typing.tick = 0;
+typing.done = 0;
+
+fun refresh() {
+    typing.tick = typing.tick + 1;
+
+    if (raccoon.frame < frames - 1) {
+        raccoon.hold = raccoon.hold + 1;
+        if (raccoon.hold >= 3) {
+            raccoon.hold = 0;
+            raccoon.frame = raccoon.frame + 1;
+            show_frame(raccoon.frame);
+        }
+    }
+
+    if (typing.done) {
+        # Dots cycle . .. ... once the code is typed.
+        if (typing.tick % 15 == 0) {
+            dots = Math.Int(typing.tick / 15) % 3;
+            text = done_text + ".";
+            if (dots > 0) text = text + ".";
+            if (dots > 1) text = text + ".";
+            status.sprite.SetImage(Image.Text(text, 0.71, 0.55, 1, 1, font));
+        }
+        if (typing.tick % 120 == 0) bounce();
+        return;
+    }
+
+    if (Math.Int(typing.tick / 20) % 2 == 0) cursor.sprite.SetOpacity(1);
+    else cursor.sprite.SetOpacity(0);
+    if (typing.tick % 3 != 0) return;
+
+    text = lines[typing.line];
+    typing.chars = typing.chars + 1;
+    row = rows[typing.line];
+    row.SetImage(row_image(text.SubString(0, typing.chars), typing.line));
+    cursor.sprite.SetPosition(code.x + row.GetImage().GetWidth(), code.y + typing.line * line_h, 3);
+
+    if (typing.chars >= text.Length()) {
+        bounce();
+        typing.chars = 0;
+        typing.line = typing.line + 1;
+        if (typing.line >= count) {
+            typing.done = 1;
+            cursor.sprite.SetOpacity(0);
+            status.sprite.SetImage(Image.Text(done_text + ".", 0.71, 0.55, 1, 1, font));
+        }
+    }
+}
+Plymouth.SetRefreshFunction(refresh);
+
+# Thin boot progress line under the status text.
+bar.w = code_w;
+bar.x = code.x;
+bar.y = code.y + (count + 1) * line_h + 4;
+bar.track = Sprite(Image("track.png").Scale(bar.w, 2));
+bar.track.SetPosition(bar.x, bar.y, 2);
+bar.fill_image = Image("bar.png");
+bar.fill = Sprite();
+bar.fill.SetPosition(bar.x, bar.y, 3);
+
+fun progress(duration, value) {
+    w = Math.Int(bar.w * value);
+    if (w > 0) bar.fill.SetImage(bar.fill_image.Scale(w, 2));
+}
+Plymouth.SetBootProgressFunction(progress);
+
+# Disk-unlock password prompt; without this the script theme hides it.
+prompt.sprite = Sprite();
+prompt.sprite.SetZ(10);
+
+fun show_password(text, bullets) {
+    stars = "";
+    for (i = 0; i < bullets; i++) stars = stars + "*";
+    if (text == "") text = "Password";
+    image = Image.Text("> " + text + ": " + stars, 0.71, 0.55, 1, 1, font);
+    prompt.sprite.SetImage(image);
+    prompt.sprite.SetPosition(screen.w / 2 - image.GetWidth() / 2, bar.y + line_h, 10);
+    prompt.sprite.SetOpacity(1);
+}
+Plymouth.SetDisplayPasswordFunction(show_password);
+
+fun show_normal() {
+    prompt.sprite.SetOpacity(0);
+}
+Plymouth.SetDisplayNormalFunction(show_normal);
