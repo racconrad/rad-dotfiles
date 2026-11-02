@@ -19,5 +19,5 @@ cls="empty"
 if [[ "$n" == 10 && "$cls" == "empty" ]]; then
   printf '{"text":"","class":"empty"}\n'
 else
-  printf '{"text":"%s","class":"%s","tooltip":"Escritorio %s"}\n' "$n" "$cls" "$n"
+  printf '{"text":"%s","class":"%s","tooltip":"Workspace %s"}\n' "$n" "$cls" "$n"
 fi

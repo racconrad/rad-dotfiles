@@ -36,5 +36,11 @@ int main(void) {
             header=source.with_name('navigation.h');header.touch()
             os.utime(header,ns=(int(before)+1000,int(before)+1000))
             self.assertEqual(module.source_revision(source),str(int(before)+1000))
+            # A resident Python provider keeps old functions in memory even
+            # after a stylesheet reload. Opening after an upgrade must replace
+            # that popup's daemon and its listeners as well.
+            backend=source.with_name('backend.py');backend.touch()
+            os.utime(backend,ns=(int(before)+2000,int(before)+2000))
+            self.assertEqual(module.source_revision(source),str(int(before)+2000))
 
 if __name__=='__main__':unittest.main()

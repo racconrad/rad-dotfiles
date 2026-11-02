@@ -210,6 +210,7 @@ class Features(unittest.TestCase):
         self.d.views.pop(1);restarted.execute(['scratch','toggle','2']);self.assertEqual(restarted.scratch,{})
 
     def test_smart_gaps_restore_theme_values_and_follow_configuration_edits(self):
+        self.e.execute(['gaps','toggle'])
         self.e.update_gaps();self.assertEqual(self.d.options['simple-tile/inner_gap_size'],10)
         self.d.trees[(1,0,0)]=tile.dwindle_layout([1]);self.e.update_gaps()
         self.assertTrue(all(v==0 for v in self.d.options.values()))
@@ -218,10 +219,41 @@ class Features(unittest.TestCase):
         self.e.update_gaps();self.assertEqual(self.d.options['simple-tile/outer_horiz_gap_size'],14)
 
     def test_smart_gaps_keep_normal_spacing_if_another_monitor_has_multiple_tiles(self):
+        self.e.execute(['gaps','toggle'])
         other=copy.deepcopy(self.d.out);other.update(id=2,**{'wset-index':3})
         self.d.outputs.append(other)
         self.d.trees[(3,0,0)]=tile.dwindle_layout([2,3]);self.d.trees[(1,0,0)]=tile.dwindle_layout([1])
         self.e.update_gaps();self.assertEqual(self.d.options['simple-tile/inner_gap_size'],10)
+
+    def test_default_gaps_stay_fixed_across_empty_single_tiled_and_floating_workspaces(self):
+        self.e.update_gaps()
+        expected=dict(self.d.options)
+        for tree in (tile.dwindle_layout([1]),{},tile.dwindle_layout([1,2])):
+            self.d.trees[(1,0,0)]=tree
+            self.e.update_gaps()
+            self.assertEqual(self.d.options,expected)
+        self.e.execute(['mode','float']);self.e.update_gaps()
+        self.assertEqual(self.d.options,expected)
+        self.e.execute(['mode','tile']);self.e.update_gaps()
+        self.assertEqual(self.d.options,expected)
+        self.assertFalse(self.e.preferences['smart_gaps'])
+
+    def test_unrelated_config_edits_do_not_reapply_gaps(self):
+        self.e.update_gaps()
+        with patch.object(self.e,'checked',wraps=self.e.checked) as checked:
+            with Path(tile.INI).open('a') as stream:stream.write('\n[core]\nbackground_color = red\n')
+            self.e.update_gaps()
+            checked.assert_not_called()
+
+    def test_external_smart_gap_preference_can_be_disabled_without_restarting(self):
+        self.e.execute(['gaps','toggle'])
+        self.d.trees[(1,0,0)]=tile.dwindle_layout([1]);self.e.update_gaps()
+        self.assertEqual(self.d.options['simple-tile/outer_horiz_gap_size'],0)
+        tile.atomic_json(self.e.state/'preferences.json',{'smart_gaps':False,'other':'preserved'})
+        self.assertTrue(self.e.refresh_preferences())
+        self.e.update_gaps()
+        self.assertEqual(self.d.options['simple-tile/outer_horiz_gap_size'],20)
+        self.assertEqual(self.e.preferences['other'],'preserved')
 
     def test_hidden_workspace_set_windows_are_excluded(self):
         self.d.add(4);self.d.views[4]['wset-index']=2

@@ -48,7 +48,9 @@ class Engine:
         self.state = state_dir()
         self.history = read_json(self.runtime/'history.json', {})
         self.scratch = read_json(self.runtime/'scratch.json', {})
-        self.preferences = read_json(self.state/'preferences.json', {'smart_gaps': True})
+        self.preferences = {'smart_gaps': False}
+        self.preference_stamp = None
+        self.refresh_preferences()
         self.preselection = None
         self.modal = None
         self.hint = None
@@ -398,13 +400,32 @@ class Engine:
                 self.t.set_layout(self.ipc, out, ws, self.t.strip_geometry(self.t.insert_dwindle(tree, view['id'])))
             self.tip(f'Scratchpad {slot} released')
 
+    def refresh_preferences(self):
+        path = self.state/'preferences.json'
+        try:
+            info = path.stat()
+            stamp = (info.st_mtime_ns, info.st_ino)
+        except OSError:
+            stamp = (0, 0)
+        if stamp == self.preference_stamp:
+            return False
+        self.preference_stamp = stamp
+        value = read_json(path, {})
+        if not isinstance(value, dict):
+            value = {}
+        if not isinstance(value.get('smart_gaps'), bool):
+            value['smart_gaps'] = False
+        changed = value.get('smart_gaps') != self.preferences.get('smart_gaps', False)
+        self.preferences = value
+        return changed
+
     def refresh_gap_config(self):
         try:
             stamp = Path(self.t.INI).stat().st_mtime_ns
         except OSError:
             stamp = 0
         if stamp == self.gap_mtime:
-            return
+            return False
         self.gap_mtime = stamp
         defaults = {'inner_gap_size': 10, 'outer_horiz_gap_size': 20, 'outer_vert_gap_size': 20}
         gaps = {}
@@ -414,13 +435,15 @@ class Engine:
                 gaps['simple-tile/'+key] = max(0, int(value)) if value is not None else default
             except (OSError, ValueError):
                 gaps['simple-tile/'+key] = default
+        changed = self.base_gaps != gaps
         self.base_gaps = gaps
-        self.applied_gaps = None
+        return changed
 
     def update_gaps(self, restore=False):
+        self.refresh_preferences()
         self.refresh_gap_config()
         wanted = dict(self.base_gaps)
-        if not restore and self.preferences.get('smart_gaps', True):
+        if not restore and self.preferences.get('smart_gaps', False):
             # Wayfire gap options are global. Keep normal gaps on all monitors
             # whenever any visible output has multiple tiles.
             multiple = False
@@ -507,13 +530,14 @@ class Engine:
         elif action == 'scratch' and 1 <= len(rest) <= 2 and rest[0] in ('assign','toggle','release'):
             self.scratch_action(rest[0], rest[1] if len(rest)>1 else '1')
         elif args == ['gaps','toggle']:
-            self.preferences['smart_gaps'] = not self.preferences.get('smart_gaps', True)
+            self.refresh_preferences()
+            self.preferences['smart_gaps'] = not self.preferences.get('smart_gaps', False)
             self.t.atomic_json(self.state/'preferences.json', self.preferences)
-            self.update_gaps(); self.tip('Smart gaps on' if self.preferences['smart_gaps'] else 'Theme gaps restored')
+            self.update_gaps(); self.tip('Smart gaps on' if self.preferences['smart_gaps'] else 'Stable theme gaps')
         elif action == 'adopt' and len(rest)==1 and rest[0].isdigit():
             self.adopt(int(rest[0]), [])
         elif args == ['status']:
-            return {'pid': os.getpid(), 'version': 2, 'resident': True, 'smart_gaps': self.preferences.get('smart_gaps', True),
+            return {'pid': os.getpid(), 'version': 2, 'resident': True, 'smart_gaps': self.preferences.get('smart_gaps', False),
                     'gap_error': self.gap_error, 'mode': self.modal['mode'] if self.modal else None,
                     'preselection': self.preselection, 'scratchpads': self.scratch,
                     'workspace': self.context(self.output())}

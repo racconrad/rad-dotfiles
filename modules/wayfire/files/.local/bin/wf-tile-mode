@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Query or toggle Wayfire tiling mode for the active workspace (for Waybar & hotkeys)."""
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+
+def get_tile_status():
+    cache_dir = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache'))
+    client = cache_dir / 'wf-tile/client'
+    out = ''
+    if client.is_file() and os.access(client, os.X_OK):
+        try:
+            proc = subprocess.run([str(client), 'status'], capture_output=True, text=True, timeout=2)
+            out = proc.stdout.strip()
+        except (subprocess.TimeoutExpired, OSError):
+            pass
+
+    if not out:
+        ctl = Path.home() / '.local/bin/wf-tile-ctl'
+        if ctl.is_file():
+            try:
+                proc = subprocess.run([str(ctl), 'status'], capture_output=True, text=True, timeout=3)
+                out = proc.stdout.strip()
+            except (subprocess.TimeoutExpired, OSError):
+                pass
+
+    ws = '1:0:0'
+    if out:
+        try:
+            data = json.loads(out)
+            ws = data.get('workspace', '1:0:0')
+        except ValueError:
+            pass
+
+    float_file = Path(os.environ.get('WF_TILE_FLOAT_STATE', Path.home() / '.cache/wf-tile-floating.json'))
+    floating = set()
+    if float_file.exists():
+        try:
+            floating = set(json.loads(float_file.read_text()))
+        except (ValueError, OSError):
+            pass
+
+    is_float = ws in floating
+    # Format readable workspace numbers (e.g. 1:0:1 -> WS 2)
+    return {
+        "text": "󰉈" if is_float else "󱂬",
+        "alt": "float" if is_float else "tile",
+        "tooltip": f"Current workspace: {'Floating mode' if is_float else 'Tiled mode'}\nClick: Toggle mode",
+        "class": "floating" if is_float else "tiled"
+    }
+
+
+def refresh_waybar():
+    subprocess.run(['pkill', '-SIGRTMIN+10', 'waybar'], check=False)
+
+
+def cmd_toggle():
+    ctl = Path.home() / '.local/bin/wf-tile-ctl'
+    if ctl.is_file() and os.access(ctl, os.X_OK):
+        subprocess.run([str(ctl), 'mode', 'toggle'], check=False)
+    refresh_waybar()
+    print(json.dumps(get_tile_status(), ensure_ascii=False))
+
+
+def cmd_status():
+    print(json.dumps(get_tile_status(), ensure_ascii=False))
+
+
+def main():
+    arg = sys.argv[1] if len(sys.argv) > 1 else 'status'
+    if arg in ('toggle', '--toggle', '-t'):
+        cmd_toggle()
+    else:
+        cmd_status()
+
+
+if __name__ == '__main__':
+    main()

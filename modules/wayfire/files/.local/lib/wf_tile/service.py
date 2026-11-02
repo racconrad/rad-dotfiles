@@ -230,8 +230,10 @@ def daemon(tile):
                 if now >= housekeeping:
                     engine.publish_ui()
                     # Also notice theme/config edits while the desktop is idle.
-                    engine.refresh_gap_config()
-                    if engine.applied_gaps is None and gap_due is None:
+                    config_changed = engine.refresh_gap_config()
+                    preferences_changed = engine.refresh_preferences()
+                    baseline_changed = not engine.preferences.get('smart_gaps', False) and engine.applied_gaps != engine.base_gaps
+                    if (engine.applied_gaps is None or config_changed or preferences_changed or baseline_changed) and gap_due is None:
                         gap_due = now+.04
                     housekeeping = now+.2
     finally:

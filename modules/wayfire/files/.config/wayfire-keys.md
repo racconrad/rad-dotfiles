@@ -10,6 +10,8 @@ Source of truth: `~/.config/wayfire.ini` (+ `~/.local/bin/wf-tile`). `Super` = l
 | Super+Ctrl+Enter | Search applications (Fuzzel) |
 | Super+A / Super+Shift+Enter | Toggle Raccon Menu (Eww) |
 | Waybar launcher button | Hidden; use the shortcuts above |
+| Super+L / Super+Ctrl+Q | Open Raccon session actions |
+| Super+Shift+L | Lock the screen directly |
 
 ## Focus, move, resize (wf-tile)
 
@@ -108,9 +110,9 @@ Tiled windows are positioned by simple-tile; press Super+T to float first.
 
 ## Power button
 
-Waybar: a short click does nothing. Hold the left mouse button for 2 seconds, then release to power off. A hold longer than 12 seconds expires. Super+Ctrl+Q still opens session actions.
+Waybar: a short click does nothing. Hold the left mouse button for 2 seconds, then release to power off. A hold longer than 12 seconds expires. Super+L or Super+Ctrl+Q opens Raccon session actions. Super+Shift+L locks directly.
 
-Raccon Menu: `Super+Ctrl+Q` abre Sesión; `Ctrl+1–4` cambia sección; `Ctrl+F` busca aplicaciones. El indicador de batería abre un selector de modo con Aplicar explícito.
+Raccon Menu: `Super+L` o `Super+Ctrl+Q` abre Sesión; `Ctrl+1–4` cambia sección; `Ctrl+F` busca aplicaciones. El indicador de batería abre un selector de modo con Aplicar explícito.
 
 ## Automatic Dwindle layout
 
@@ -132,3 +134,10 @@ Validation: `python3 tests/check_tiling_installed.py` uses a private Wayfire and
 - `raccon-term show|hide|close|status`: explicit controls. `exit` / Ctrl+D ends the shell.
 - Opening again after closing starts a fresh shell. Normal **Super+Enter** Kitty windows stay independent.
 - Layout/motion: `~/.config/raccon-term/config.json`; terminal: `~/.config/kitty/raccon-panel.conf`.
+
+El panel Kitty usa un fade a posición fija lateral; pulsaciones durante la transición
+se agrupan (máximo un toggle cada 280ms). El encabezado tiene minimizar/cerrar;
+Waybar indica visible/oculto/cerrado con botones para ocultar y cerrar la sesión.
+Después de actualizar la barra: `pkill -SIGUSR2 -x waybar`.
+
+Quick terminal: Super+Space shows/hides; Super+Shift+Space closes. F12 aliases remain. Clicking another window hides the panel and preserves its shell.

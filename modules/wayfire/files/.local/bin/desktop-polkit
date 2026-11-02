@@ -1,0 +1,19 @@
+#!/bin/sh
+# MATE uses the session's GTK 3 theme and ~/.config/gtk-3.0 colors.
+# Retain an available agent until mate-polkit has been installed.
+for agent in \
+    /usr/lib/mate-polkit/polkit-mate-authentication-agent-1 \
+    /usr/libexec/polkit-mate-authentication-agent-1 \
+    /usr/lib/polkit-kde-authentication-agent-1 \
+    /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+do
+    if [ -x "$agent" ]; then
+        case "${1:-}" in
+            --check) printf '%s\n' "$agent"; exit 0 ;;
+            '') exec "$agent" ;;
+            *) printf 'Usage: desktop-polkit [--check]\n' >&2; exit 2 ;;
+        esac
+    fi
+done
+printf 'Install mate-polkit to enable the GTK 3 authentication dialog.\n' >&2
+exit 1
