@@ -2,7 +2,9 @@
 
 * { all: unset; font-family: "Inter", sans-serif; font-size: 13px; }
 window { background: transparent; color: $on_surface; }
-.style-selector { background: $surface; border: 1px solid $outline_variant; border-radius: 18px; padding: 26px; }
+.style-selector { background: transparent; }
+.selector-main { background: $surface; border: 1px solid $outline_variant; border-radius: 18px; padding: 26px; }
+.selector-extra { background: $surface; border: 1px solid $outline_variant; border-radius: 18px; padding: 12px; margin-left: 4px; }
 .heading { font-size: 25px; font-weight: 600; letter-spacing: -.5px; }
 .subtitle, .caption { color: $on_surface_variant; }
 .close { padding: 10px; border-radius: 8px; }
@@ -38,18 +40,6 @@ $spring: cubic-bezier(.2, .8, .2, 1);
 .style-selector.motion .footer, .style-selector.motion .theme-choice {
   transition: opacity 220ms $spring, background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out;
 }
-.style-selector.motion .style-list.entering .theme-choice:nth-child(2) { transition-delay: 18ms; }
-.style-selector.motion .style-list.entering .theme-choice:nth-child(3) { transition-delay: 36ms; }
-.style-selector.motion .style-list.entering .theme-choice:nth-child(4) { transition-delay: 54ms; }
-.style-selector.motion .style-list.entering .theme-choice:nth-child(5) { transition-delay: 72ms; }
-.style-selector.motion .style-list.entering .theme-choice:nth-child(6) { transition-delay: 90ms; }
-.style-selector.motion .style-list.entering .theme-choice:nth-child(7) { transition-delay: 108ms; }
-.style-selector.motion .preview-column.entering { transition-delay: 40ms; }
-.style-selector.motion .footer.entering { transition-delay: 80ms; }
-.style-selector.motion .header.enter, .style-selector.motion .preview-column.enter,
-.style-selector.motion .footer.enter, .style-selector.motion .style-list.enter .theme-choice {
-  opacity: 0; transition: none;
-}
 .style-selector.motion .choice-icon image { transition: -gtk-icon-transform 220ms $spring; }
 .style-selector.motion .theme-choice:hover .choice-icon image,
 .style-selector.motion .theme-choice:focus .choice-icon image { -gtk-icon-transform: scale(1.18) rotate(-6deg); }
@@ -78,6 +68,15 @@ $spring: cubic-bezier(.2, .8, .2, 1);
 .style-selector .frame-toggle.selected { background: $primary; color: $on_primary; }
 .style-selector .frame-toggle.selected image { color: $on_primary; }
 .style-selector .frame-picker { padding-top: 4px; }
+.style-selector .bar-picker { padding-top: 4px; }
+.style-selector .bar-picker button { padding: 7px 10px; }
+.style-selector .extra-title { font-size: 15px; font-weight: 600; }
+.style-selector .extra-close { min-width: 18px; min-height: 18px; padding: 6px; }
+.style-selector .selector-extra .caption { font-size: 11px; }
+.style-selector .selector-extra .frame-option { padding: 7px; min-width: 22px; min-height: 22px; }
+.style-selector.extras-below .selector-extra { margin-left: 0; margin-top: 4px; }
+/* The shell is transparent; only the main card and its attached options draw. */
+window .style-selector.style-shell { background: transparent; border: none; padding: 0; }
 .style-selector .preview-stack { border-radius: 10px; }
 .style-selector.motion .apply.applying image { animation: style-applying 900ms linear infinite; }
 @keyframes style-applying { to { -gtk-icon-transform: rotate(360deg); } }

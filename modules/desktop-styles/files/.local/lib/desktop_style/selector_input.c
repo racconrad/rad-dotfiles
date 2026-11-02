@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "../raccon_menu/navigation.h"
+#include "../raccon_menu/resident_surface.h"
 
 static const gchar *sections[]={"header","style-list","preview-column","footer",NULL};
 static GtkWidget *resident;
@@ -23,6 +24,8 @@ static gboolean initial_focus(gpointer window);
 static gboolean motion(GtkWidget *window);
 static void show_selector(void);
 static void hide_selector(void);
+static void configure_extras(GtkWidget *window);
+static gboolean dismiss_extras(gboolean restore_focus);
 
 static void pose(GtkWidget *window,const gchar *klass,gboolean enabled) {
     for(guint i=0;sections[i];i++) {
@@ -47,12 +50,12 @@ static gboolean motion(GtkWidget *window) {
 static gboolean fade_frame(GtkWidget *window,GdkFrameClock *clock,gpointer unused) {
     gint64 now=gdk_frame_clock_get_frame_time(clock);
     if(!fade_started)fade_started=now;
-    gdouble t=MIN(1.,(now-fade_started)/(fade_target?180000.:120000.));
+    gdouble t=MIN(1.,(now-fade_started)/(fade_target?130000.:90000.));
     gdouble eased=1.-(1.-t)*(1.-t)*(1.-t);
     gtk_widget_set_opacity(window,fade_from+(fade_target-fade_from)*eased);
     if(t<1.)return G_SOURCE_CONTINUE;
     fade_tick=0;
-    if(!visible)gtk_widget_hide(window);
+    if(!visible)resident_surface_park(window);
     return G_SOURCE_REMOVE;
 }
 static void stop_fade(void) {
@@ -63,47 +66,42 @@ static void destroyed(GtkWidget *window,gpointer unused) {
     if(resident!=window)return;
     stop_fade();
     g_object_remove_weak_pointer(G_OBJECT(window),(gpointer *)&resident);resident=NULL;
+    state("ready","0");
     gchar *path=g_build_filename(runtime_dir,"mapped",NULL);unlink(path);g_free(path);
 }
 static void fade(gdouble target) {
     stop_fade();fade_started=0;fade_from=gtk_widget_get_opacity(resident);fade_target=target;
     if(!motion(resident)) {
         gtk_widget_set_opacity(resident,target);
-        if(!visible)gtk_widget_hide(resident);
+        if(!visible)resident_surface_park(resident);
     } else fade_tick=gtk_widget_add_tick_callback(resident,fade_frame,NULL,NULL);
 }
 static void show_selector(void) {
     if(!resident)return;
+    configure_extras(resident);
     gboolean opening=!visible;
     visible=TRUE;warming=FALSE;state("visible","1");
     if(opening) {
         stop_fade();gtk_widget_set_opacity(resident,0);
-        gtk_widget_show(resident);fade(1.);
+        resident_surface_show(resident);fade(1.);
     }
     gtk_window_present(GTK_WINDOW(resident));
     g_idle_add_full(G_PRIORITY_DEFAULT_IDLE,initial_focus,g_object_ref(resident),g_object_unref);
 }
 static void hide_selector(void) {
     if(!resident)return;
+    dismiss_extras(FALSE);
     visible=FALSE;warming=FALSE;state("visible","0");
+    resident_surface_input(resident,FALSE);
     cancel_entrance(resident);fade(0.);
-}
-static gboolean warm_frame(GtkWidget *window,GdkFrameClock *clock,gpointer data);
-static gboolean warm_again(gpointer window) {
-    if(resident==window&&warming&&!visible) {
-        gtk_widget_set_opacity(window,0);gtk_widget_show(window);
-        gtk_widget_add_tick_callback(window,warm_frame,GINT_TO_POINTER(1),NULL);
-    }
-    return G_SOURCE_REMOVE;
 }
 static gboolean warm_frame(GtkWidget *window,GdkFrameClock *clock,gpointer data) {
     if(resident!=window||!warming||visible)return G_SOURCE_REMOVE;
     guint frames=GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(window),"warm-frames"))+1;
     g_object_set_data(G_OBJECT(window),"warm-frames",GUINT_TO_POINTER(frames));
     if(frames%3)return G_SOURCE_CONTINUE;
-    gtk_widget_hide(window);
-    if(!data)g_timeout_add_full(G_PRIORITY_DEFAULT,60,warm_again,g_object_ref(window),g_object_unref);
-    else warming=FALSE;
+    resident_surface_park(window);
+    warming=FALSE;state("ready","1");
     return G_SOURCE_REMOVE;
 }
 static gboolean control(GIOChannel *channel,GIOCondition condition,gpointer unused) {
@@ -116,19 +114,6 @@ static gboolean control(GIOChannel *channel,GIOCondition condition,gpointer unus
         g_free(line);line=NULL;
     }
     g_free(line);return G_SOURCE_CONTINUE;
-}
-static gboolean enter_frame(GtkWidget *window,GdkFrameClock *clock,gpointer unused) {
-    guint frames=GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(window),"style-frames"))+1;
-    g_object_set_data(G_OBJECT(window),"style-frames",GUINT_TO_POINTER(frames));
-    if(frames<2)return G_SOURCE_CONTINUE;
-    pose(window,"enter",FALSE);
-    g_object_set_data(G_OBJECT(window),"style-tick",NULL);
-    return G_SOURCE_REMOVE;
-}
-static gboolean entrance_done(gpointer window) {
-    pose(window,"entering",FALSE);
-    g_object_set_data(G_OBJECT(window),"style-timeout",NULL);
-    return G_SOURCE_REMOVE;
 }
 static void cancel_entrance(GtkWidget *window) {
     guint tick=GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(window),"style-tick"));
@@ -152,17 +137,66 @@ static gboolean initial_focus(gpointer window) {
 static void close_selector(void) {
     hide_selector();
 }
+static void configure_extras(GtkWidget *window) {
+    GtkWidget *shell=nav_find(window,"style-shell"), *reveal=nav_find(window,"extra-revealer");
+    gboolean enabled=TRUE,below=FALSE;
+    gint screen_height=1080;
+    g_object_get(gtk_widget_get_settings(window),"gtk-enable-animations",&enabled,NULL);
+    GdkWindow *surface=gtk_widget_get_window(window);
+    GdkMonitor *monitor=surface?gdk_display_get_monitor_at_window(gtk_widget_get_display(window),surface):NULL;
+    if(monitor) { GdkRectangle bounds;gdk_monitor_get_geometry(monitor,&bounds);below=bounds.width<1080;screen_height=bounds.height; }
+    GtkStyleContext *context=gtk_widget_get_style_context(shell?shell:window);
+    if(below)gtk_style_context_add_class(context,"extras-below");
+    else gtk_style_context_remove_class(context,"extras-below");
+    if(GTK_IS_BOX(shell))gtk_orientable_set_orientation(GTK_ORIENTABLE(shell),below?GTK_ORIENTATION_VERTICAL:GTK_ORIENTATION_HORIZONTAL);
+    guint ms=enabled?(shell&&nav_class(shell,"compact-motion")?140:200):0;
+    if(GTK_IS_REVEALER(reveal)) {
+        gtk_revealer_set_transition_type(GTK_REVEALER(reveal),enabled?(below?GTK_REVEALER_TRANSITION_TYPE_SLIDE_DOWN:GTK_REVEALER_TRANSITION_TYPE_SLIDE_RIGHT):GTK_REVEALER_TRANSITION_TYPE_NONE);
+        gtk_revealer_set_transition_duration(GTK_REVEALER(reveal),ms);
+        gtk_widget_set_valign(reveal,below?GTK_ALIGN_START:GTK_ALIGN_END);
+        gtk_widget_set_halign(reveal,below?GTK_ALIGN_END:GTK_ALIGN_FILL);
+    }
+    GtkWidget *pages=nav_find(window,"extra-pages");
+    if(GTK_IS_STACK(pages)) {
+        gtk_stack_set_transition_type(GTK_STACK(pages),enabled?GTK_STACK_TRANSITION_TYPE_SLIDE_UP_DOWN:GTK_STACK_TRANSITION_TYPE_NONE);
+        gtk_stack_set_transition_duration(GTK_STACK(pages),ms);
+    }
+    GtkWidget *scroll=nav_find(window,"extra-scroll"), *main=nav_find(window,"selector-main");
+    if(GTK_IS_SCROLLED_WINDOW(scroll)) {
+        gint main_height=0;
+        if(below&&main)gtk_widget_get_preferred_height(main,NULL,&main_height);
+        gtk_scrolled_window_set_propagate_natural_height(GTK_SCROLLED_WINDOW(scroll),TRUE);
+        gtk_scrolled_window_set_propagate_natural_width(GTK_SCROLLED_WINDOW(scroll),TRUE);
+        gtk_scrolled_window_set_max_content_height(GTK_SCROLLED_WINDOW(scroll),MAX(80,screen_height-main_height-24));
+    }
+}
+static gboolean dismiss_extras(gboolean restore_focus) {
+    if(!resident)return FALSE;
+    GtkWidget *reveal=nav_find(resident,"extra-revealer");
+    if(!GTK_IS_REVEALER(reveal)||!gtk_revealer_get_reveal_child(GTK_REVEALER(reveal)))return FALSE;
+    gtk_revealer_set_reveal_child(GTK_REVEALER(reveal),FALSE);
+    if(restore_focus) {
+        GtkWidget *pages=nav_find(resident,"extra-pages");
+        const gchar *page=GTK_IS_STACK(pages)?gtk_stack_get_visible_child_name(GTK_STACK(pages)):NULL;
+        nav_nth(resident,g_strcmp0(page,"1")==0?"frames-toggle":"bar-toggle",0,FALSE);
+    }
+    /* Persist through the same FileEvents stream, without blocking GTK on IPC. */
+    gchar *helper=g_build_filename(g_get_home_dir(),".local","bin","desktop-style",NULL);
+    gchar *argv[]={helper,"extra","close",NULL};
+    g_spawn_async(NULL,argv,NULL,0,NULL,NULL,NULL,NULL);g_free(helper);
+    return TRUE;
+}
 static gboolean keys(GtkWidget *window,GdkEventKey *event,gpointer unused) {
     guint key=gdk_keyval_to_lower(event->keyval);
     if(key==GDK_KEY_Escape||((event->state&GDK_CONTROL_MASK)&&key==GDK_KEY_w)) {
         if(!g_object_get_data(G_OBJECT(window),"nav-held")) {
             g_object_set_data(G_OBJECT(window),"nav-held",GUINT_TO_POINTER(event->keyval));
-            close_selector();
+            if(key!=GDK_KEY_Escape||!dismiss_extras(TRUE))close_selector();
         }
         return TRUE;
     }
     if(event->state&GDK_CONTROL_MASK) {
-        if(key>=GDK_KEY_1&&key<=GDK_KEY_7) {
+        if(key>=GDK_KEY_1&&key<=GDK_KEY_9) {
             if(!g_object_get_data(G_OBJECT(window),"nav-held")) {
                 g_object_set_data(G_OBJECT(window),"nav-held",GUINT_TO_POINTER(event->keyval));
                 nav_nth(window,"theme-choice",key-GDK_KEY_1,TRUE);
@@ -178,13 +212,25 @@ static gboolean keys(GtkWidget *window,GdkEventKey *event,gpointer unused) {
         }
     }
     if(key==GDK_KEY_Home||key==GDK_KEY_End) {
-        nav_nth(window,"theme-choice",key==GDK_KEY_Home?0:6,FALSE);return TRUE;
+        GPtrArray *items=g_ptr_array_new();nav_collect(window,items,"theme-choice");
+        guint index=key==GDK_KEY_Home||!items->len?0:items->len-1;
+        g_ptr_array_unref(items);
+        nav_nth(window,"theme-choice",index,FALSE);return TRUE;
     }
     return nav_key(window,event);
 }
 static gboolean release(GtkWidget *window,GdkEventKey *event,gpointer unused){return nav_release(window,event);}
 static gboolean focus_out(GtkWidget *window,GdkEventFocus *event,gpointer unused) {
     g_object_set_data(G_OBJECT(window),"nav-held",NULL);return FALSE;
+}
+static gboolean release_keyboard(gpointer data) {
+    GtkWidget *window=data;
+    if(gtk_layer_set_keyboard_mode&&gtk_layer_is_layer_window&&gtk_layer_is_layer_window(GTK_WINDOW(window)))
+        gtk_layer_set_keyboard_mode(GTK_WINDOW(window),visible&&!warming&&gtk_widget_get_mapped(window)?2:0);
+    return G_SOURCE_REMOVE;
+}
+static gboolean focus_in(GtkWidget *window,GdkEventFocus *event,gpointer unused) {
+    release_keyboard(window);return FALSE;
 }
 static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *values,gpointer unused) {
     GtkWidget *window=g_value_get_object(&values[0]);
@@ -199,6 +245,7 @@ static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *val
         g_signal_connect(window,"key-press-event",G_CALLBACK(keys),NULL);
         g_signal_connect(window,"key-release-event",G_CALLBACK(release),NULL);
         g_signal_connect(window,"focus-out-event",G_CALLBACK(focus_out),NULL);
+        g_signal_connect(window,"focus-in-event",G_CALLBACK(focus_in),NULL);
         g_signal_connect(window,"unmap",G_CALLBACK(unmapped),NULL);
         g_signal_connect(window,"destroy",G_CALLBACK(destroyed),NULL);
         g_object_set_data(G_OBJECT(window),"style-bound",GINT_TO_POINTER(1));
@@ -208,22 +255,18 @@ static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *val
     if(first&&!visible&&(seen_window||(GTK_IS_LABEL(hidden)&&g_str_equal(gtk_label_get_text(GTK_LABEL(hidden)),"true")))) {
         visible=FALSE;warming=TRUE;state("visible","0");
         gtk_widget_set_opacity(window,0);
+        resident_surface_input(window,FALSE);state("ready","0");
         gtk_widget_add_tick_callback(window,warm_frame,NULL,NULL);
     } else if(!warming) {
         visible=TRUE;state("visible","1");
     }
     seen_window=TRUE;
     state("mapped","1");
+    configure_extras(window);
+    /* Exclusive focus is an opening request, never a persistent grab. */
+    g_timeout_add_full(G_PRIORITY_DEFAULT,120,release_keyboard,g_object_ref(window),g_object_unref);
     GtkWidget *preview=nav_find(window,"preview-stack");
     if(GTK_IS_STACK(preview))gtk_stack_set_transition_duration(GTK_STACK(preview),nav_find(window,"compact-motion")?140:220);
-    if(!warming&&motion(window)) {
-        pose(window,"enter",TRUE);pose(window,"entering",TRUE);
-        g_object_set_data(G_OBJECT(window),"style-frames",NULL);
-        guint tick=gtk_widget_add_tick_callback(window,enter_frame,NULL,NULL);
-        g_object_set_data(G_OBJECT(window),"style-tick",GUINT_TO_POINTER(tick));
-        guint timer=g_timeout_add_full(G_PRIORITY_DEFAULT,420,entrance_done,g_object_ref(window),g_object_unref);
-        g_object_set_data(G_OBJECT(window),"style-timeout",GUINT_TO_POINTER(timer));
-    }
     if(!warming)g_idle_add_full(G_PRIORITY_DEFAULT_IDLE,initial_focus,g_object_ref(window),g_object_unref);
     return TRUE;
 }

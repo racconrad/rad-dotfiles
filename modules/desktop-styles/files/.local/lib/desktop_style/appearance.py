@@ -3,16 +3,16 @@ import json
 
 
 def resolve(name, profile, colors):
-    strict = name in ('monochrome', 'retro', 'terminal')
+    strict = name in ('monochrome', 'retro', 'terminal', 'ascii')
     widget_frame = profile.get('widget_frame', name)
-    if widget_frame not in ('none','monochrome','terminal','retro','future','glass','modern','gnome','windows'):
+    if widget_frame not in ('none','monochrome','terminal','retro','future','glass','modern','gnome','windows','ascii'):
         widget_frame = 'none'
     return dict(style=name, font=profile['font'], radius=profile['radius'],
                 control_radius=min(profile['radius'], 10), border=profile['border'],
                 opacity=profile['alpha'] if name == 'glass' else 1,
                 panel_padding=16 if strict or name == 'windows' else 20,
                 control_padding=8 if strict or name == 'windows' else 10,
-                position=profile['position'], continuous=name in ('gnome','windows','terminal'),
+                position=profile['position'], continuous=profile.get('continuous',False),
                 strict=strict, colors=colors, widgets=dict(skin=profile['skin'], frame=widget_frame,
                     fx='none' if strict else 'focus', background='surface'))
 
@@ -65,6 +65,7 @@ tooltip label {{ padding: 0; }}
 .popup .mode-row.selected, .popup .session-choice.selected, .popup .nav-tab.current, .popup .app-launch.first-match, .popup button.apply {{ background: {accent}; color: {onaccent}; }}
 .popup .mode-row.selected label, .popup .session-choice.selected label, .popup .nav-tab.current label, .popup button.apply label {{ color: {onaccent}; }}
 .popup .muted {{ color: {muted}; }}
+.popup .shortcuts-panel .key-cap {{ border-radius: {q}px; border-color: {edge}; }}
 .popup button.destructive, .popup button.destructive:hover, .popup button.destructive:focus {{ background: {colors['error']}; color: {colors['on_error']}; }}
 '''
     # Descendants must use the foreground of the actual selected/hover surface.
@@ -89,7 +90,8 @@ tooltip label {{ padding: 0; }}
     panels += f'menu, menu *, popover, popover * {{ font-family: "{font}", "JetBrainsMono Nerd Font Propo", sans-serif; color: {fg}; }}\nmenuitem:hover, menuitem:selected {{ background: {accent}; color: {onaccent}; }}\n'
 
     selector = f'.style-selector, .style-selector * {{ font-family: "{font}", "JetBrainsMono Nerd Font Propo", sans-serif; }}\n'
-    selector += panel('window .style-selector') + controls('.style-selector')
+    selector += panel('window .style-selector .selector-main, window .style-selector .selector-extra') + controls('.style-selector')
+    selector += f'.style-selector .selector-extra {{ padding: 12px; margin-left: 4px; }}\n'
     selector += f'''
 .style-selector .style-option, .style-selector .close, .style-selector .restore {{ border-radius: {q}px; }}
 .style-selector .style-option.selected, .style-selector button.apply {{ background: {accent}; color: {onaccent}; border: 1px solid {accent}; }}
@@ -162,6 +164,11 @@ tooltip label {{ padding: 0; }}
         bar+=f'{interactive} {{ transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out; }}\n'
     if t['continuous']:
         bar+=f'window#waybar {{ background: {surface}; }}\nwindow#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar {{ background: transparent; border: none; border-radius: 0; }}\nwindow#waybar > box {{ padding-top: 0; }}\n'
+    else:
+        bar+='window#waybar { background: transparent; }\n'
+    inset=0 if t['continuous'] else 8
+    padding=dict(top=f'0 0 {inset}px 0',bottom=f'{inset}px 0 0 0',left=f'0 {inset}px 0 0',right=f'0 0 0 {inset}px')[t['position']]
+    bar+=f'window#waybar.{t["position"]} > box {{ padding: {padding}; }}\n'
     if t['strict']:
         bar+='window#waybar * { background-image: none; box-shadow: none; text-shadow: none; }\n'
     if name=='monochrome':
@@ -226,6 +233,30 @@ window#osd progress, window#osd segment.active {{ min-height: 3px; background: {
     if t['strict']:
         editor+=f'{editor_scope} * {{ transition: none; animation: none; }}\n'
         editor+=f'{editor_scope} .wcard:disabled {{ opacity: 1; }}\n'
+
+    if name == 'ascii':
+        cyan=colors['secondary']
+        # Fine typographic rules, square controls, and color-coded text. No
+        # raster overlays or ambient repaints on interactive desktop surfaces.
+        menu+=f'''
+.popup .header {{ border-bottom: 1px dashed {edge}; padding-bottom: 12px; }}
+.popup .title, .popup .side-title {{ color: {cyan}; font-weight: 500; font-size: 14px; }}
+.popup .search-bar {{ background: {bg}; border-style: dashed; }}
+.popup .ascii-prompt {{ color: {accent}; }}
+.popup .navigation {{ border-top: 1px dashed {edge}; padding-top: 8px; }}
+.popup .daily-app {{ border-color: {edge}; }}
+'''
+        widgets+=f'''
+{root} .gen-head, {root} .pl-head, {root} .music-head {{ border-bottom: 1px dashed {edge}; padding-bottom: 8px; }}
+{root} .gen-title, {root} .pl-title, {root} .greeting {{ color: {cyan}; font-weight: 500; }}
+{root} .gen-icon, {root} .pl-icon, {root} .sys-chip {{ background: transparent; color: {accent}; }}
+{root} progress highlight {{ background: {cyan}; }}
+'''
+        selector+=f'.style-selector .header {{ border-bottom: 1px dashed {edge}; padding-bottom: 12px; }}\n.style-selector .preview-title {{ color: {cyan}; }}\n'
+        panels+=f'#desktop-menu .panel-title {{ color: {cyan}; }}\n'
+        editor+=f'{editor_scope} .panel-title, {editor_scope} .group-title {{ color: {cyan}; }}\n{editor_scope} .section {{ border-style: dashed; }}\n'
+        bar+=f'window#waybar {{ border-bottom: 1px solid {edge}; }}\nwindow#waybar #clock {{ color: {cyan}; background: transparent; }}\n'
+        swaync+=f'.notification .summary {{ color: {cyan}; }}\n'
 
     # gtk.css has USER priority, above each application's theme provider.
     # Mutable shape rules there would pin old radii in resident Eww processes.

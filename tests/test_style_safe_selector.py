@@ -34,25 +34,25 @@ class SafeSelectorTests(unittest.TestCase):
         for action in (self.engine.open_selector, self.engine.toggle_selector):
             with self.choose(code=1) as run:
                 action()
-                self.assertEqual(len(run.call_args.kwargs['input'].splitlines()), 8)
+                self.assertEqual(len(run.call_args.kwargs['input'].splitlines()), 7)
         self.engine.apply.assert_not_called()
         self.engine.reset.assert_not_called()
 
     def test_valid_selection_applies_only_selected_theme(self):
-        with self.choose('2\n'):
+        with self.choose('4\n'):
             self.engine.open_selector()
         self.engine.apply.assert_called_once_with('retro')
         self.engine.reset.assert_not_called()
 
     def test_current_and_invalid_selections_do_nothing(self):
-        for value in ('3', '-1', '8', '99', 'bad', ''):
+        for value in ('1', '-1', '7', '99', 'bad', ''):
             with self.choose(value):
                 self.engine.open_selector()
         self.engine.apply.assert_not_called()
         self.engine.reset.assert_not_called()
 
     def test_restore_original(self):
-        with self.choose('7'):
+        with self.choose('6'):
             self.engine.toggle_selector()
         self.engine.reset.assert_called_once_with()
 
@@ -70,7 +70,7 @@ class SafeSelectorTests(unittest.TestCase):
         e.eww=Mock(return_value=subprocess.CompletedProcess(['eww'],0,'',''))
         with patch.object(e,'open_selector') as opened, patch.object(e.subprocess,'run') as run, patch.object(e,'selector_daemon_running',return_value=True):
             e.toggle_selector()
-        e.eww.assert_called_once_with('active-windows')
+        e.eww.assert_not_called()
         opened.assert_called_once_with()
         run.assert_not_called()
 

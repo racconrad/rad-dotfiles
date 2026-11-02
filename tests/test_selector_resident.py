@@ -67,6 +67,12 @@ class ResidentSelectorTests(unittest.TestCase):
             styles.update(selected='glass')
         self.assertEqual(styles.read(self.state/'ui.json')['selected'],'glass')
 
+    def test_renderer_edits_do_not_invalidate_the_native_resident(self):
+        fd=self.fifo()
+        Path(styles.__file__).write_text('# Updated theme names and rendering\n')
+        self.assertTrue(styles.selector_send('show'))
+        self.assertEqual(os.read(fd,4096),b'show\n')
+
     def test_cold_open_publishes_state_only_after_daemon_is_ready(self):
         module=self.home/'selector.so';module.touch()
         source=ROOT/'modules/desktop-styles/files/.config/desktop-style/source-colors.json'
@@ -90,6 +96,8 @@ class ResidentSelectorTests(unittest.TestCase):
         self.assertIn('selector_prewarm=true',commands[0])
         self.assertEqual(started[0]['env']['LANGUAGE'],'en_US:en')
         self.assertFalse(styles.read(self.state/'ui.json')['busy'])
+        self.assertEqual(styles.read(self.state/'ui.json')['extra'],'')
+        self.assertFalse(styles.read(self.state/'ui.json')['frames_loaded'])
 
 
 if __name__=='__main__':unittest.main()
