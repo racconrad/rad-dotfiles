@@ -21,7 +21,7 @@ button:disabled { opacity: .5; }
 .app-search { color: $on_surface; caret-color: $primary; min-height: 22px; }
 .app-search selection { background: $primary; color: $on_primary; }
 .daily-apps { padding: 2px 0; }
-.daily-app { min-height: 88px; padding: 13px 6px; background: rgba($primary, .09); }
+.daily-app { min-height: 60px; padding: 10px 6px; background: rgba($primary, .09); }
 .daily-app image { color: $primary; transition: -gtk-icon-transform 140ms ease-out; }
 .daily-app:hover image { -gtk-icon-transform: scale(1.09); }
 .daily-app label { font-size: 12px; font-weight: 500; }
@@ -68,64 +68,71 @@ scrollbar slider { min-width: 4px; border-radius: 8px; background: rgba($seconda
    popup buttons and panels, which made every hover snap. input.c adds `enter` (start pose) for one
    frame and `entering` (stagger delays) for the length of the entrance; `.still` keeps it all off. */
 $ease: cubic-bezier(.22, 1, .36, 1);
-$spring: cubic-bezier(.34, 1.45, .64, 1);
+$spring: cubic-bezier(.22, 1, .36, 1);
 .popup.motion button { transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out; }
 .popup.motion .daily-app { transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out,
   opacity 260ms ease-out; }
 .popup.motion .daily-app image { transition: -gtk-icon-transform 420ms $spring; }
-.popup.motion .daily-app:hover image { -gtk-icon-transform: scale(1.24) rotate(-9deg); }
+.popup.motion .daily-app:hover image { -gtk-icon-transform: scale(1.08); }
 .popup.motion .daily-app:active image { -gtk-icon-transform: scale(.88); transition-duration: 90ms; }
 .popup.motion .nav-tab image, .popup.motion .quick image, .popup.motion .close image { transition: -gtk-icon-transform 360ms $spring; }
-.popup.motion .nav-tab:hover image, .popup.motion .quick:hover image { -gtk-icon-transform: scale(1.18); }
-.popup.motion .close:hover image { -gtk-icon-transform: rotate(90deg); }
+.popup.motion .nav-tab:hover image, .popup.motion .quick:hover image { -gtk-icon-transform: scale(1.06); }
+.popup.motion .close:hover image { -gtk-icon-transform: scale(1.06); }
 .popup.motion .app-launch image { transition: -gtk-icon-transform 300ms $spring; }
 .popup.motion .app-launch:hover image, .popup.motion .app-launch.first-match image { -gtk-icon-transform: scale(1.15); }
 .popup.motion .header, .popup.motion .search-bar, .popup.motion .utilities, .popup.motion .navigation {
   transition: opacity 240ms ease-out; }
-.popup.motion .search-bar.entering { transition-delay: 30ms; }
-.popup.motion .utilities.entering { transition-delay: 220ms; }
-.popup.motion .navigation.entering { transition-delay: 260ms; }
-.popup.motion .header.enter, .popup.motion .search-bar.enter, .popup.motion .utilities.enter,
-.popup.motion .navigation.enter, .popup.motion .daily-apps.enter .daily-app { opacity: 0; }
-.popup.motion .daily-apps.enter .daily-app image { -gtk-icon-transform: scale(.48) rotate(-22deg); }
-.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(1),
-.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(1) image { transition-delay: 0ms; }
-.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(2),
-.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(2) image { transition-delay: 28ms; }
-.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(3),
-.popup.motion .daily-apps.entering box:nth-child(1) > button.daily-app:nth-child(3) image { transition-delay: 56ms; }
-.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(1),
-.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(1) image { transition-delay: 84ms; }
-.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(2),
-.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(2) image { transition-delay: 112ms; }
-.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(3),
-.popup.motion .daily-apps.entering box:nth-child(2) > button.daily-app:nth-child(3) image { transition-delay: 140ms; }
-.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(1),
-.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(1) image { transition-delay: 168ms; }
-.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(2),
-.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(2) image { transition-delay: 196ms; }
-.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(3),
-.popup.motion .daily-apps.entering box:nth-child(3) > button.daily-app:nth-child(3) image { transition-delay: 224ms; }
-
 /* Shared interaction rhythm with the floating wallpaper/session cards. */
 .popup.motion .session-choice image, .popup.motion .mode-row image {
   transition: -gtk-icon-transform 220ms $ease;
 }
 .popup.motion .session-choice:hover image, .popup.motion .mode-row:hover image { -gtk-icon-transform: scale(1.12); }
 .popup.motion button:active image { -gtk-icon-transform: scale(.92); transition-duration: 90ms; }
-/* Start pose is immediate; removing enter releases the staggered spring. */
-.popup.motion .daily-apps.enter .daily-app,
-.popup.motion .daily-apps.enter .daily-app image,
-.popup.motion .header.enter, .popup.motion .search-bar.enter,
-.popup.motion .utilities.enter, .popup.motion .navigation.enter { transition: none; }
 .popup.motion .search-bar image { transition: -gtk-icon-transform 350ms $spring; }
-.popup.motion .search-bar:hover image { -gtk-icon-transform: scale(1.16) rotate(-10deg); }
+.popup.motion .search-bar:hover image { -gtk-icon-transform: scale(1.06); }
 @keyframes menu-select {
   0% { -gtk-icon-transform: scale(.82) rotate(-8deg); }
   65% { -gtk-icon-transform: scale(1.2) rotate(3deg); }
   100% { -gtk-icon-transform: scale(1); }
 }
-.popup.motion .nav-tab.current image { animation: menu-select 360ms ease-out 1; }
+.popup.motion .nav-tab.current image { animation: none; }
 .popup.still, .popup.still * { transition: none; animation: none; -gtk-icon-transform: none; }
 
 .popup button:focus { box-shadow: inset 0 0 0 2px $outline_variant; }
+
+/* Shortcut viewer: colours come from the active theme via currentColor, so every desktop style adapts. */
+.popup .keys-scroll { min-height: 260px; }
+.popup .key-section-title { font-size: 11px; font-weight: 600; letter-spacing: .6px; opacity: .7; padding: 6px 8px 2px; }
+.popup .key-row { padding: 6px 8px; }
+.popup .key-cap { font-family: "JetBrainsMono Nerd Font Mono", monospace; font-size: 12px; font-weight: 600; padding: 1px 6px;
+  border: 1px solid; border-color: unquote("alpha(currentColor, .35)"); border-radius: 6px; }
+.popup .key-action { font-size: 12px; }
+.popup .shortcuts-panel.ascii .key-cap { border-style: dashed; border-radius: 0; }
+
+/* Raccon's compact launcher rhythm; colour and geometry still follow the theme. */
+.popup .panel.panel { padding: 14px; }
+.popup .side-panel.side-panel { padding: 10px; }
+.popup .title { font-size: 19px; }
+.popup .search-bar { padding: 9px 10px; }
+.popup .search-bar entry { background: transparent; border: none; padding: 0; min-height: 22px; }
+.popup .nav-tab, .popup .quick { padding: 7px; }
+.popup .side-title { padding: 2px 0 4px; }
+.popup .service-content button { padding: 6px; }
+.popup .service-content .network-row, .popup .service-content .device-row { padding: 7px 6px; min-height: 26px; }
+.popup .service-content .network-row.selected, .popup .service-content .device-row.selected {
+  background: rgba($primary, .12); color: $on_surface;
+}
+.popup .service-content .network-row:hover, .popup .service-content .device-row:hover {
+  background: $primary; color: $on_primary;
+}
+.popup .calendar-navigation button { padding: 6px; }
+.popup .calendar-weekdays label { font-size: 11px; padding: 3px; }
+.popup button.calendar-day { padding: 2px; min-width: 24px; min-height: 22px; }
+.popup button.calendar-day label { font-size: 12px; }
+.popup button.calendar-day.other-month { color: $on_surface_variant; }
+.popup button.calendar-day.today { border-color: $primary; }
+.popup button.calendar-day.has-event label { text-decoration-line: underline; text-decoration-color: $primary; }
+.popup button.calendar-day.selected { background: $primary; color: $on_primary; border-color: $primary; }
+.popup button.calendar-day.selected label { color: $on_primary; text-decoration-color: $on_primary; }
+.popup .calendar-entry { background: $surface_container_highest; padding: 8px; }
+.popup .agenda-scroll { min-height: 100px; }

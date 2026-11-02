@@ -1,4 +1,5 @@
 """Calendar/agenda for the resident Raccon window; preserves legacy event storage."""
+import calendar
 import datetime as dt
 import fcntl
 import hashlib
@@ -36,13 +37,17 @@ def token(value):return hashlib.sha256(str(value).encode()).hexdigest()[:24]
 
 
 def selected():
-    return dt.date.fromisoformat(load(ROOT/'calendar-date.json',dt.date.today().isoformat()))
+    try:return dt.date.fromisoformat(load(ROOT/'calendar-date.json',dt.date.today().isoformat()))
+    except (OSError,ValueError,TypeError):return dt.date.today()
 
 
 def events():
     rows=load(EVENTS,[])
     if not isinstance(rows,list) or any(not isinstance(r,dict) or not all(isinstance(r.get(k),str) for k in ('id','date','title')) for r in rows):
         raise ValueError('Could not read the agenda. Your events file was preserved.')
+    for row in rows:
+        try:dt.date.fromisoformat(row['date'])
+        except ValueError:raise ValueError('An event has an invalid date. Your events file was preserved.')
     return rows
 
 
@@ -53,41 +58,65 @@ def tasks():
             for group in json.loads(result.stdout).get('groups',[]) for item in group.get('items',[])]
 
 
-def snapshot(task_rows=()):
-    date=selected();rows=events()
+MONTHS=('January','February','March','April','May','June','July','August','September','October','November','December')
+
+
+def calendar_grid(date, rows):
+    first=date.replace(day=1);occupied={r['date'] for r in rows};today=dt.date.today()
+    cells=[]
+    for offset in range(42):
+        try:day=first+dt.timedelta(days=offset-first.weekday())
+        except OverflowError:
+            cells.append(dict(day='',iso='',selected=False,today=False,other=True,event=False));continue
+        cells.append(dict(day=str(day.day),iso=day.isoformat(),selected=day==date,today=day==today,
+                          other=day.month!=date.month,event=day.isoformat() in occupied))
+    return [cells[i:i+7] for i in range(0,42,7)]
+
+
+def snapshot(task_rows=(), rows=None, error=''):
+    date=selected();rows=events() if rows is None else rows
     present=[dict(token=token(r['id']),title=r['title']) for r in rows if r['date']==date.isoformat()]
     upcoming=[dict(title=r['title'],date=r['date']) for r in sorted(rows,key=lambda r:r['date']) if r['date']>date.isoformat()][:3]
-    return dict(day=date.day,month=date.month,year=date.year,date=date.strftime('%d/%m/%Y'),
-                events=present,upcoming=upcoming,tasks=list(task_rows) if date==dt.date.today() else [],error='')
+    return dict(day=date.day,month=date.month,year=date.year,date=date.strftime('%d/%m/%Y'),iso=date.isoformat(),
+                month_title=f'{MONTHS[date.month-1]} {date.year}',weekdays=['M','T','W','T','F','S','S'],
+                weeks=calendar_grid(date,rows),events=present,upcoming=upcoming,
+                tasks=list(task_rows) if date==dt.date.today() else [],error=error)
 
 
 def watch():
-    previous=None;task_rows=[];refresh=0;task_revision=None
-    while True:
-        try:
-            active=(ROOT/'page').read_text().strip()=='7'
-        except OSError:active=False
-        if active or previous is None:
-            try:
-                error=''
-                revision=load(ROOT/'calendar-tasks.json',0)
-                if revision!=task_revision:refresh=0;task_revision=revision
+    sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
+    from raccon_events import FileEvents
+    previous=None;task_rows=[];refresh=0;task_error=''
+    with FileEvents([ROOT/'calendar-date.json',ROOT/'calendar-tasks.json',EVENTS,ROOT/'page',ROOT/'visible']) as changes:
+        while True:
+            try:active=(ROOT/'page').read_text().strip()=='7' and (ROOT/'visible').read_text().strip()=='1'
+            except OSError:active=False
+            if active or previous is None:
                 if active and time.monotonic()>=refresh:
-                    try:task_rows=tasks()
-                    except Exception:task_rows=[];error='Could not load tasks.'
+                    try:task_rows=tasks();task_error=''
+                    except Exception:task_rows=[];task_error='Could not load tasks. Reopen the calendar to retry.'
                     refresh=time.monotonic()+15
-                frame=snapshot(task_rows);frame['error']=error
-            except Exception as exc:
-                today=dt.date.today();frame=dict(day=today.day,month=today.month,year=today.year,date=today.strftime('%d/%m/%Y'),events=[],upcoming=[],tasks=[],error=str(exc))
-            if frame!=previous:
-                print(json.dumps(frame,ensure_ascii=False),flush=True);previous=frame
-        time.sleep(.4 if active else 1)
+                try:frame=snapshot(task_rows,error=task_error)
+                except Exception as exc:frame=snapshot(rows=[],error=str(exc))
+                if frame!=previous:
+                    print(json.dumps(frame,ensure_ascii=False),flush=True);previous=frame
+            changed=changes.wait(max(0,refresh-time.monotonic()) if active else None)
+            if ROOT/'calendar-tasks.json' in changed or ROOT/'page' in changed or ROOT/'visible' in changed:refresh=0
 
 
 def action(args):
     ROOT.mkdir(parents=True,exist_ok=True)
     if args[0]=='select':
-        day,month,year=map(int,args[1:4]);store(ROOT/'calendar-date.json',dt.date(year,month,day).isoformat());return
+        if len(args)==2:date=dt.date.fromisoformat(args[1])
+        else:
+            day,month,year=map(int,args[1:4]);date=dt.date(year,month,day)
+        store(ROOT/'calendar-date.json',date.isoformat());return
+    if args[0]=='move':
+        offset=int(args[1])
+        if offset not in (-1,1):raise ValueError('Invalid month change.')
+        date=selected();index=date.year*12+date.month-1+offset;year,month=divmod(index,12);month+=1
+        date=dt.date(year,month,min(date.day,calendar.monthrange(year,month)[1]))
+        store(ROOT/'calendar-date.json',date.isoformat());return
     if args[0]=='today':store(ROOT/'calendar-date.json',dt.date.today().isoformat());return
     if args[0]=='task':
         row=next(r for r in tasks() if r['token']==args[1])
@@ -100,7 +129,8 @@ def action(args):
         if args[0]=='add':
             title=sys.stdin.read(501).strip()
             if not title or len(title)>500:raise ValueError('Enter an event with up to 500 characters.')
-            rows.append(dict(id=uuid.uuid4().hex,date=selected().isoformat(),title=title))
+            date=dt.date.fromisoformat(args[1]) if len(args)>1 else selected()
+            rows.append(dict(id=uuid.uuid4().hex,date=date.isoformat(),title=title))
         elif args[0]=='remove':rows=[r for r in rows if token(r['id'])!=args[1]]
         else:raise ValueError('Unknown calendar action.')
         store(EVENTS,rows)

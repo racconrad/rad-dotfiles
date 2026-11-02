@@ -4,6 +4,8 @@
 Tiles reference wallpapers by index, so odd filenames (quotes, spaces) never reach Eww's shell strings.
 """
 import hashlib
+import time
+import uuid
 import tempfile
 import json
 import os
@@ -60,6 +62,107 @@ def thumb(src):
         temp.unlink(missing_ok=True)
 
 
+def cached_thumb(src):
+    out = THUMBS / (hashlib.sha1(str(src).encode()).hexdigest() + '.png')
+    try:
+        return str(out) if out.stat().st_size and src.stat().st_mtime <= out.stat().st_mtime else ''
+    except OSError:return ''
+
+
+REQUEST = Path(os.environ.get('XDG_RUNTIME_DIR', CACHE)) / 'raccon-float-gallery.json'
+
+def request_gallery(section='all', page=None):
+    if section not in ('all','images','videos'):raise ValueError('Unknown wallpaper section')
+    REQUEST.parent.mkdir(parents=True,exist_ok=True)
+    data=dict(section=section,page=page,token=uuid.uuid4().hex)
+    fd,name=tempfile.mkstemp(dir=REQUEST.parent,prefix='.gallery-')
+    try:
+        with os.fdopen(fd,'w') as stream:json.dump(data,stream)
+        os.replace(name,REQUEST)
+    finally:
+        if os.path.exists(name):os.unlink(name)
+
+
+def gallery_request():
+    try:
+        value=json.loads(REQUEST.read_text())
+        if isinstance(value,dict) and value.get('section') in ('all','images','videos'):return value
+    except (OSError,ValueError):pass
+    return dict(section='all',page=None,token='initial')
+
+
+def current_wallpaper():
+    try:
+        value=(CACHE/'current-wallpaper').read_text().strip()
+        return str(Path(value).resolve()) if value else ''
+    except OSError:return ''
+
+
+def progressive_gallery(request):
+    cat=catalogue();cat['all']=sorted(cat['images']+cat['videos'])
+    section=request['section'];files=cat[section]
+    pages=max(1,(len(files)+PAGE_SIZE-1)//PAGE_SIZE)
+    page=max(0,min(int(request.get('page') or 0),pages-1))
+    offset=page*PAGE_SIZE if request.get('page') is not None else 0
+    if request.get('page') is not None:files=files[offset:offset+PAGE_SIZE]
+    current=current_wallpaper()
+    tiles=[];missing=[]
+    for i,p in enumerate(files):
+        cached=cached_thumb(p)
+        source=str(p.resolve())
+        tiles.append(dict(index=offset+i,name=p.stem,source=source,video=kind_of(p)=='videos',thumb=css_url(cached),has_thumb=bool(cached),current=source==current))
+        if not cached:missing.append((p,tiles[-1]))
+    data=dict(rows=[dict(i=r,count=len(tiles[i:i+COLUMNS]),tiles=tiles[i:i+COLUMNS]) for r,i in enumerate(range(0,len(tiles),COLUMNS))],
+              section=section,page=page,pages=pages,counts={k:len(v) for k,v in cat.items()},loading=bool(missing),error='')
+    return data,missing
+
+
+def watch_gallery():
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from raccon_events import FileEvents
+    # One resident listener, two decoders maximum, and no queued stale work.
+    # Emit cached images/placeholders BEFORE submitting any decoder work.
+    THUMBS.mkdir(parents=True,exist_ok=True)
+    active=None;pending={};missing=[];data=None;last=0;dirty=False
+    with FileEvents([REQUEST,CACHE/'current-wallpaper']) as changes, ThreadPoolExecutor(max_workers=2) as pool:
+        while True:
+            request=gallery_request();token=request['token']
+            if token!=active:
+                active=token
+                try:data,missing=progressive_gallery(request)
+                except OSError:
+                    data=dict(rows=[],section=request['section'],page=0,pages=1,counts=dict(all=0,images=0,videos=0),loading=False,error='Wallpaper folder is unavailable.')
+                    missing=[]
+                print(json.dumps(data),flush=True);last=time.monotonic();dirty=False
+            current=current_wallpaper()
+            for row in data.get('rows',[]):
+                for tile in row['tiles']:
+                    selected=bool(current) and tile.get('source')==current
+                    if tile.get('current',False)!=selected:
+                        tile['current']=selected;dirty=True
+            for future,(generation,tile) in list(pending.items()):
+                if not future.done():continue
+                del pending[future]
+                try:path=future.result()
+                except (OSError,ValueError):path=''
+                if generation==active:
+                    tile.update(thumb=css_url(path),has_thumb=bool(path));dirty=True
+            while missing and len(pending)<2:
+                path,tile=missing.pop(0)
+                future=pool.submit(thumb,path)
+                pending[future]=(active,tile)
+                future.add_done_callback(changes.wake)
+            loading=bool(missing or any(g==active for g,t in pending.values()))
+            if data['loading']!=loading:data['loading']=loading;dirty=True
+            if dirty and (not loading or time.monotonic()-last>=.15):
+                # A filter changed during decode: never flash the previous view.
+                if gallery_request()['token']==active:print(json.dumps(data),flush=True)
+                dirty=False;last=time.monotonic()
+            # Only a pending publish batch has a deadline; an idle gallery sleeps
+            # until a request or decoder completion, without repeatedly reading JSON.
+            changes.wait(max(0,.15-(time.monotonic()-last)) if dirty else None)
+
+
 def css_url(path):
     return path.replace('\\', '\\\\').replace('"', '\\"')
 
@@ -73,6 +176,10 @@ def rows(files, current, offset=0):
 
 
 def main(args):
+    if args[:1]==['watch']:
+        watch_gallery();return
+    if args[:1]==['request']:
+        request_gallery(args[1] if len(args)>1 else 'all',int(args[2]) if len(args)>2 else None);return
     if args[:1] == ['preview-stop']:
         from wall_preview import preview
         preview(selection=args[1] if len(args)>1 else '')
@@ -89,6 +196,7 @@ def main(args):
         return
     if args[:1] == ['set']:
         path = cat[args[1]][int(args[2])]
+        if str(path.resolve())==current_wallpaper():return
         os.execv(str(HOME / '.local/bin/wallpaper-set'), ['wallpaper-set', str(path)])
     try:
         current = (CACHE / 'current-wallpaper').read_text().strip()

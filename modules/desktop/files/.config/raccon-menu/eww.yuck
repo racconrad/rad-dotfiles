@@ -1,5 +1,6 @@
 (include "controls.yuck")
 (include "calendar.yuck")
+(include "shortcuts.yuck")
 ; Compact daily launcher. desktop-power owns profile policy.
 (defvar page 0)
 (defvar prewarm false)
@@ -14,8 +15,8 @@
 (defvar apps_loading false)
 (defpoll modes :initial '[{"id": "auto", "name": "Automatic", "icon": "preferences-system-symbolic", "description": ""}, {"id": "performance", "name": "Power saver", "icon": "battery-low-symbolic", "description": ""}, {"id": "balanced", "name": "Balanced", "icon": "power-profile-balanced-symbolic", "description": ""}, {"id": "complete", "name": "Full", "icon": "weather-clear-symbolic", "description": ""}, {"id": "working", "name": "Working", "icon": "computer-symbolic", "description": ""}]' :interval "30s"
   "python3 $HOME/.local/lib/raccon_menu/backend.py modes-data")
-(defpoll catalogue :initial '{"apps":[],"favorites":[]}' :interval "5m"
-  "python3 $HOME/.local/lib/raccon_menu/backend.py catalogue")
+(deflisten catalogue :initial '{"apps":[],"favorites":[]}'
+  "python3 $HOME/.local/lib/raccon_menu/backend.py watch-catalogue")
 (deflisten desktop :initial '{"user":"","avatar":"","has_avatar":false,"mode_name":"Power mode","source":"","applying":false,"has_errors":false,"errors":"","ready":false,"motion":true,"duration":"220ms"}'
   "python3 $HOME/.local/lib/raccon_menu/backend.py listen")
 
@@ -97,17 +98,18 @@
   (box :class "popup ${desktop.motion ? 'motion' : 'still'}" :space-evenly false :spacing 0
     (label :class "initial-page" :visible false :text page)
     (label :class "initial-hidden" :visible false :text prewarm)
-    (box :class "panel" :orientation "v" :space-evenly false :spacing 14 :width panel_width
+    (box :class "panel" :orientation "v" :space-evenly false :spacing 10 :width panel_width
       (box :class "header" :space-evenly false :spacing 12
         (image :class "avatar" :visible {desktop.has_avatar} :path {desktop.avatar ?: 'assets/empty.svg'}
-          :image-width 42 :image-height 42)
-        (label :class "title" :hexpand true :xalign 0 :limit-width 23 :text {desktop.user})
+          :image-width 34 :image-height 34)
+        (label :class "title" :hexpand true :xalign 0 :limit-width 23 :text {(desktop.ascii ?: false) ? '[ ' + desktop.user + ' ]' : desktop.user})
         (button :class "close" :tooltip "Close · Esc" :onclick "~/.local/bin/desktop-menu close" :timeout "3s"
           (menu-icon :name "window-close-symbolic")))
       (box :class "search-bar" :space-evenly false :spacing 8
-        (menu-icon :name "system-search-symbolic")
+        (box :visible {!(desktop.ascii ?: false)} (menu-icon :name "system-search-symbolic"))
+        (label :class "ascii-prompt" :visible {desktop.ascii ?: false} :text ">_")
         (input :class "app-search" :hexpand true :tooltip "Type to search · Enter to open"))
-      (stack :class "pages" :selected {page == 1 ? 1 : 0} :same-size true
+      (stack :class "pages" :selected {page == 1 ? 1 : 0} :same-size false
         :transition {desktop.motion ? "slideleft" : "none"}
         (menu-home)
         (menu-apps :content_height content_height))
@@ -120,25 +122,29 @@
         (menu-nav :index 1 :name "apps" :title "Apps" :icon "view-app-grid-symbolic")
         (menu-nav :index 2 :name "modes" :title "Power mode" :icon "preferences-system-power-symbolic")
         (box :hexpand true)
+        (menu-nav :index 7 :name "calendar" :title "Calendar · Ctrl+8" :icon "x-office-calendar-symbolic")
         (box :visible {desktop.quick_terminal ?: false}
           (menu-quick :name "quick-terminal" :title "Quick terminal · Super+F12" :icon "utilities-terminal-symbolic"))
+        (menu-nav :index 8 :name "shortcuts" :title "Shortcuts · Ctrl+9" :icon "preferences-desktop-keyboard-shortcuts-symbolic")
         (menu-quick :name "notifications" :title "Notifications" :icon "preferences-system-notifications-symbolic")
         (menu-nav :index 3 :name "session" :title "Session" :icon "system-shutdown-symbolic")))
     (revealer :class "side-revealer" :reveal {page >= 2} :transition {desktop.motion ? "slideright" : "none"}
       :duration {desktop.duration} :valign "end"
       (box :class "side-panel" :orientation "v" :space-evenly false :width 200
-        (stack :class "side-pages" :vexpand true :selected {page >= 2 ? page - 2 : 0} :same-size false
+        (stack :class "side-pages" :selected {page >= 2 ? page - 2 : 0} :same-size false
           :transition {desktop.motion ? "crossfade" : "none"}
           (menu-modes)
           (menu-session)
           (menu-audio)
           (menu-wifi)
           (menu-bluetooth)
-          (menu-calendar))))))
+          (menu-calendar)
+          (menu-shortcuts))))))
 
 (defwindow raccon-menu [panel_width content_height]
   :monitor 0
   :geometry (geometry :x "4px" :y "78px" :width "1px" :height "1px" :anchor "bottom left")
   :stacking "overlay" :exclusive false :focusable true :namespace "raccon-menu"
-  (revealer :class "shell-revealer" :reveal true :transition "slideup" :duration "220ms"
-    (menu-panel :panel_width panel_width :content_height content_height)))
+  (revealer :class "shell-revealer" :reveal true :transition "none" :duration "0ms"
+    (transform :class "motion-stage" :translate-x "0%" :translate-y "0%"
+      (menu-panel :panel_width panel_width :content_height content_height))))

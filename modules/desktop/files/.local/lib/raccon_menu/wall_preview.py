@@ -91,14 +91,17 @@ def presentation(state):
 
 
 def watch():
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from raccon_events import FileEvents
     last = None
-    while True:
-        # Eww receives only state changes. Native GTK advances the active image.
-        line = json.dumps(presentation(read_state()))
-        if line != last:
-            print(line, flush=True)
-            last = line
-        time.sleep(.1)
+    with FileEvents([STATE]) as changes:
+        while True:
+            # Native GTK advances the image; file events deliver playback changes.
+            line = json.dumps(presentation(read_state()))
+            if line != last:
+                print(line, flush=True)
+                last = line
+            changes.wait()
 
 
 if __name__ == '__main__':
