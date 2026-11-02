@@ -1,0 +1,692 @@
+#!/usr/bin/env python3
+"""Raccon Update Manager: unified updater with pacman, paru/yay, flatpak, caching, sub-package selection, and rdot doctor integration."""
+import fcntl
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+import time
+
+CACHE_DIR = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache'))
+CACHE_FILE = CACHE_DIR / 'raccon-updates-cache.json'
+LOCK_FILE = CACHE_DIR / 'raccon-updates.lock'
+CACHE_TTL = 7200  # 2 hours cache validity
+RACCON_ICON = Path.home() / '.config/waybar/icons/raccoon-symbolic.svg'
+
+
+def detect_aur_helper():
+    for helper in ('paru', 'yay'):
+        if shutil.which(helper):
+            return helper
+    return None
+
+
+def get_official_updates():
+    if not shutil.which('checkupdates'):
+        return []
+    try:
+        proc = subprocess.run(['checkupdates'], capture_output=True, text=True, timeout=30)
+        return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    except (subprocess.TimeoutExpired, OSError):
+        return []
+
+
+def get_aur_updates(helper):
+    if not helper or not shutil.which(helper):
+        return []
+    try:
+        proc = subprocess.run([helper, '-Qua'], capture_output=True, text=True, timeout=30)
+        return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    except (subprocess.TimeoutExpired, OSError):
+        return []
+
+
+def get_flatpak_updates():
+    if not shutil.which('flatpak'):
+        return []
+    try:
+        proc = subprocess.run(
+            ['flatpak', 'remote-ls', '--updates', '--columns=application,name,version,branch'],
+            capture_output=True, text=True, timeout=25
+        )
+        lines = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+        # Skip header if present
+        if lines and ('Application' in lines[0] or 'application' in lines[0]):
+            lines = lines[1:]
+        return lines
+    except (subprocess.TimeoutExpired, OSError):
+        return []
+
+
+def parse_pkg_line(line):
+    """Parse 'pkgname old_ver -> new_ver' into (name, old_ver, new_ver)."""
+    parts = line.split()
+    if len(parts) >= 4 and parts[2] == '->':
+        return parts[0], parts[1], parts[3]
+    elif len(parts) >= 2:
+        return parts[0], parts[1], ""
+    return line, "", ""
+
+
+def parse_flatpak_line(line):
+    """Parse tab-separated line into (app_id, name, ver, branch)."""
+    parts = line.split('\t')
+    app_id = parts[0].strip() if len(parts) > 0 else line.strip()
+    name = parts[1].strip() if len(parts) > 1 and parts[1].strip() else app_id
+    ver = parts[2].strip() if len(parts) > 2 and parts[2].strip() else ""
+    branch = parts[3].strip() if len(parts) > 3 and parts[3].strip() else ""
+    return app_id, name, ver, branch
+
+
+def load_cache():
+    if not CACHE_FILE.exists():
+        return None
+    try:
+        data = json.loads(CACHE_FILE.read_text())
+        if time.time() - data.get('timestamp', 0) < CACHE_TTL:
+            return data
+    except (ValueError, OSError):
+        pass
+    return None
+
+
+def save_cache(official, aur, flatpaks, waybar_payload):
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = CACHE_FILE.with_suffix('.tmp')
+    data = {
+        'timestamp': time.time(),
+        'official': official,
+        'aur': aur,
+        'flatpaks': flatpaks,
+        'total': len(official) + len(aur) + len(flatpaks),
+        'waybar_payload': waybar_payload
+    }
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+    tmp.replace(CACHE_FILE)
+
+
+def build_tooltip(official, aur, flatpaks, helper):
+    total = len(official) + len(aur) + len(flatpaks)
+    if total == 0:
+        return "System up to date (0 updates)\n\nClick: Check updates\nRight click: rdot doctor"
+
+    lines = [f"{total} updates pending\n"]
+
+    if official:
+        lines.append(f"Official ({len(official)}):")
+        max_show = 12
+        for item in official[:max_show]:
+            name, old_v, new_v = parse_pkg_line(item)
+            ver = f" ({old_v} -> {new_v})" if old_v and new_v else ""
+            lines.append(f"  • {name}{ver}")
+        if len(official) > max_show:
+            lines.append(f"  ... and {len(official) - max_show} more")
+
+    if aur:
+        helper_str = f" [{helper}]" if helper else ""
+        if official:
+            lines.append("")
+        lines.append(f"AUR{helper_str} ({len(aur)}):")
+        max_show = 10
+        for item in aur[:max_show]:
+            name, old_v, new_v = parse_pkg_line(item)
+            ver = f" ({old_v} -> {new_v})" if old_v and new_v else ""
+            lines.append(f"  • {name}{ver}")
+        if len(aur) > max_show:
+            lines.append(f"  ... and {len(aur) - max_show} more")
+
+    if flatpaks:
+        if official or aur:
+            lines.append("")
+        lines.append(f"Flatpak ({len(flatpaks)}):")
+        max_show = 8
+        for item in flatpaks[:max_show]:
+            app_id, name, ver, branch = parse_flatpak_line(item)
+            label = f"{name} ({app_id})" if name != app_id else app_id
+            if branch and branch != 'stable':
+                label += f" [{branch}]"
+            lines.append(f"  • {label}")
+        if len(flatpaks) > max_show:
+            lines.append(f"  ... and {len(flatpaks) - max_show} more")
+
+    lines.append("\nClick: Update packages\nRight click: rdot doctor")
+    return "\n".join(lines)
+
+
+def fetch_updates_payload():
+    helper = detect_aur_helper()
+    official = get_official_updates()
+    aur = get_aur_updates(helper)
+    flatpaks = get_flatpak_updates()
+
+    total = len(official) + len(aur) + len(flatpaks)
+    tooltip = build_tooltip(official, aur, flatpaks, helper)
+
+    if total == 0:
+        data = {
+            "text": "",
+            "alt": "0",
+            "tooltip": tooltip,
+            "class": "uptodate"
+        }
+    else:
+        data = {
+            "text": str(total),
+            "alt": str(total),
+            "tooltip": tooltip,
+            "class": "pending"
+        }
+
+    save_cache(official, aur, flatpaks, data)
+    return data
+
+
+def cmd_check(force=False):
+    if not force:
+        cached = load_cache()
+        if cached and 'waybar_payload' in cached:
+            print(json.dumps(cached['waybar_payload'], ensure_ascii=False))
+            return
+
+    # Non-blocking lock to avoid duplicate concurrent checks
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(LOCK_FILE, 'w') as lock:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            payload = fetch_updates_payload()
+            print(json.dumps(payload, ensure_ascii=False))
+    except (BlockingIOError, OSError):
+        if CACHE_FILE.exists():
+            try:
+                cached = json.loads(CACHE_FILE.read_text())
+                print(json.dumps(cached.get('waybar_payload', {}), ensure_ascii=False))
+                return
+            except Exception:
+                pass
+        print(json.dumps({"text": "", "alt": "0", "tooltip": "Checking for updates...", "class": "checking"}))
+
+
+def cmd_count(force=False):
+    if not force:
+        cached = load_cache()
+        if cached:
+            total = cached.get('total', 0)
+            print(total if total > 0 else "")
+            return
+
+    payload = fetch_updates_payload()
+    total = payload.get('alt', '')
+    print(total if total != '0' else '')
+
+
+def notify(title, message, urgency='normal'):
+    if not shutil.which('notify-send'):
+        return
+    icon = str(RACCON_ICON) if RACCON_ICON.is_file() else 'software-update-available-symbolic'
+    subprocess.run([
+        'notify-send',
+        '-a', 'Raccon Updates',
+        '-u', urgency,
+        '-i', icon,
+        title,
+        message
+    ], check=False)
+
+
+def refresh_waybar():
+    subprocess.run(['pkill', '-SIGRTMIN+8', 'waybar'], check=False)
+
+
+def build_unified_item_list(official, aur, flatpaks):
+    """Build a unified list of update item dicts."""
+    items = []
+    for line in official:
+        name, old_v, new_v = parse_pkg_line(line)
+        ver_str = f"({old_v} -> {new_v})" if old_v and new_v else (f"({old_v})" if old_v else "")
+        items.append({
+            'type': 'official',
+            'name': name,
+            'id': name,
+            'version': ver_str,
+            'display': f"{name} {ver_str}".strip(),
+            'raw': line
+        })
+
+    for line in aur:
+        name, old_v, new_v = parse_pkg_line(line)
+        ver_str = f"({old_v} -> {new_v})" if old_v and new_v else (f"({old_v})" if old_v else "")
+        items.append({
+            'type': 'aur',
+            'name': name,
+            'id': name,
+            'version': ver_str,
+            'display': f"{name} {ver_str}".strip(),
+            'raw': line
+        })
+
+    for line in flatpaks:
+        app_id, name, ver, branch = parse_flatpak_line(line)
+        tag = f"[{branch}]" if branch and branch != 'stable' else ""
+        disp = f"{name} ({app_id}) {tag}".strip() if name != app_id else f"{app_id} {tag}".strip()
+        items.append({
+            'type': 'flatpak',
+            'name': name,
+            'id': app_id,
+            'version': tag,
+            'display': disp,
+            'raw': line
+        })
+    return items
+
+
+def parse_selection_indices(input_str, items):
+    """Parse comma/space separated numbers, ranges (e.g. 1-4), or package names."""
+    selected = set()
+    tokens = [t.strip() for t in re.split(r'[, ]+', input_str) if t.strip()]
+    for token in tokens:
+        if '-' in token:
+            parts = token.split('-', 1)
+            if parts[0].isdigit() and parts[1].isdigit():
+                start, end = int(parts[0]), int(parts[1])
+                for idx in range(min(start, end), max(start, end) + 1):
+                    if 1 <= idx <= len(items):
+                        selected.add(idx - 1)
+                continue
+        if token.isdigit():
+            idx = int(token)
+            if 1 <= idx <= len(items):
+                selected.add(idx - 1)
+                continue
+        # Search by name or id substring
+        lower_tok = token.lower()
+        matched = False
+        for i, it in enumerate(items):
+            if lower_tok in it['name'].lower() or lower_tok in it['id'].lower():
+                selected.add(i)
+                matched = True
+        if not matched and lower_tok == 'all':
+            return list(range(len(items)))
+    return sorted(selected)
+
+
+def select_subpackages_fzf(items):
+    """Use fzf for multi-selection of individual packages."""
+    if not shutil.which('fzf'):
+        return None
+
+    # Format candidates with fixed-width prefix: "  1. [OFFICIAL] pkgname (old -> new)"
+    candidates = []
+    for i, it in enumerate(items):
+        cat = it['type'].upper().ljust(8)
+        candidates.append(f"{i + 1:3d}. [{cat}] {it['display']}")
+
+    cmd = [
+        'fzf', '--multi',
+        '--ansi',
+        '--header=TAB: toggle select | Shift-TAB: toggle up | Ctrl-A: select all | ENTER: confirm | ESC: back',
+        '--prompt=Select packages > ',
+        '--height=~70%',
+        '--reverse',
+        '--border=rounded',
+        '--info=inline'
+    ]
+
+    try:
+        proc = subprocess.run(cmd, input="\n".join(candidates), text=True, capture_output=True)
+    except OSError:
+        return None
+
+    if proc.returncode == 0 and proc.stdout.strip():
+        selected_indices = []
+        for line in proc.stdout.splitlines():
+            m = re.match(r'^\s*(\d+)\.', line)
+            if m:
+                idx = int(m.group(1)) - 1
+                if 0 <= idx < len(items):
+                    selected_indices.append(idx)
+        return [items[i] for i in selected_indices]
+    elif proc.returncode == 130:
+        # User pressed ESC / Cancel in fzf
+        return 'cancel'
+    return []
+
+
+def select_subpackages_prompt(items):
+    """Show numbered list of packages for manual selection."""
+    print("\n\033[1mAvailable packages to update:\033[0m")
+    for i, it in enumerate(items):
+        cat_color = {
+            'official': '\033[1;34m',
+            'aur': '\033[1;36m',
+            'flatpak': '\033[1;33m'
+        }.get(it['type'], '\033[0m')
+        cat = it['type'].upper().ljust(8)
+        print(f"  \033[2m[{i + 1:2d}]\033[0m {cat_color}[{cat}]\033[0m {it['display']}")
+
+    print("\nEnter package numbers (e.g. 1, 3, 5-8), package names, or 'q' to cancel:")
+    try:
+        line = input("\033[1mSelection: \033[0m").strip()
+    except (KeyboardInterrupt, EOFError):
+        return []
+
+    if line.lower() in ('q', 'quit', 'exit', ''):
+        return []
+
+    indices = parse_selection_indices(line, items)
+    return [items[i] for i in indices]
+
+
+def execute_subpackages_update(selected_items, helper):
+    """Execute updates for specifically chosen individual sub-packages."""
+    if not selected_items:
+        print("No packages selected.")
+        return {'success_any': False, 'has_error': False, 'cancelled': True}
+
+    official_pkgs = [it['id'] for it in selected_items if it['type'] == 'official']
+    aur_pkgs = [it['id'] for it in selected_items if it['type'] == 'aur']
+    flatpak_pkgs = [it['id'] for it in selected_items if it['type'] == 'flatpak']
+
+    print(f"\n\033[1mSelected {len(selected_items)} package(s) to update:\033[0m")
+    if official_pkgs:
+        print(f"  \033[1;34m• Official ({len(official_pkgs)}):\033[0m {', '.join(official_pkgs)}")
+    if aur_pkgs:
+        print(f"  \033[1;36m• AUR ({len(aur_pkgs)}):\033[0m {', '.join(aur_pkgs)}")
+    if flatpak_pkgs:
+        print(f"  \033[1;33m• Flatpak ({len(flatpak_pkgs)}):\033[0m {', '.join(flatpak_pkgs)}")
+
+    try:
+        confirm = input("\n\033[1mProceed with updating these packages? [Y/n]: \033[0m").strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        print("\nOperation cancelled.")
+        return {'success_any': False, 'has_error': False, 'cancelled': True}
+
+    if confirm not in ('', 'y', 'yes', 's', 'si'):
+        print("Update cancelled.")
+        return {'success_any': False, 'has_error': False, 'cancelled': True}
+
+    print("\n\033[1;32m==> Executing updates for selected packages...\033[0m\n")
+    success_any = False
+    has_error = False
+    cancelled = False
+
+    if official_pkgs:
+        print("\033[1;34m:: Updating Official packages...\033[0m")
+        res = subprocess.run(['sudo', 'pacman', '-S', '--needed'] + official_pkgs)
+        if res.returncode == 0:
+            success_any = True
+        elif res.returncode == 130:
+            cancelled = True
+        else:
+            has_error = True
+
+    if aur_pkgs and not cancelled:
+        if helper:
+            print(f"\n\033[1;36m:: Updating AUR packages with {helper}...\033[0m")
+            res = subprocess.run([helper, '-S', '--needed'] + aur_pkgs)
+            if res.returncode == 0:
+                success_any = True
+            elif res.returncode == 130:
+                cancelled = True
+            else:
+                has_error = True
+        else:
+            print("\n\033[1;31mNo AUR helper found. Skipping AUR packages.\033[0m")
+            has_error = True
+
+    if flatpak_pkgs and not cancelled:
+        print("\n\033[1;33m:: Updating Flatpak packages...\033[0m")
+        res = subprocess.run(['flatpak', 'update', '-y'] + flatpak_pkgs)
+        if res.returncode == 0:
+            success_any = True
+        elif res.returncode == 130:
+            cancelled = True
+        else:
+            has_error = True
+
+    return {'success_any': success_any, 'has_error': has_error, 'cancelled': cancelled}
+
+
+def cmd_run():
+    helper = detect_aur_helper()
+    print("\033[1;35m:: Raccon Update Manager\033[0m")
+    print("Checking system update status...\n")
+
+    # Fetch fresh updates when run interactively
+    payload = fetch_updates_payload()
+    cached = load_cache() or {}
+    official = cached.get('official', [])
+    aur = cached.get('aur', [])
+    flatpaks = cached.get('flatpaks', [])
+    initial_total = len(official) + len(aur) + len(flatpaks)
+
+    if initial_total == 0:
+        print("\033[1;32m✓ System is completely up to date.\033[0m")
+        input("\nPress Enter to exit...")
+        return 0
+
+    all_items = build_unified_item_list(official, aur, flatpaks)
+
+    print(f"\033[1m{initial_total} updates pending:\033[0m")
+    if official:
+        print(f"\n\033[1;34m[Official / Pacman] ({len(official)})\033[0m")
+        for pkg in official[:12]:
+            name, old_v, new_v = parse_pkg_line(pkg)
+            ver = f" ({old_v} -> {new_v})" if old_v and new_v else ""
+            print(f"  • {name}{ver}")
+        if len(official) > 12:
+            print(f"  ... and {len(official) - 12} more.")
+
+    if aur:
+        print(f"\n\033[1;36m[AUR - {helper}] ({len(aur)})\033[0m")
+        for pkg in aur[:10]:
+            name, old_v, new_v = parse_pkg_line(pkg)
+            ver = f" ({old_v} -> {new_v})" if old_v and new_v else ""
+            print(f"  • {name}{ver}")
+        if len(aur) > 10:
+            print(f"  ... and {len(aur) - 10} more.")
+
+    if flatpaks:
+        print(f"\n\033[1;33m[Flatpak] ({len(flatpaks)})\033[0m")
+        for fp in flatpaks[:10]:
+            app_id, name, ver, branch = parse_flatpak_line(fp)
+            tag = f" [{branch}]" if branch and branch != 'stable' else ""
+            disp = f"{name} ({app_id}){tag}" if name != app_id else f"{app_id}{tag}"
+            print(f"  • {disp}")
+        if len(flatpaks) > 10:
+            print(f"  ... and {len(flatpaks) - 10} more.")
+
+    print("\n\033[1mSelect update scope:\033[0m")
+    print("  \033[1;32m[1]\033[0m All updates (Official + AUR + Flatpak) \033[2m[Default]\033[0m")
+    print("  \033[1;34m[2]\033[0m Official packages only (pacman)")
+    if helper:
+        print(f"  \033[1;36m[3]\033[0m AUR packages only ({helper})")
+    if flatpaks:
+        print("  \033[1;33m[4]\033[0m Flatpak packages only")
+    if shutil.which('fzf'):
+        print("  \033[1;35m[5]\033[0m Select individual sub-packages \033[2m(interactive fzf checklist)\033[0m")
+        print("  \033[1;37m[6]\033[0m Select sub-packages by number or name")
+    else:
+        print("  \033[1;35m[5]\033[0m Select individual sub-packages by number or name")
+    print("  \033[1;31m[q]\033[0m Cancel / Exit")
+
+    try:
+        choice = input("\n\033[1mChoice [1] (or enter package numbers/names): \033[0m").strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        print("\nOperation cancelled.")
+        return 1
+
+    if choice in ('q', 'quit', 'exit', 'n', 'no'):
+        print("Update cancelled.")
+        return 0
+
+    success_any = False
+    has_error = False
+    cancelled = False
+    performed_update = False
+
+    # Check if user entered numbers, ranges or package names directly
+    direct_subpackages = False
+    if choice and choice not in ('1', '2', '3', '4', '5', '6', 'a', 'all', 'p', 'pacman', 'official', 'u', 'aur', 'f', 'flatpak', 's', 'sub', 'fzf', 'm'):
+        parsed = parse_selection_indices(choice, all_items)
+        if parsed:
+            selected_items = [all_items[i] for i in parsed]
+            res_dict = execute_subpackages_update(selected_items, helper)
+            success_any = res_dict.get('success_any', False)
+            has_error = res_dict.get('has_error', False)
+            cancelled = res_dict.get('cancelled', False)
+            performed_update = True
+            direct_subpackages = True
+
+    if not direct_subpackages:
+        if choice in ('5', 's', 'sub', 'fzf'):
+            selected_items = select_subpackages_fzf(all_items)
+            if selected_items == 'cancel':
+                print("Selection cancelled.")
+                return 0
+            if selected_items is None:
+                selected_items = select_subpackages_prompt(all_items)
+            if not selected_items:
+                print("No packages chosen.")
+                return 0
+            res_dict = execute_subpackages_update(selected_items, helper)
+            success_any = res_dict.get('success_any', False)
+            has_error = res_dict.get('has_error', False)
+            cancelled = res_dict.get('cancelled', False)
+            performed_update = True
+
+        elif choice in ('6', 'm', 'manual'):
+            selected_items = select_subpackages_prompt(all_items)
+            if not selected_items:
+                print("No packages chosen.")
+                return 0
+            res_dict = execute_subpackages_update(selected_items, helper)
+            success_any = res_dict.get('success_any', False)
+            has_error = res_dict.get('has_error', False)
+            cancelled = res_dict.get('cancelled', False)
+            performed_update = True
+
+        elif choice in ('', '1', 'a', 'all', 'y', 'yes'):
+            performed_update = True
+            print("\n\033[1;32m==> Executing full system update...\033[0m\n")
+            if helper:
+                res = subprocess.run([helper, '-Syu'])
+                if res.returncode == 0:
+                    success_any = True
+                elif res.returncode == 130:
+                    cancelled = True
+                else:
+                    has_error = True
+            else:
+                res = subprocess.run(['sudo', 'pacman', '-Syu'])
+                if res.returncode == 0:
+                    success_any = True
+                elif res.returncode == 130:
+                    cancelled = True
+                else:
+                    has_error = True
+
+            # If user interrupted Arch/AUR updates, do not proceed blindly into Flatpaks
+            if cancelled:
+                print("\n\033[1;33m:: Arch/AUR update cancelled by user.\033[0m")
+            elif flatpaks and shutil.which('flatpak'):
+                print("\n\033[1;33m:: Updating Flatpaks...\033[0m")
+                fres = subprocess.run(['flatpak', 'update'])
+                if fres.returncode == 0:
+                    success_any = True
+                elif fres.returncode == 130:
+                    cancelled = True
+                else:
+                    has_error = True
+
+        elif choice in ('2', 'p', 'pacman', 'official'):
+            performed_update = True
+            print("\n\033[1;34m:: Updating Official packages with pacman...\033[0m")
+            res = subprocess.run(['sudo', 'pacman', '-Syu'])
+            if res.returncode == 0:
+                success_any = True
+            elif res.returncode == 130:
+                cancelled = True
+            else:
+                has_error = True
+
+        elif choice in ('3', 'u', 'aur'):
+            performed_update = True
+            if helper:
+                print(f"\n\033[1;36m:: Updating AUR packages with {helper}...\033[0m")
+                res = subprocess.run([helper, '-Sua'])
+                if res.returncode == 0:
+                    success_any = True
+                elif res.returncode == 130:
+                    cancelled = True
+                else:
+                    has_error = True
+            else:
+                print("\n\033[1;31mNo AUR helper found (paru/yay).\033[0m")
+                return 1
+
+        elif choice in ('4', 'f', 'flatpak'):
+            performed_update = True
+            if shutil.which('flatpak'):
+                print("\n\033[1;33m:: Updating Flatpaks...\033[0m")
+                res = subprocess.run(['flatpak', 'update'])
+                if res.returncode == 0:
+                    success_any = True
+                elif res.returncode == 130:
+                    cancelled = True
+                else:
+                    has_error = True
+            else:
+                print("\n\033[1;31mFlatpak not installed.\033[0m")
+                return 1
+
+    if not performed_update:
+        print(f"Invalid option: '{choice}'. Aborting.")
+        return 1
+
+    # Update state only after operations complete to prevent bugs/flickering
+    print("\nRefreshing update status...")
+    fetch_updates_payload()
+    refresh_waybar()
+
+    cached_now = load_cache() or {}
+    remaining = cached_now.get('total', 0)
+    applied_count = max(0, initial_total - remaining)
+
+    if remaining == 0:
+        print("\n\033[1;32m✓ System is completely up to date!\033[0m")
+        notify("System Updated", "All packages are up to date.")
+    elif applied_count > 0:
+        print(f"\n\033[1;32m✓ Updated {applied_count} package(s) successfully. ({remaining} remaining)\033[0m")
+        notify("Updates Applied", f"{applied_count} package(s) updated. {remaining} remaining.")
+    elif cancelled:
+        print("\n\033[1;33m:: Update operation was cancelled by user.\033[0m")
+    elif not success_any and has_error:
+        print("\n\033[1;31m✗ An error occurred during the update process.\033[0m")
+        notify("Update Incomplete", "Errors occurred during update.", urgency='normal')
+    else:
+        print(f"\n\033[1;32m✓ Process finished. {remaining} updates remaining.\033[0m")
+        notify("Updates Finished", f"{remaining} updates remaining.")
+
+    input("\nPress Enter to exit...")
+    return 0 if (remaining == 0 or applied_count > 0 or not has_error) else 1
+
+
+def main():
+    arg = sys.argv[1] if len(sys.argv) > 1 else 'run'
+    force = '--force' in sys.argv or '-f' in sys.argv
+    if arg in ('check', '--check', '-c'):
+        cmd_check(force=force)
+    elif arg in ('count', '--count'):
+        cmd_count(force=force)
+    elif arg in ('run', '--run'):
+        sys.exit(cmd_run())
+    else:
+        print("Usage: raccon-update [check|count|run] [--force]")
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Open GUI file explorer at specified path (defaults to current directory)
+target="${1:-.}"
+
+if [[ -e "$target" ]]; then
+  target="$(realpath "$target" 2>/dev/null || echo "$target")"
+fi
+
+if command -v nautilus >/dev/null 2>&1; then
+  setsid -f nautilus "$target" >/dev/null 2>&1
+elif command -v xdg-open >/dev/null 2>&1; then
+  setsid -f xdg-open "$target" >/dev/null 2>&1
+else
+  echo "No supported GUI file manager found." >&2
+  exit 1
+fi
