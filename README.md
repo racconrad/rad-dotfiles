@@ -17,6 +17,29 @@
 
 Your personal desktop, packed for the next machine. Version **0.3.0**, defined in [`.rdot`](.rdot).
 
+## Gallery
+
+Six desktop styles change the bar, Raccon Menu, window borders and app themes
+together. Colors follow your own wallpaper (none is bundled); Night keeps a
+fixed navy, ivory and coral palette.
+
+| Default | Transparent | Classic |
+| :---: | :---: | :---: |
+| ![Default style](modules/desktop-styles/files/.config/desktop-style/previews/modern.png) | ![Transparent style](modules/desktop-styles/files/.config/desktop-style/previews/glass.png) | ![Classic style](modules/desktop-styles/files/.config/desktop-style/previews/terminal.png) |
+| **Mono** | **Retro** | **Night** |
+| ![Mono style](modules/desktop-styles/files/.config/desktop-style/previews/monochrome.png) | ![Retro style](modules/desktop-styles/files/.config/desktop-style/previews/retro.png) | ![Night style](modules/desktop-styles/files/.config/desktop-style/previews/ascii.png) |
+
+<table>
+<tr>
+<td width="60%"><img src="modules/desktop-styles/files/.local/share/raccon/sddm/raccon/preview.png" alt="Raccon SDDM login screen"></td>
+<td width="40%"><img src="extras/plymouth/raccon-code/raccoon.png" alt="Raccoon Plymouth boot splash"></td>
+</tr>
+<tr>
+<td align="center">Login screen for SDDM (<code>extras/install-sddm.sh</code>)</td>
+<td align="center">Boot splash that types code (<code>--setup plymouth</code>)</td>
+</tr>
+</table>
+
 ## Install your den
 
 ```sh
