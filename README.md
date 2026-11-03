@@ -19,6 +19,15 @@ Your personal desktop, packed for the next machine. Version **0.3.0**, defined i
 
 ## Gallery
 
+![Raccon desktop with the Night style: clock, pixel widgets, workspaces, taskbar and status bar](assets/screenshots/desktop.jpg)
+
+Raccon Menu opens from the bar or with <kbd>Super</kbd>: search apps, switch power
+modes, control audio, Wi-Fi and Bluetooth, and look up every shortcut.
+
+| Shortcuts | Power modes |
+| :---: | :---: |
+| ![Raccon Menu with the shortcuts panel](assets/screenshots/menu-shortcuts.jpg) | ![Raccon Menu with the power modes panel](assets/screenshots/menu-modes.jpg) |
+
 Six desktop styles change the bar, Raccon Menu, window borders and app themes
 together. Colors follow your own wallpaper (none is bundled); Night keeps a
 fixed navy, ivory and coral palette.
