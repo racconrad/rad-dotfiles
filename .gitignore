@@ -7,5 +7,8 @@ __pycache__/
 .history/
 
 # Internal notes stay local
-docs/
 INVENTORY.md
+docs/ai.md
+docs/dots-audit-*.md
+docs/master.md
+docs/tiling.md
