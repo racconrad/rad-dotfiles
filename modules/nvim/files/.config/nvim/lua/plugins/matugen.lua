@@ -4,6 +4,12 @@ function _G.MatugenReload()
   local ok, colors = pcall(require, "matugen_colors")
   if ok then
     require("base16-colorscheme").setup(colors)
+    vim.api.nvim_set_hl(0, "DashboardHeader", { fg = colors.base0B, bold = true })
+    vim.api.nvim_set_hl(0, "DashboardKey", { fg = colors.base0A, bold = true })
+    vim.api.nvim_set_hl(0, "DashboardIcon", { fg = colors.base0D })
+    vim.api.nvim_set_hl(0, "DashboardDesc", { fg = colors.base05 })
+    vim.api.nvim_set_hl(0, "DashboardFooter", { fg = colors.base03, italic = true })
+    vim.api.nvim_set_hl(0, "FloatBorder", { fg = colors.base03 })
   else
     vim.cmd.colorscheme("tokyonight")
   end

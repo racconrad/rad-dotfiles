@@ -393,8 +393,7 @@ def snapshot(previous=None):
         mode=status.get('mode', ''), source=status.get('source', ''), preference=preference,
         mode_name=NAMES.get(status.get('mode'), 'Loading mode'), applying=status.get('transition', False),
         has_errors=bool(errors), errors=' · '.join(f'{key}: {value}' for key, value in errors.items()),
-        ready=bool(status.get('mode')), **appearance_state(status),
-        quick_terminal=os.access(BIN/'raccon-term',os.X_OK) and bool(shutil.which('kitten')), **identity())
+        ready=bool(status.get('mode')), **appearance_state(status), **identity())
 
 
 def listen():
@@ -403,21 +402,22 @@ def listen():
         locale.setlocale(locale.LC_TIME, 'en_US.UTF-8')
     except locale.Error:
         locale.setlocale(locale.LC_TIME, 'C')
-    previous, last = {}, None
-    while True:
-        if (RUNTIME / 'visible').exists() and (RUNTIME / 'visible').read_text().strip() == '0':
-            time.sleep(1)
-            continue
-        palette()
-        previous = snapshot(previous)
-        line = json.dumps({k: v for k, v in previous.items() if not k.startswith('_')}, ensure_ascii=False)
-        # Identical lines still make Eww re-evaluate every widget bound to `desktop`.
-        if line != last:
-            write(STATE / 'desktop.json', line)
-            print(line, flush=True)
-            last = line
-        time.sleep(2)
-
+    from filewatch import FileWatch
+    with FileWatch([RUNTIME / 'visible']) as watch:
+        previous, last = {}, None
+        while True:
+            if (RUNTIME / 'visible').exists() and (RUNTIME / 'visible').read_text().strip() == '0':
+                watch.wait(5)
+                continue
+            palette()
+            previous = snapshot(previous)
+            line = json.dumps({k: v for k, v in previous.items() if not k.startswith('_')}, ensure_ascii=False)
+            # Identical lines still make Eww re-evaluate every widget bound to `desktop`.
+            if line != last:
+                write(STATE / 'desktop.json', line)
+                print(line, flush=True)
+                last = line
+            watch.wait(2)
 
 def build_input_module():
     source = HERE / 'input.c'
@@ -607,7 +607,6 @@ def launch_app(token):
 
 def shortcut(name):
     commands = {'files': ['dolphin'], 'browser': ['brave'], 'terminal': ['kitty'],
-        'quick-terminal': [str(BIN/'raccon-term')],
         'audio': [str(BIN / 'desktop-panel'), 'audio'],
         'connections': [str(BIN / 'desktop-panel'), 'connections'],
         'calendar': [str(BIN / 'desktop-panel'), 'calendar'],

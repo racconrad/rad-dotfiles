@@ -32,6 +32,25 @@ class PanelTests(unittest.TestCase):
         (panels.ROOT/'visible').write_text('0')
         self.assertFalse(any(panels.active(kind) for kind in panels.PAGES))
 
+    def test_reopening_before_deadline_refreshes_immediately(self):
+        calls=[]
+        class Waiter:
+            def __init__(self,*args,**kwargs):pass
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def wait(self,timeout):
+                calls.append(timeout)
+                if len(calls)==3:raise KeyboardInterrupt
+            def close(self):pass
+        with patch.object(panels,'active',side_effect=[True,False,True]), \
+             patch.object(panels,'FileWatch',Waiter,create=True), \
+             patch.object(panels.time,'sleep',side_effect=Waiter().wait), \
+             patch.object(panels,'refresh',return_value=panels.defaults('audio')) as refresh, \
+             patch.object(panels.time,'monotonic',return_value=10), \
+             patch('sys.stdout',io.StringIO()):
+            with self.assertRaises(KeyboardInterrupt):panels.listen('audio')
+        self.assertEqual(refresh.call_count,2)
+
     def test_wifi_uses_cached_scan_and_preserves_connected_bssid_over_stronger_ap(self):
         calls=[]
         rows=(' :Cafe\\:casa:AA\\:BB\\:CC\\:DD\\:EE\\:00:98:WPA2:wlan0\n'

@@ -42,7 +42,7 @@ def load_config():
         raise ValueError('Se requiere 0 < critical < warning < high <= 100')
     if not 0 < auto['low_battery'] <= 100 or not 0 <= auto['recovery_margin'] <= 10:
         raise ValueError('Umbrales de cambio automático no válidos')
-    if auto['poll_seconds'] < 1 or auto['notification_reset'] < 1:
+    if auto['poll_seconds'] < 1 or auto.get('stable_ac_poll_seconds',15) < 1 or auto['notification_reset'] < 1:
         raise ValueError('Los intervalos y el margen de notificación deben ser positivos')
     for name in ('performance', 'balanced', 'complete', 'working'):
         profile = config['profiles'][name]

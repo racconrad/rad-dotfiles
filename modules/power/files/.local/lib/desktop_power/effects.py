@@ -150,6 +150,17 @@ def wayfire(profile, force=False):
                     ipc('wf/alpha/set-view-alpha', {'view-id': view['id'], 'alpha': 1.0})
 
 
+def widget_policy():
+    """Explicit adapter for tinyWidgets; other profiles keep their own policy."""
+    ctl=HOME/'.local/bin/widgetctl'
+    status=STATE/'status.json'
+    if not ctl.is_file() or not status.is_file():return
+    command=[str(ctl),'--config',str(HOME/'.config/eww')]
+    general=json.loads(run([*command,'style']))
+    if isinstance(general,dict) and 'frame' in general:
+        run([*command,'policy',str(status)])
+
+
 def widgets(profile):
     if not (HOME / '.local/bin/widgetctl').is_file():
         return

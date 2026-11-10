@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import backend as shell
 import positioning
+from filewatch import FileWatch
 from transport import send
 
 HOME = Path.home()
@@ -192,47 +193,50 @@ def listen(kind):
     shown = presentation(kind, data)
     print(json.dumps(shown, ensure_ascii=False), flush=True)
     deadline, previous, discovery = 0, '', set()
-    while True:
-        if active(kind):
-            try: marker = (ROOT / ('refresh-'+kind)).read_text()
-            except OSError: marker = ''
-            now = time.monotonic()
-            if now >= deadline or marker != previous:
-                if kind == 'bluetooth':
-                    try: scanning = float((ROOT/'scan-until').read_text()) > time.time()
-                    except (OSError, ValueError): scanning = False
-                    for path in discovery.copy():
-                        if not scanning:
-                            try: bluez(path, 'org.bluez.Adapter1', 'StopDiscovery')
-                            except Exception: pass
-                            discovery.discard(path)
-                    if scanning:
-                        for adapter in data.get('adapters', []):
-                            if adapter['enabled'] and adapter['path'] not in discovery:
-                                try:
-                                    bluez(adapter['path'], 'org.bluez.Adapter1', 'StartDiscovery')
-                                    discovery.add(adapter['path'])
+    with FileWatch(directories=[ROOT]) as watch:
+        was_active=False
+        while True:
+            current=active(kind)
+            if current:
+                try: marker = (ROOT / ('refresh-'+kind)).read_text()
+                except OSError: marker = ''
+                now = time.monotonic()
+                if not was_active or now >= deadline or marker != previous:
+                    if kind == 'bluetooth':
+                        try: scanning = float((ROOT/'scan-until').read_text()) > time.time()
+                        except (OSError, ValueError): scanning = False
+                        for path in discovery.copy():
+                            if not scanning:
+                                try: bluez(path, 'org.bluez.Adapter1', 'StopDiscovery')
                                 except Exception: pass
-                fresh = refresh(kind)
-                frame = presentation(kind, fresh)
+                                discovery.discard(path)
+                        if scanning:
+                            for adapter in data.get('adapters', []):
+                                if adapter['enabled'] and adapter['path'] not in discovery:
+                                    try:
+                                        bluez(adapter['path'], 'org.bluez.Adapter1', 'StartDiscovery')
+                                        discovery.add(adapter['path'])
+                                    except Exception: pass
+                    fresh = refresh(kind)
+                    frame = presentation(kind, fresh)
+                    if frame != shown:
+                        print(json.dumps(frame, ensure_ascii=False), flush=True)
+                        shown = frame
+                    data = fresh
+                    previous = marker
+                    deadline = now + (1 if kind == 'audio' else 2)
+                # UI navigation uses the current snapshot; it must never trigger a radio query.
+                frame = presentation(kind, data)
                 if frame != shown:
                     print(json.dumps(frame, ensure_ascii=False), flush=True)
                     shown = frame
-                data = fresh
-                previous = marker
-                deadline = now + (1 if kind == 'audio' else 2)
-            # UI navigation uses the current snapshot; it must never trigger a radio query.
-            frame = presentation(kind, data)
-            if frame != shown:
-                print(json.dumps(frame, ensure_ascii=False), flush=True)
-                shown = frame
-        elif discovery:
-            for path in discovery:
-                try: bluez(path, 'org.bluez.Adapter1', 'StopDiscovery')
-                except Exception: pass
-            discovery.clear()
-        time.sleep(.25)
-
+            elif discovery:
+                for path in discovery:
+                    try: bluez(path, 'org.bluez.Adapter1', 'StopDiscovery')
+                    except Exception: pass
+                discovery.clear()
+            was_active=current
+            watch.wait(.25 if current else 5)
 
 def selected(kind, value, group):
     if not re.fullmatch(r'[0-9a-f]{24}', value): raise ValueError('Invalid selection.')

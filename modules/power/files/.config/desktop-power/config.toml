@@ -1,6 +1,7 @@
 # Desktop modes. "performance" means maximum battery saving here, not CPU turbo.
 [automation]
 poll_seconds = 5
+stable_ac_poll_seconds = 15
 low_battery = 30           # Below this value: performance when unplugged.
 recovery_margin = 3        # Return to balanced at 33%, avoiding mode flapping.
 warning = 30

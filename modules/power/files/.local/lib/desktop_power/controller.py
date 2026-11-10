@@ -85,6 +85,20 @@ def publish(status, config):
     write_text(HOME / '.config/waybar/desktop-state.css', style(status, config))
 
 
+def widget_visibility(status):
+    if status['mode']=='complete' and status['policy']['widgets']:
+        from .occlusion import suspended
+        status['policy']['widgets']=not suspended()
+
+
+def poll_interval(config,status,previous):
+    auto=config['automation']
+    stable=(status['battery'].get('plugged') is True and status['battery']==previous.get('battery')
+            and not status['errors'] and status['mode']==previous.get('mode')
+            and status['source']==previous.get('source'))
+    return max(auto['poll_seconds'],auto.get('stable_ac_poll_seconds',15)) if stable else auto['poll_seconds']
+
+
 def reconcile(previous, last_fingerprint=None, apply=True, retry=False):
     config = load_config()
     battery = read_battery()
@@ -95,12 +109,14 @@ def reconcile(previous, last_fingerprint=None, apply=True, retry=False):
     status['notification_flags'] = flags
     if not alerts and not flags:
         status['errors'].pop('notification', None)
+    if apply:widget_visibility(status)
+    visibility_changed=status['policy']['widgets']!=previous.get('policy',{}).get('widgets')
     current_fingerprint = fingerprint(config, status)
     profile_changed = current_fingerprint != last_fingerprint or retry
     status['transition'] = bool(apply and (profile_changed or previous.get('source') != status['source']))
     publish(status, config)  # Widget/menu consumers see the policy before adapters run.
     if apply:
-        profile = config['profiles'][status['mode']]
+        profile = dict(config['profiles'][status['mode']], widgets=status['policy']['widgets'])
         if profile_changed:
             adapters = [('widgets-policy', effects.widget_policy), ('wayfire', lambda: effects.wayfire(profile, force=True)), ('cpu', lambda: effects.cpu(profile)),
                         ('focus', lambda: effects.focus_fx(profile))]
@@ -114,7 +130,13 @@ def reconcile(previous, last_fingerprint=None, apply=True, retry=False):
                     status['errors'].pop(name, None)
                 except Exception as exc:
                     status['errors'][name] = str(exc)
-        if not profile['widgets'] or effects.widgets_need_install():
+        if visibility_changed and not profile_changed:
+            try:
+                effects.widget_policy()
+                status['errors'].pop('widgets-policy',None)
+            except Exception as exc:
+                status['errors']['widgets-policy']=str(exc)
+        if not profile['widgets'] or visibility_changed and not profile_changed or 'widgets' in status['errors'] or effects.widgets_need_install():
             # Editing is an explicit temporary exception. Reconcile its exit even
             # when the battery/profile itself has not changed.
             try:
@@ -144,7 +166,7 @@ def reconcile(previous, last_fingerprint=None, apply=True, retry=False):
                 status['notification_flags'] = original_flags
         status['transition'] = False
         publish(status, config)
-    return status, current_fingerprint, config['automation']['poll_seconds']
+    return status, current_fingerprint, poll_interval(config,status,previous)
 
 
 def daemon():
@@ -264,7 +286,7 @@ def bar_data(status, frame=0):
     elif status['level'] == 'critical':
         icon = '󰂃'
     source = 'Auto' if status['source'] == 'auto' else 'Manual'
-    name = {'performance': 'Power Saver', 'balanced': 'Balanced', 'complete': 'Performance', 'working': 'Work'}[status['mode']]
+    name = status.get('label') or {'performance': 'Power Saver', 'balanced': 'Balanced', 'complete': 'Performance', 'working': 'Work'}.get(status['mode'], status['mode'])
     plugged = {True: 'Plugged in', False: 'On battery', None: 'No charger'}[battery.get('plugged')]
     level = {'critical': ' · Critical', 'warning': ' · Low'}.get(status['level'], '')
     tooltip = f"{name} · {source}\n{percent}{level} · {plugged}\nClick: choose mode in Raccon Menu"
