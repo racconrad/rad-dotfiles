@@ -125,19 +125,3 @@ Super+T remembers the size and position you chose while floating, and restores t
 Tiled resizing applies the real client geometry directly (`simple-tile.animation_duration = 0`) instead of crossfading snapshots. Other compositor effects remain configured as before. Super+Ctrl+T rebuilds the current tile nodes to recover their scale transforms without toggling the whole desktop or losing the split tree.
 
 Validation: `python3 tests/check_tiling_installed.py` uses a private Wayfire and animated test clients to check Dwindle cuts, per-window floating geometry restoration, workspace floating, utility exceptions, resize and live content updates. It does not move user windows.
-
-## Quick Kitty sidebar
-
-- **Super+F12**: slide the right panel in/out, keeping the shell and running commands.
-- **Ctrl+Esc** inside the panel: hide it.
-- **Super+Shift+F12** or **Ctrl+Shift+Q** inside the panel: close this terminal session completely.
-- `raccon-term show|hide|close|status`: explicit controls. `exit` / Ctrl+D ends the shell.
-- Opening again after closing starts a fresh shell. Normal **Super+Enter** Kitty windows stay independent.
-- Layout/motion: `~/.config/raccon-term/config.json`; terminal: `~/.config/kitty/raccon-panel.conf`.
-
-El panel Kitty usa un fade a posición fija lateral; pulsaciones durante la transición
-se agrupan (máximo un toggle cada 280ms). El encabezado tiene minimizar/cerrar;
-Waybar indica visible/oculto/cerrado con botones para ocultar y cerrar la sesión.
-Después de actualizar la barra: `pkill -SIGUSR2 -x waybar`.
-
-Quick terminal: Super+Space shows/hides; Super+Shift+Space closes. F12 aliases remain. Clicking another window hides the panel and preserves its shell.

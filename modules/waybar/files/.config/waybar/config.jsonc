@@ -16,7 +16,6 @@
     "wlr/taskbar"
   ],
   "modules-right": [
-    "group/quick-terminal",
     "group/music",
     "tray",
     "group/hardware",
@@ -30,45 +29,6 @@
     "clock",
     "custom/power"
   ],
-  "group/quick-terminal": {
-    "orientation": "horizontal",
-    "modules": [
-      "custom/quick-terminal",
-      "custom/quick-terminal-close"
-    ]
-  },
-  "custom/quick-terminal": {
-    "exec": "~/.local/bin/raccon-term indicator",
-    "exec-if": "test -x ~/.local/bin/raccon-term",
-    "return-type": "json",
-    "interval": "once",
-    "signal": 9,
-    "format": "{}",
-    "tooltip": true,
-    "on-click": "~/.local/bin/raccon-term toggle",
-    "on-click-middle": "~/.local/bin/raccon-term hide",
-    "on-click-right": "~/.local/bin/raccon-term close"
-  },
-  "custom/quick-terminal-hide": {
-    "exec": "~/.local/bin/raccon-term indicator hide",
-    "exec-if": "test -x ~/.local/bin/raccon-term",
-    "return-type": "json",
-    "interval": "once",
-    "signal": 9,
-    "format": "{}",
-    "tooltip": true,
-    "on-click": "~/.local/bin/raccon-term hide"
-  },
-  "custom/quick-terminal-close": {
-    "exec": "~/.local/bin/raccon-term indicator close",
-    "exec-if": "test -x ~/.local/bin/raccon-term",
-    "return-type": "json",
-    "interval": "once",
-    "signal": 9,
-    "format": "{}",
-    "tooltip": true,
-    "on-click": "~/.local/bin/raccon-term close"
-  },
   "group/workspaces": {
     "orientation": "horizontal",
     "modules": [
@@ -360,9 +320,7 @@
   },
   "exclusive": true,
   "wlr/taskbar": {
-    "ignore-list": [
-      "raccon-quick-terminal"
-    ],
+    "ignore-list": [],
     "format": "{icon}",
     "icon-size": 30,
     "icon-theme": "Papirus-Dark",

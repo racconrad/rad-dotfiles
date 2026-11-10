@@ -29,12 +29,6 @@ With the `power` module, click the battery in Waybar to cycle Auto â†’ Ahorro â†
 
 `wf-tile status` checks the service; `wf-tile restart` reloads it. Full list: [wayfire-keys.md](../modules/wayfire/files/.config/wayfire-keys.md).
 
-## Quick Kitty panel
-
-With the Kitty module, **Super+Space** shows or hides a terminal at the right edge. It hides when focus leaves and keeps its session. **Super+Shift+Space** closes the session.
-
-The Waybar terminal icon toggles it (left click), hides it (middle) or closes it (right). Commands: `raccon-term toggle|show|hide|close|status`. Settings: `~/.config/raccon-term/config.json` and `~/.config/kitty/raccon-panel.conf`.
-
 ## Zsh prompt
 
 The Zsh module ships the **raccon** theme. It works with or without Oh My Zsh and needs no Nerd Font.

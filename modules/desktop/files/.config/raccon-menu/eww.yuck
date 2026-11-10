@@ -123,8 +123,6 @@
         (menu-nav :index 2 :name "modes" :title "Power mode" :icon "preferences-system-power-symbolic")
         (box :hexpand true)
         (menu-nav :index 7 :name "calendar" :title "Calendar · Ctrl+8" :icon "x-office-calendar-symbolic")
-        (box :visible {desktop.quick_terminal ?: false}
-          (menu-quick :name "quick-terminal" :title "Quick terminal · Super+F12" :icon "utilities-terminal-symbolic"))
         (menu-nav :index 8 :name "shortcuts" :title "Shortcuts · Ctrl+9" :icon "preferences-desktop-keyboard-shortcuts-symbolic")
         (menu-quick :name "notifications" :title "Notifications" :icon "preferences-system-notifications-symbolic")
         (menu-nav :index 3 :name "session" :title "Session" :icon "system-shutdown-symbolic")))

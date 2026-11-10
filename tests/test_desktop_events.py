@@ -197,44 +197,5 @@ class ListenerTests(unittest.TestCase):
         self.assertFalse(list(provider.parent.glob('client-*')))
 
 
-class TerminalEventTests(unittest.TestCase):
-    def test_native_focus_minimize_and_exit_refresh_without_polling(self):
-        spec = importlib.util.spec_from_file_location('event_terminal', ROOT/'modules/kitty/files/.local/lib/raccon_terminal.py')
-        terminal = importlib.util.module_from_spec(spec);spec.loader.exec_module(terminal)
-        with tempfile.TemporaryDirectory() as root:
-            root = Path(root)
-            (root/'state.json').write_text(json.dumps(dict(visible=True,view_id=17)))
-            (root/'intent.json').write_text(json.dumps(dict(target='visible',seq=4)))
-            panel = Mock();panel.state=root/'state.json';panel.intent=root/'intent.json'
-            panel.wf.return_value={'info':{'id':17}}
-            messages = iter([dict(event='view-unmapped',view={'id':88,'parent':17}),
-                             dict(event='view-focused',view={'id':99}),
-                             dict(event='view-minimized',view={'id':17}),
-                             dict(event='view-unmapped',view={'id':17})])
-            class Events:
-                def __init__(self):self.sock=Mock()
-                def __call__(self,*args):self.subscription=args
-                def receive(self):return next(messages)
-                def close(self):pass
-            with patch.object(terminal,'RUNTIME',root), patch.object(terminal,'Panel',return_value=panel), \
-                 patch.object(terminal,'Wayfire',Events), patch.object(terminal,'notify_waybar') as notify:
-                terminal.watch_focus()
-            panel.command.assert_called_once_with('hide',expected_seq=4)
-            panel.alive.assert_called_once_with()
-            self.assertEqual(notify.call_count,2)
-            # Exit before subscription startup must still clear the bar once.
-            panel.reset_mock();panel.alive.return_value=False
-            with patch.object(terminal,'RUNTIME',root), patch.object(terminal,'Panel',return_value=panel), \
-                 patch.object(terminal,'Wayfire',Events), patch.object(terminal,'notify_waybar') as notify:
-                terminal.watch_focus()
-            panel.alive.assert_called_once_with()
-            panel.wf.assert_not_called()
-            notify.assert_called_once_with()
-
-    def test_installed_terminal_modules_update_on_dedicated_signal(self):
-        import re
-        path = ROOT/'modules/waybar/files/.config/waybar/config.jsonc'
-        config = json.loads(re.sub(r'^\s*//.*$', '', path.read_text(), flags=re.M))
-        for name in ('custom/quick-terminal','custom/quick-terminal-hide','custom/quick-terminal-close'):
-            self.assertEqual(config[name]['interval'],'once')
-            self.assertEqual(config[name]['signal'],9)
+if __name__ == '__main__':
+    unittest.main()

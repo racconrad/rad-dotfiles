@@ -23,7 +23,7 @@ CONFIGS = {
                'gtk-4.0/gtk.css', 'gtk-4.0/gtk-dark.css', 'gtk-4.0/colors.css',
                'gtk-4.0/settings.ini', 'qt5ct', 'qt6ct', 'rofi/clipboard.rasi', 'rofi/colors.rasi'],
     'wallpaper': ['waypaper/config.ini', 'rofi/wallpaper.rasi'],
-    'kitty': ['kitty', 'raccon-term'], 'alacritty': ['alacritty'],
+    'kitty': ['kitty'], 'alacritty': ['alacritty'],
     'fuzzel': ['fuzzel'], 'rofi': [],
     'swaync': ['swaync'], 'mako': ['mako'],
     'gtklock': ['gtklock'], 'swaylock': ['swaylock'],
@@ -35,7 +35,7 @@ CONFIGS = {
 }
 SCRIPTS = {
     'base': ['rdot'],
-    'kitty': ['raccon-term'],
+    'kitty': [],
     'desktop': ['desktop-menu', 'desktop-panel', 'desktop-login-sddm', 'desktop-input-recover', 'clip-pick', 'screenshot', 'raccon-float', 'raccon-music', 'waybar-music'],
     'wayfire': ['desktop-polkit', 'display-mode', 'wf-focus-fx', 'wf-tile', 'wf-tile-ctl', 'wf-ws', 'wf-ws-label', 'wf-ws-watch'],
     'power': ['desktop-power', 'idle-lock', 'idle-suspend', 'waybar-power-hold', 'waybar-power-menu'],

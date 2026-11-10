@@ -274,8 +274,6 @@ def render(relative, content, home, modules, choices):
             text = text.split(ZSH_PERSONAL)[0] + ZSH_PERSONAL + current.split(ZSH_PERSONAL, 1)[1]
     if relative == '.config/wayfire.ini':
         text = set_ini(text, 'command_terminal', terminal)
-        if 'kitty' not in modules:
-            text = re.sub(r'^(?:binding_quick_terminal(?:_easy)?(?:_close)?|command_quick_terminal(?:_easy)?(?:_close)?|quick_terminal_initial_alpha)\s*=.*\n', '', text, flags=re.M)
         text = set_ini(text, 'command_monitor', terminal + ' -e btop')
         text = set_ini(text, 'command_browser', choices['browser'])
         text = set_ini(text, 'command_files', choices['filemanager'])
@@ -319,11 +317,6 @@ def render(relative, content, home, modules, choices):
             text = re.sub(r'^(?:binding_|repeatable_binding_|command_)' + re.escape(name) + r'\s*=.*\n', '', text, flags=re.M)
     elif relative == '.config/waybar/config.jsonc':
         data = json.loads(re.sub(r'^\s*//.*$', '', text, flags=re.M))
-        if 'kitty' not in modules:
-            data['modules-right'] = [m for m in data['modules-right'] if m != 'group/quick-terminal']
-            for key in ('group/quick-terminal', 'custom/quick-terminal',
-                        'custom/quick-terminal-hide', 'custom/quick-terminal-close'):
-                data.pop(key, None)
         data['modules-right'] = [m for m in data['modules-right'] if m != 'custom/notification']
         data.pop('custom/notification', None)
         text = json.dumps(data, ensure_ascii=False, indent=2) + '\n'
@@ -384,7 +377,7 @@ def render(relative, content, home, modules, choices):
             text = re.sub(r'^@import "orientation.css";\n?', '', text, flags=re.M)
             text += '\n@import "orientation.css";\n'
     if relative == '.local/bin/wallpaper-theme' and 'desktop-styles' not in modules:
-        text = re.sub(r'\n# Reapply the selected global appearance[^\n]*\nif \[\[ -x "\$HOME/.local/bin/desktop-style" \]\]; then\n.*?\nfi\n', '\n', text, flags=re.S)
+        text = re.sub(r'\nif \[\[ -x "\$HOME/\.local/bin/desktop-style" \]\]; then\n.*?\nfi\n', '\n', text, flags=re.S)
     shell_enabled = choices['shell'] in modules
     if relative == '.config/kitty/kitty.conf' and shell_enabled:
         text += '\nshell ' + choices['shell'] + '\n'

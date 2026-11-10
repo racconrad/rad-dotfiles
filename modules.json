@@ -226,7 +226,7 @@
       ]
     },
     "kitty": {
-      "label": "Kitty terminal with dynamic colors and quick sidebar",
+      "label": "Kitty terminal with dynamic colors",
       "requires": [
         "base"
       ],
