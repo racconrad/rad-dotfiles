@@ -170,7 +170,7 @@ class InstallTests(unittest.TestCase):
     def test_minimal_modules_do_not_enable_other_matugen_outputs(self):
         modules, plan = self.plan(['themes', 'terminal'])
         config = tomllib.loads(plan['.config/matugen/config.toml'][0].decode())
-        self.assertEqual(set(config['templates']), {'gtk3', 'gtk4', 'qt5ct', 'qt6ct', 'kitty'})
+        self.assertEqual(set(config['templates']), {'gtk3', 'gtk4', 'qt5ct', 'qt6ct'})
         self.assertNotIn('.config/wayfire.ini', plan)
         self.assertNotIn('.config/eww/style.json', plan)
 

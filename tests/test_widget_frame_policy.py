@@ -29,18 +29,18 @@ class FramePolicyTests(unittest.TestCase):
     def test_defaults_follow_style(self):
         for name in ('monochrome','glass','modern'):
             self.assertEqual(resolve(name,styles.PROFILES[name],{})['widgets']['frame'],'none')
-        for name in ('terminal','retro','gnome','windows'):
+        for name in ('terminal','retro','ascii'):
             self.assertEqual(resolve(name,styles.PROFILES[name],{})['widgets']['frame'],name)
 
     def test_inactive_theme_edit_is_saved_without_changing_live_widgets(self):
         before=self.tokens.read_text()
-        styles.set_widget_frame('none','windows')
+        styles.set_widget_frame('none','retro')
         self.assertEqual(self.tokens.read_text(),before)
-        self.assertEqual(styles.widget_frame('windows'),'none')
+        self.assertEqual(styles.widget_frame('retro'),'none')
         self.assertEqual(styles.widget_frame('modern'),'auto')
-        styles.set_widget_frame('retro','modern')
-        self.assertEqual(json.loads(self.tokens.read_text())['widgets']['frame'],'retro')
-        self.assertEqual(styles.widget_frame('windows'),'none')
+        styles.set_widget_frame('terminal','modern')
+        self.assertEqual(json.loads(self.tokens.read_text())['widgets']['frame'],'terminal')
+        self.assertEqual(styles.widget_frame('retro'),'none')
 
     def test_auto_restores_active_theme_default(self):
         styles.set_widget_frame('retro','modern')
@@ -51,13 +51,13 @@ class FramePolicyTests(unittest.TestCase):
         (self.state/'widget-frame.json').write_text('{"frame":"glass"}')
         styles.set_widget_frame('none','modern')
         self.assertEqual(styles.widget_frame('modern'),'none')
-        self.assertEqual(styles.widget_frame('windows'),'glass')
+        self.assertEqual(styles.widget_frame('retro'),'glass')
         data=json.loads((self.state/'widget-frame.json').read_text())
         self.assertEqual(data['version'],2)
 
     def test_apply_uses_target_theme_not_current_theme(self):
-        styles.set_widget_frame('future','windows')
-        data={'style':'windows','widgets':{'frame':'windows'}}
+        styles.set_widget_frame('future','retro')
+        data={'style':'retro','widgets':{'frame':'retro'}}
         self.assertEqual(json.loads(styles.with_widget_frame(json.dumps(data)))['widgets']['frame'],'future')
         self.assertEqual(styles.widget_frame('modern'),'auto')
 

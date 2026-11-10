@@ -49,7 +49,7 @@ class WidgetBundleTests(unittest.TestCase):
         self.assertTrue(any('/profiles/Personal.json' in p for p in plan))
         self.assertEqual(json.loads(plan['.config/eww/animation.json'][0])['fps'], 60)
         self.assertEqual(json.loads(plan['.config/eww/style.json'][0]),
-                         {'skin': 'bento', 'fx': 'focus', 'background': 'surface'})
+                         {'skin': 'ascii', 'fx': 'none', 'background': 'surface', 'frame': 'none'})
 
     def test_all_personal_layouts_follow_the_tinywidgets_instance_contract(self):
         profiles = ROOT / 'modules/widgets-profiles/files/.config/eww/profiles'
@@ -78,7 +78,7 @@ class WidgetBundleTests(unittest.TestCase):
         self.assertIn('widgets-minecraft', modules)
         self.assertIn('python-pillow', installer.packages_for(modules))
         widgets = json.loads(plan['.config/eww/instances.json'][0])['widgets']
-        self.assertEqual(len(widgets), 15)
+        self.assertEqual(len(widgets), 11)
         chest = next(w for w in widgets if w['window'] == 'chest')
         # The owner's installed apps are never shipped; each user fills the chest.
         self.assertEqual(json.loads(chest['opts']['launchers']), [])
@@ -163,7 +163,7 @@ class WidgetBundleTests(unittest.TestCase):
         saved = installer.load_selection(self.home)
         self.assertEqual(saved['widgets']['profile'], 'Personal')
         self.assertEqual(saved['widgets']['theme'], 'quiet')
-        self.assertEqual(len(json.loads(source.read_text())['widgets']), 15)
+        self.assertEqual(len(json.loads(source.read_text())['widgets']), 11)
         backup = next((self.home / '.local/state/raccon-dots/backups').iterdir())
         with redirect_stdout(self.output):
             installer.restore(backup, self.home)

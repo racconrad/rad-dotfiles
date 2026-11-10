@@ -113,7 +113,7 @@ class DesktopStylesTests(unittest.TestCase):
                 self.assertEqual('@import "desktop-style";' in menu,enabled)
                 shortcut=plan['.config/wayfire.ini'][0].decode()
                 self.assertEqual('binding_desktop_style = <super> <alt> KEY_T' in shortcut,enabled)
-                self.assertEqual('desktop-style prewarm' in shortcut,enabled)
+                self.assertNotIn('desktop-style prewarm',shortcut)
                 hook=plan['.local/bin/wallpaper-theme'][0].decode()
                 self.assertEqual('desktop-style" wallpaper' in hook,enabled)
 

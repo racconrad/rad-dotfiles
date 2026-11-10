@@ -42,16 +42,18 @@ class WorkingModeTests(unittest.TestCase):
              patch.object(controller, 'read_battery', return_value=battery), \
              patch.object(controller, 'read_json', return_value={'mode': 'working'}), \
              patch.object(controller, 'publish'), \
+             patch.object(controller.effects, 'widget_policy'), \
              patch.object(controller.effects, 'wayfire'), \
              patch.object(controller.effects, 'cpu'), \
              patch.object(controller.effects, 'focus_fx'), \
-             patch.object(controller.effects, 'widgets'), \
+             patch.object(controller.effects, 'widgets') as widgets, \
              patch.object(controller.effects, 'widgets_need_install', return_value=False), \
              patch.object(controller.effects, 'wallpaper'), \
              patch.object(controller.effects, 'run'), \
              patch.object(controller.effects, 'desktop_transition') as transition:
             state, _, _ = controller.reconcile({})
             transition.assert_not_called()
+            widgets.assert_called_once()
             self.assertEqual(state['errors'], {})
 
 
