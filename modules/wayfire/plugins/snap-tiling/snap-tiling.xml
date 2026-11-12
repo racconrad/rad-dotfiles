@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<wayfire>
+  <plugin name="snap-tiling">
+    <_short>Snap Tiling</_short>
+    <_long>Native slot preview and grouped window placement.</_long>
+    <category>Window Management</category>
+    <option name="toggle" type="key">
+      <_short>Open snap selector</_short>
+      <default>&lt;super&gt; KEY_Z</default>
+    </option>
+  </plugin>
+</wayfire>
