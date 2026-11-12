@@ -4,30 +4,36 @@
 (defvar outputs_open false)
 (defvar inputs_open false)
 (defvar wifi_selected '{"token":"","title":"","secured":false,"active":false,"signal":0,"security":""}')
-(deflisten audio :initial '{"available":false,"ready":false,"error":"","outputs":[],"inputs":[],"output":{"token":"","title":"Loading output…","volume":0,"mute":false},"input":{"token":"","title":"Loading microphone…","volume":0,"mute":false}}'
+(deflisten audio :initial '{"available":false,"ready":false,"error":"","status":"loading","message":"Loading audio devices…","outputs":[],"inputs":[],"output":{"token":"","title":"Loading output…","token":"","volume":0,"mute":false},"input":{"token":"","title":"Loading microphone…","token":"","volume":0,"mute":false}}'
  "python3 $HOME/.local/lib/raccon_menu/panels.py listen audio")
-(deflisten wifi :initial '{"available":false,"ready":false,"error":"","enabled":false,"networks":[],"rows":[],"list_page":0,"page_count":1,"total":0,"empty":true,"title":"Loading…"}'
+(deflisten wifi :initial '{"available":false,"ready":false,"error":"","status":"loading","message":"Loading networks…","enabled":false,"networks":[],"rows":[],"list_page":0,"page_count":1,"total":0,"empty":true,"title":"Loading…"}'
  "python3 $HOME/.local/lib/raccon_menu/panels.py listen connections")
-(deflisten bluetooth :initial '{"available":false,"ready":false,"error":"","enabled":false,"scanning":false,"devices":[],"rows":[],"list_page":0,"page_count":1,"total":0,"detail":{"token":"","title":"","icon":"bluetooth-symbolic","connected":false,"paired":false,"battery":"","address":"","trusted":false,"kind":"Device","signal":"No data"},"adapters":[],"empty":true,"title":"Loading…"}'
+(deflisten bluetooth :initial '{"available":false,"ready":false,"error":"","status":"loading","message":"Loading Bluetooth devices…","enabled":false,"scanning":false,"devices":[],"rows":[],"list_page":0,"page_count":1,"total":0,"detail":{"token":"","title":"","icon":"bluetooth-symbolic","connected":false,"paired":false,"battery":"","address":"","trusted":false,"kind":"Device","signal":"No data"},"adapters":[],"empty":true,"title":"Loading…"}'
  "python3 $HOME/.local/lib/raccon_menu/panels.py listen bluetooth")
 
 (defwidget glyph [name]
  (image :icon name :icon-size "large-toolbar"))
+(defwidget service-state [kind state busy]
+ (box :height 48 :space-evenly false :spacing 6
+  (label :class {state.status == 'error' ? 'error' : 'muted'} :hexpand true :xalign 0
+   :wrap true :limit-width 23 :text {busy ? 'Applying changes…' : state.message ?: ''})
+  (button :visible {state.status == 'error'} :active {!busy} :tooltip "Retry service status" :timeout "3s"
+   :onclick "~/.local/bin/desktop-panel retry ${kind}" (label :text "Retry"))))
 (defwidget sound-panel []
  (box :orientation "v" :space-evenly false :spacing 8
-  (label :class "error" :visible {audio.error != ''} :wrap true :text {audio.error})
+  (service-state :kind "audio" :state audio :busy false)
   (box :space-evenly false :spacing 8
    (button :timeout "35s" :class "mute" :active {audio.output.token != ''} :tooltip "Mute or unmute output"
     :onclick "~/.local/bin/desktop-panel audio-mute output ${audio.output.token}"
     (glyph :name {audio.output.mute ? 'audio-volume-muted-symbolic' : 'audio-volume-high-symbolic'}))
-   (button :timeout "35s" :class "device-toggle" :hexpand true :tooltip "Choose audio output"
+   (button :timeout "35s" :class "device-toggle" :hexpand true :active {audio.output.token != ''} :tooltip "Choose audio output"
     :onclick "eww -c $HOME/.config/raccon-menu update outputs_open=${!outputs_open}"
     (box :space-evenly false :spacing 6
      (label :xalign 0 :hexpand true :limit-width 18 :text {audio.output.title})
      (image :icon "pan-down-symbolic" :icon-size "menu")))
    (label :class "volume-percent" :text "${audio.output.volume}%"))
   (scale :class "output-volume" :min 0 :max 100 :value {audio.output.volume} :active {audio.output.token != ''})
-  (revealer :reveal outputs_open :transition "slidedown" :duration "140ms"
+  (revealer :class "output-choices" :reveal outputs_open :transition "slidedown" :duration "140ms"
    (scroll :height 80 :hscroll false
     (box :orientation "v" :space-evenly false :spacing 2
      (for device in {audio.outputs}
@@ -38,12 +44,12 @@
    (button :timeout "35s" :class "mute" :active {audio.input.token != ''} :tooltip "Mute or unmute microphone"
     :onclick "~/.local/bin/desktop-panel audio-mute input ${audio.input.token}"
     (glyph :name {audio.input.mute ? 'microphone-sensitivity-muted-symbolic' : 'audio-input-microphone-symbolic'}))
-   (button :timeout "35s" :class "mic-choice" :tooltip {audio.input.title}
+   (button :timeout "35s" :class "mic-choice" :active {audio.input.token != ''} :tooltip {audio.input.title}
     :onclick "eww -c $HOME/.config/raccon-menu update inputs_open=${!inputs_open}"
     (image :icon "pan-down-symbolic" :icon-size "menu"))
    (scale :class "input-volume" :hexpand true :min 0 :max 100 :value {audio.input.volume} :active {audio.input.token != ''})
    (label :class "volume-percent" :text "${audio.input.volume}%"))
-  (revealer :reveal inputs_open :transition "slidedown" :duration "140ms"
+  (revealer :class "input-choices" :reveal inputs_open :transition "slidedown" :duration "140ms"
    (scroll :height 80 :hscroll false
     (box :orientation "v" :space-evenly false :spacing 2
      (for device in {audio.inputs}
@@ -63,10 +69,6 @@
 
 (defwidget wifi-list []
  (box :orientation "v" :space-evenly false :spacing 8
-  (label :class "muted" :visible {!wifi.ready} :wrap true :limit-width 23 :xalign 0 :text "Loading networks…")
-  (label :class "error" :visible {wifi.error != ''} :wrap true :limit-width 23 :text {wifi.error})
-  (label :class "muted" :visible {wifi.ready && wifi.available && !wifi.enabled} :wrap true :limit-width 23 :xalign 0 :text "Turn on Wi-Fi to see networks.")
-  (label :class "muted" :visible {wifi.ready && wifi.enabled && wifi.empty} :wrap true :limit-width 23 :xalign 0 :text "No networks. Scan to refresh.")
   (box :orientation "v" :space-evenly false :spacing 5
    (for network in {wifi.rows}
     (button :timeout "35s" :class "network-row ${network.active ? 'selected' : ''}" :active {wifi.enabled && !wifi_busy}
@@ -115,14 +117,14 @@
  (box :class "service-content service-full" :orientation "v" :space-evenly false :spacing 10
   (box :space-evenly false :spacing 6
    (label :class "side-title" :text "Wi-Fi" :hexpand true :xalign 0)
-   (button :timeout "35s" :active {wifi.available && !wifi_busy} :tooltip "Scan networks"
+   (button :timeout "35s" :active {wifi.available && wifi.enabled && !wifi_busy} :tooltip "Scan networks"
     :onclick "~/.local/bin/desktop-panel wifi-scan" (image :icon "view-refresh-symbolic" :icon-size "menu"))
    (button :timeout "35s" :class "power ${wifi.enabled ? 'selected' : ''}" :active {wifi.available && !wifi_busy}
     :tooltip {wifi.enabled ? 'Turn off Wi-Fi' : 'Turn on Wi-Fi'}
     :onclick "~/.local/bin/desktop-panel wifi-power ${wifi.enabled ? 'off' : 'on'}"
     (image :icon "system-shutdown-symbolic" :icon-size "menu")))
-  (label :class "muted service-caption" :visible wifi_busy :limit-width 24 :text "Applying changes…" :xalign 0)
-  (stack :class "wifi-views" :selected {wifi_selected.token == '' ? 0 : wifi_selected.active ? 3 : wifi_selected.secured ? 1 : 2} :same-size false
+  (service-state :kind "connections" :state wifi :busy wifi_busy)
+  (stack :class "wifi-views" :selected {wifi_selected.token == '' ? 0 : wifi_selected.active ? 3 : wifi_selected.secured ? 1 : 2} :same-size true
    :transition {desktop.motion ? "slideleft" : "none"}
    (wifi-list) (wifi-connection) (wifi-open-network) (wifi-connected))))
 
@@ -133,10 +135,6 @@
 
 (defwidget bluetooth-list []
  (box :orientation "v" :space-evenly false :spacing 8
-  (label :class "muted" :visible {!bluetooth.ready} :xalign 0 :limit-width 24 :text "Loading devices…")
-  (label :class "error" :visible {bluetooth.error != ''} :wrap true :limit-width 23 :text {bluetooth.error})
-  (label :class "muted" :visible {bluetooth.ready && bluetooth.available && !bluetooth.enabled} :wrap true :limit-width 23 :xalign 0 :text "Turn on Bluetooth to connect.")
-  (label :class "muted" :visible {bluetooth.ready && bluetooth.enabled && bluetooth.empty} :wrap true :limit-width 23 :xalign 0 :text "No devices. Scan to discover.")
   (box :orientation "v" :space-evenly false :spacing 5
    (for device in {bluetooth.rows}
     (button :timeout "35s" :class "device-row ${device.connected ? 'selected' : ''}" :active {bluetooth.enabled && !bt_busy}
@@ -175,9 +173,8 @@
     :tooltip {bluetooth.enabled ? 'Turn off Bluetooth' : 'Turn on Bluetooth'}
     :onclick "~/.local/bin/desktop-panel bt-power ${bluetooth.enabled ? 'off' : 'on'}"
     (image :icon "system-shutdown-symbolic" :icon-size "menu")))
-  (label :class "muted service-caption" :visible {bt_busy || bluetooth.scanning} :xalign 0 :limit-width 24
-   :text {bt_busy ? 'Applying changes…' : 'Scanning…'})
-  (stack :class "bluetooth-views" :selected {bluetooth.detail.token == '' ? 0 : 1} :same-size false
+  (service-state :kind "bluetooth" :state bluetooth :busy bt_busy)
+  (stack :class "bluetooth-views" :selected {bluetooth.detail.token == '' ? 0 : 1} :same-size true
    :transition {desktop.motion ? "slideleft" : "none"}
    (bluetooth-list) (bluetooth-device))))
 

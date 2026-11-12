@@ -2,12 +2,15 @@
 #include <gmodule.h>
 #include "navigation.h"
 #include "thumbnail_playback.h"
+#include "float_resident.h"
+#include "soft_icons.h"
+#include "popup_geometry.h"
 extern void gtk_layer_set_keyboard_mode(GtkWindow *,gint) __attribute__((weak));
 extern gboolean gtk_layer_is_layer_window(GtkWindow *) __attribute__((weak));
 static gboolean release_keyboard(gpointer data) {
     GtkWidget *window=data;
     if(gtk_layer_set_keyboard_mode&&gtk_layer_is_layer_window&&gtk_layer_is_layer_window(GTK_WINDOW(window)))
-        gtk_layer_set_keyboard_mode(GTK_WINDOW(window),gtk_widget_get_mapped(window)?2:0);
+        gtk_layer_set_keyboard_mode(GTK_WINDOW(window),gtk_widget_get_mapped(window)&&!g_object_get_data(G_OBJECT(window),"float-warming")?2:0);
     return G_SOURCE_REMOVE;
 }
 static gboolean focus_acquired(GtkWidget *window,GdkEventFocus *event,gpointer unused) {
@@ -112,13 +115,14 @@ static gboolean released(GtkWidget *w,GdkEventKey *e,gpointer unused){return nav
 static gboolean focus_reset(GtkWidget *w,GdkEventFocus *e,gpointer unused){g_object_set_data(G_OBJECT(w),"nav-held",NULL);return FALSE;}
 static gboolean initial_focus(gpointer data) {
     GtkWidget *w=data;
-    if(gtk_widget_get_mapped(w)) {
+    if(gtk_widget_get_mapped(w)&&!g_object_get_data(G_OBJECT(w),"float-warming")) {
         if(!nav_nth(w,"wall-tile",0,FALSE) && !nav_nth(w,"session-tile",0,FALSE))nav_nth(w,NULL,0,FALSE);
     }
     return G_SOURCE_REMOVE;
 }
 static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *values,gpointer unused) {
     GtkWidget *w=g_value_get_object(&values[0]);
+    soft_icons_apply(w);
     /* Eww overlays default to pass-through; Play must receive clicks itself. */
     GtkWidget *parent=gtk_widget_get_parent(w);
     if(parent && GTK_IS_OVERLAY(parent) && gtk_bin_get_child(GTK_BIN(parent))!=w)
@@ -137,6 +141,9 @@ static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *val
     }
     /* Hidden metadata labels do not map: bind them when their toplevel maps. */
     if(GTK_IS_WINDOW(w)&&gtk_window_get_window_type(GTK_WINDOW(w))==GTK_WINDOW_TOPLEVEL) {
+        if(nav_find(w,"music-card")) popup_geometry_bind(w,360,160);
+        else if(nav_find(w,"wallpaper-card")) popup_geometry_bind(w,1100,700);
+        else if(nav_find(w,"session-row")) popup_geometry_bind(w,1100,360);
         if(!g_object_get_data(G_OBJECT(w),"float-keys")) {
             g_signal_connect(w,"key-press-event",G_CALLBACK(keys),NULL);
             g_signal_connect(w,"key-release-event",G_CALLBACK(released),NULL);
@@ -150,6 +157,7 @@ static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *val
             g_object_set_data(G_OBJECT(metadata),"native-playback",GINT_TO_POINTER(1));
             play_update(G_OBJECT(metadata),NULL,NULL);
         }
+        if(resident_bind(w))return TRUE;
         g_timeout_add_full(G_PRIORITY_DEFAULT,260,initial_focus,g_object_ref(w),g_object_unref);
         g_timeout_add_full(G_PRIORITY_DEFAULT,120,release_keyboard,g_object_ref(w),g_object_unref);
     }

@@ -943,14 +943,14 @@ def selector_module():
     here=Path(__file__).resolve().parent
     target=HOME/'.cache/desktop-style/selector.so'
     target.parent.mkdir(parents=True,exist_ok=True)
-    sources=(here/'selector_input.c',here.parent/'raccon_menu/navigation.h',here.parent/'raccon_menu/resident_surface.h')
+    sources=(here/'selector_input.c',here.parent/'raccon_menu/navigation.h',here.parent/'raccon_menu/resident_surface.h',here.parent/'raccon_menu/soft_icons.h',here.parent/'raccon_menu/popup_geometry.h')
     with (target.parent/'build.lock').open('w') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
         if not target.exists() or target.stat().st_mtime_ns < max(p.stat().st_mtime_ns for p in sources):
             flags=shlex.split(run(['pkg-config','--cflags','--libs','gtk+-3.0']).stdout)
             temp=target.with_name(f'selector-{os.getpid()}.so')
             try:
-                run(['cc','-shared','-fPIC','-O2','-Wall','-Wextra','-Wno-unused-parameter',sources[0],'-o',temp,*flags])
+                run(['cc','-shared','-fPIC','-O2','-Wall','-Wextra','-Wno-unused-parameter','-I',here.parent/'raccon_menu',sources[0],'-o',temp,*flags])
                 temp.replace(target)
             finally:temp.unlink(missing_ok=True)
     return target
@@ -961,7 +961,7 @@ def selector_revision():
     sources=[here/'selector_input.c',here.parent/'raccon_menu/navigation.h']
     # The resident only loads this native module. Python runs in separate
     # commands/listeners; changing a name or renderer must not restart GTK.
-    sources.extend(p for p in (here.parent/'raccon_menu/resident_surface.h',) if p.is_file())
+    sources.extend(p for p in (here.parent/'raccon_menu/resident_surface.h',here.parent/'raccon_menu/soft_icons.h',here.parent/'raccon_menu/popup_geometry.h') if p.is_file())
     return str(max(p.stat().st_mtime_ns for p in sources))
 
 

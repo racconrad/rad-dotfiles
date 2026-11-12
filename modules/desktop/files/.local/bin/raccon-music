@@ -2,6 +2,9 @@
 # Toggle (or `close`) the floating music card on the bar's side (own Eww instance).
 set -euo pipefail
 cfg="$HOME/.config/raccon-music"
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/raccon-music-$(id -u).visibility.lock"
+if [[ ${1:-} == prepare ]]; then flock -n 9 || exit 0
+else flock -w 3 9 || exit 1; fi
 # Flag read by waybar-music: Waybar hides its compact buttons while the card is open.
 flag="${XDG_RUNTIME_DIR:-/tmp}/raccon-music.open"
 if [[ ${1:-} == refresh ]]; then
@@ -9,9 +12,9 @@ if [[ ${1:-} == refresh ]]; then
   if eww -c "$cfg" ping >/dev/null 2>&1; then eww -c "$cfg" reload; fi
   exit 0
 fi
-if [[ ${1:-} == close ]] || eww -c "$cfg" active-windows 2>/dev/null | grep -q '^raccon-music'; then
+if [[ ${1:-} == close ]] || { [[ ${1:-} != prepare ]] && [[ $(eww -c "$cfg" get card_visible 2>/dev/null) == true ]]; }; then
   rm -f "$flag"
-  exec eww -c "$cfg" close raccon-music
+  exec eww -c "$cfg" update card_visible=false music_open=false
 fi
 python3 "$HOME/.local/lib/raccon_menu/backend.py" palette
 module=$(python3 "$HOME/.local/lib/raccon_menu/keyboard_build.py")
@@ -21,12 +24,26 @@ if [[ $(cat "$key_stamp" 2>/dev/null || true) != "$revision" ]]; then
   eww -c "$cfg" kill >/dev/null 2>&1 || true
 fi
 if ! eww -c "$cfg" ping >/dev/null 2>&1; then
-  GTK_MODULES="$module" RACCON_FLOAT_KEYS=1 RACCON_KEYS_COMMAND=raccon-music eww -c "$cfg" daemon </dev/null &>/dev/null
+  rm -f "$flag" "${XDG_RUNTIME_DIR:-$HOME/.cache}/raccon-music.ready"
+  GTK_MODULES="$module" RACCON_FLOAT_KEYS=1 RACCON_KEYS_COMMAND=raccon-music eww -c "$cfg" daemon 9>&- </dev/null &>/dev/null
   eww -c "$cfg" ping >/dev/null
   printf '%s' "$revision" > "$key_stamp"
 fi
 pos=$(grep -oP '^\s*"position"\s*:\s*"\K\w+' "$HOME/.config/waybar/config.jsonc" 2>/dev/null || echo top)
 # Same offsets the menu uses next to Waybar.
 if [[ $pos == bottom ]]; then anchor="bottom right" y=4px; else anchor="top right" y=78px; fi
+geometry="${XDG_RUNTIME_DIR:-$HOME/.cache}/raccon-music.geometry"
+active=$(eww -c "$cfg" active-windows)
+if grep -q '^raccon-music:' <<< "$active" && [[ $(cat "$geometry" 2>/dev/null || true) != "$anchor:$y" ]]; then
+  eww -c "$cfg" close raccon-music
+  active=""
+fi
+if ! grep -q '^raccon-music:' <<< "$active"; then
+  rm -f "$flag" "${XDG_RUNTIME_DIR:-$HOME/.cache}/raccon-music.ready"
+  eww -c "$cfg" update card_visible=false
+  eww -c "$cfg" open raccon-music --arg anchor="$anchor" --arg y="$y"
+  printf '%s' "$anchor:$y" > "$geometry"
+fi
+[[ ${1:-} != prepare ]] || exec python3 "$HOME/.local/lib/raccon_menu/card_wait.py" raccon-music.ready
 touch "$flag"
-exec eww -c "$cfg" open raccon-music --arg anchor="$anchor" --arg y="$y"
+exec eww -c "$cfg" update card_visible=true

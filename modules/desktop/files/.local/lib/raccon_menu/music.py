@@ -2,6 +2,9 @@
 """Stream the active MPRIS player as JSON lines for the menu music card."""
 import hashlib
 import json
+import os
+import select
+import signal
 import subprocess
 import sys
 import time
@@ -69,25 +72,68 @@ def emit(value):
 
 
 def main():
-    emit(EMPTY)
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from raccon_events import FileEvents
+    flag = Path(os.environ.get('XDG_RUNTIME_DIR', '/tmp')) / 'raccon-music.open'
+    def stop(_signal, _frame):
+        raise SystemExit()
+    signal.signal(signal.SIGTERM, stop)
     art_cache = {}
-    while True:
-        try:
-            follow = subprocess.Popen(['playerctl', '--follow', 'metadata', '--format', FORMAT],
-                                      stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
-        except FileNotFoundError:
-            emit(EMPTY)
-            time.sleep(3600)
-            continue
-        last = None
-        for line in follow.stdout:
-            value = state(line, art_cache)
-            if value != last:
-                emit(value)
-                last = value
-        follow.wait()
+    follow = None
+    with FileEvents([flag]) as changes:
         emit(EMPTY)
-        time.sleep(2)
+        try:
+            while True:
+                if not flag.exists():
+                    if follow is not None:
+                        follow.terminate()
+                        try:
+                            follow.wait(timeout=.5)
+                        except subprocess.TimeoutExpired:
+                            follow.kill()
+                            follow.wait()
+                        follow.stdout.close()
+                        follow = None
+                    changes.wait()
+                    continue
+                if follow is None:
+                    try:
+                        follow = subprocess.Popen(['playerctl', '--follow', 'metadata', '--format', FORMAT],
+                                                  stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                    except FileNotFoundError:
+                        changes.wait(3600)
+                        continue
+                    buffered, last = b'', None
+                ready, _, _ = select.select([changes, follow.stdout], [], [])
+                if changes in ready:
+                    changes.drain()
+                    if not flag.exists():
+                        continue
+                if follow.stdout in ready:
+                    chunk = os.read(follow.stdout.fileno(), 65536)
+                    if not chunk:
+                        follow.wait()
+                        follow.stdout.close()
+                        follow = None
+                        emit(EMPTY)
+                        changes.wait(2)
+                        continue
+                    buffered += chunk
+                    while b'\n' in buffered:
+                        line, buffered = buffered.split(b'\n', 1)
+                        value = state(line.decode(errors='replace'), art_cache)
+                        if value != last:
+                            emit(value)
+                            last = value
+        finally:
+            if follow is not None:
+                follow.terminate()
+                try:
+                    follow.wait(timeout=.5)
+                except subprocess.TimeoutExpired:
+                    follow.kill()
+                    follow.wait()
+                follow.stdout.close()
 
 
 if __name__ == '__main__':

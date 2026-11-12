@@ -3,6 +3,8 @@
 #include <gmodule.h>
 #include "navigation.h"
 #include "resident_surface.h"
+#include "soft_icons.h"
+#include "popup_geometry.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -256,13 +258,35 @@ static void animate_open(void) {
     gtk_widget_set_opacity(menu_window, 1);
     slide_to(1, ms);
 }
-/* Warm the GTK tree, then unmap its layer surface to release compositor input. */
+static void stack_index(GtkWidget *widget, guint index);
+/* Warm common pages without publishing service activation or taking input. */
 static gboolean prewarm_frame(GtkWidget *window, GdkFrameClock *clock, gpointer data) {
     if (window != menu_window) return G_SOURCE_REMOVE;
-    if (visible) { state("ready", "1"); return G_SOURCE_REMOVE; }
+    if (visible) {
+        stack_index(find(window, "pages"), current_page == 1 || browsing_apps ? 1 : 0);
+        state("ready", "1");
+        return G_SOURCE_REMOVE;
+    }
     guint frames = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(window), "prewarm-frames")) + 1;
     g_object_set_data(G_OBJECT(window), "prewarm-frames", GUINT_TO_POINTER(frames));
     if (frames % 3) return G_SOURCE_CONTINUE;
+    GtkWidget *pages = find(window, "pages");
+    GtkWidget *side = find(window, "side-revealer");
+    GtkWidget *side_pages = find(window, "side-pages");
+    if (GTK_IS_STACK(pages)) gtk_stack_set_transition_duration(GTK_STACK(pages), 0);
+    if (GTK_IS_STACK(side_pages)) gtk_stack_set_transition_duration(GTK_STACK(side_pages), 0);
+    if (GTK_IS_REVEALER(side)) gtk_revealer_set_transition_duration(GTK_REVEALER(side), 0);
+    if (frames == 3) stack_index(pages, 1);
+    else if (frames == 6 || frames == 9) {
+        stack_index(pages, 0);
+        stack_index(side_pages, frames == 6 ? 2 : 3);
+        if (GTK_IS_REVEALER(side)) gtk_revealer_set_reveal_child(GTK_REVEALER(side), TRUE);
+    } else {
+        stack_index(pages, 0);
+        stack_index(side_pages, 0);
+        if (GTK_IS_REVEALER(side)) gtk_revealer_set_reveal_child(GTK_REVEALER(side), FALSE);
+    }
+    if (frames < 12) return G_SOURCE_CONTINUE;
     resident_surface_park(window);
     state("ready", "1");
     return G_SOURCE_REMOVE;
@@ -344,7 +368,7 @@ static void select_page(guint page) {
     GtkWidget *side_pages = find(menu_window, "side-pages");
     stack_index(side_pages, page >= 2 ? page - 2 : 0);
     GtkWidget *side_panel = find(menu_window, "side-panel");
-    if (side_panel) gtk_widget_set_size_request(side_panel, page >= 4 ? 292 : 200, -1);
+    if (side_panel) gtk_widget_set_size_request(side_panel, 292, -1);
     GtkWidget *side = find(menu_window, "side-revealer");
     if (side && GTK_IS_REVEALER(side)) {
         gtk_widget_set_valign(side, dock_edge == 2 ? GTK_ALIGN_START : GTK_ALIGN_END);
@@ -378,6 +402,7 @@ static void show_menu(guint page) {
     if (confirmation && GTK_IS_REVEALER(confirmation))
         gtk_revealer_set_reveal_child(GTK_REVEALER(confirmation), FALSE);
     browsing_apps = page == 1;
+    if (opening && !simple_pages) stack_index(find(menu_window, "pages"), browsing_apps ? 1 : 0);
     select_page(page);
     filter_current();
     GtkWidget *clock = find(menu_window, "clock");
@@ -476,7 +501,8 @@ static guint filter_rows(GtkWidget *widget, const gchar *row_class, gchar **word
     for (GList *item = children; item; item = item->next)
         count += filter_rows(item->data, row_class, words, first);
     g_list_free(children);
-    if (has_class(widget, "key-section")) gtk_widget_set_visible(widget, count > 0);
+    if (has_class(widget, "key-section") || has_class(widget, "app-row"))
+        gtk_widget_set_visible(widget, count > 0);
     return count;
 }
 static void filter_current(void) {
@@ -558,21 +584,33 @@ static gboolean key_press(GtkWidget *window, GdkEventKey *event, gpointer data) 
     if ((event->state & GDK_MOD1_MASK) && key >= GDK_KEY_1 && key <= GDK_KEY_9 && !simple_pages) {
         select_page(0); nav_nth(window, "daily-app", key - GDK_KEY_1, TRUE); return TRUE;
     }
-    if (key == GDK_KEY_Down && !(event->state & (GDK_CONTROL_MASK|GDK_MOD1_MASK|GDK_SUPER_MASK)) &&
-        gtk_window_get_focus(GTK_WINDOW(window)) == find(window,"app-search")) {
-        nav_nth(window, current_page == 1 ? "app-launch" : "daily-app", 0, FALSE); return TRUE;
+    if (key == GDK_KEY_Down && !(event->state & (GDK_CONTROL_MASK|GDK_MOD1_MASK|GDK_SUPER_MASK))) {
+        GtkWidget *focus = gtk_window_get_focus(GTK_WINDOW(window));
+        if (focus && focus == find(window, current_page == 8 ? "keys-search" : "app-search")) {
+            if (nav_nth(window, current_page == 8 ? "key-row" : current_page == 1 ? "app-launch" : "daily-app", 0, FALSE))
+                return TRUE;
+        }
     }
     if (nav_key(window, event)) return TRUE;
     if (key == GDK_KEY_Escape) {
-        if (simple_pages) { hide_menu(FALSE); return TRUE; }
-        GtkWidget *entry = find(window, "app-search");
-        GtkWidget *keys = find(window, "keys-search");
-        if (current_page == 8 && GTK_IS_ENTRY(keys) && *gtk_entry_get_text(GTK_ENTRY(keys))) gtk_entry_set_text(GTK_ENTRY(keys), "");
-        else if (current_page >= 2) select_page(0);
-        else if (GTK_IS_ENTRY(entry) && *gtk_entry_get_text(GTK_ENTRY(entry))) {
-            browsing_apps = FALSE;
+        GtkWidget *entry = find(window, current_page == 8 ? "keys-search" : "app-search");
+        if (GTK_IS_ENTRY(entry) && *gtk_entry_get_text(GTK_ENTRY(entry))) {
             gtk_entry_set_text(GTK_ENTRY(entry), "");
-        } else hide_menu(FALSE);
+        } else if (nav_nth(window, "service-back", 0, TRUE)) {
+            return TRUE;
+        } else {
+            GtkWidget *outputs = find(window, "output-choices");
+            GtkWidget *inputs = find(window, "input-choices");
+            if (GTK_IS_REVEALER(outputs) && gtk_revealer_get_reveal_child(GTK_REVEALER(outputs)))
+                nav_nth(window, "device-toggle", 0, TRUE);
+            else if (GTK_IS_REVEALER(inputs) && gtk_revealer_get_reveal_child(GTK_REVEALER(inputs)))
+                nav_nth(window, "mic-choice", 0, TRUE);
+            else if (current_page > 0) {
+                browsing_apps = FALSE;
+                select_page(0);
+                nav_nth(window, simple_pages ? NULL : "daily-app", 0, FALSE);
+            } else hide_menu(FALSE);
+        }
         return TRUE;
     }
     if (key == GDK_KEY_Super_L || key == GDK_KEY_Super_R) {
@@ -620,6 +658,10 @@ static gboolean key_release(GtkWidget *window, GdkEventKey *event, gpointer data
         super_down = FALSE;
         if (close) { hide_menu(TRUE); return TRUE; }
     }
+    return FALSE;
+}
+static gboolean pointer_press(GtkWidget *widget, GdkEventButton *event, gpointer data) {
+    if (super_down) super_used = TRUE;
     return FALSE;
 }
 static gboolean focus_in(GtkWidget *window, GdkEventFocus *event, gpointer data) {
@@ -744,6 +786,11 @@ static void calendar_add(GtkWidget *widget,gpointer unused) {
 
 static gboolean mapped(GSignalInvocationHint *hint, guint n, const GValue *values, gpointer data) {
     GtkWidget *widget = g_value_get_object(&values[0]);
+    soft_icons_apply(widget);
+    if (GTK_IS_BUTTON(widget) && !g_object_get_data(G_OBJECT(widget), "raccon-pointer-input")) {
+        g_signal_connect(widget, "button-press-event", G_CALLBACK(pointer_press), NULL);
+        g_object_set_data(G_OBJECT(widget), "raccon-pointer-input", GINT_TO_POINTER(1));
+    }
     if (!g_object_get_data(G_OBJECT(widget), "panel-input")) {
         if (GTK_IS_STACK(widget) && (has_class(widget, "wifi-views") || has_class(widget, "bluetooth-views")))
             gtk_stack_set_transition_duration(GTK_STACK(widget), 140);
@@ -775,13 +822,16 @@ static gboolean mapped(GSignalInvocationHint *hint, guint n, const GValue *value
             g_signal_connect(widget,"clicked",G_CALLBACK(calendar_add),NULL);
         g_object_set_data(G_OBJECT(widget), "panel-input", GINT_TO_POINTER(1));
     }
-    if (GTK_IS_IMAGE(widget) && has_class(widget, "app-icon") &&
+    if (GTK_IS_IMAGE(widget) && (has_class(widget, "app-icon") || has_class(widget, "daily-icon")) &&
         !g_object_get_data(G_OBJECT(widget), "file-icon")) {
         GtkWidget *row = gtk_widget_get_parent(widget);
+        while (row && !has_class(row, "app-launch") && !has_class(row, "daily-app") && !has_class(row, "recent-launch"))
+            row = gtk_widget_get_parent(row);
         GtkWidget *key = row ? find(row, "file-key") : NULL;
         if (GTK_IS_LABEL(key) && *gtk_label_get_text(GTK_LABEL(key))) {
             GError *error = NULL;
-            GdkPixbuf *icon = gdk_pixbuf_new_from_file_at_scale(gtk_label_get_text(GTK_LABEL(key)), 24, 24, TRUE, &error);
+            gint pixels = has_class(widget, "daily-icon") ? 32 : 24;
+            GdkPixbuf *icon = gdk_pixbuf_new_from_file_at_scale(gtk_label_get_text(GTK_LABEL(key)), pixels, pixels, TRUE, &error);
             if (icon) { gtk_image_set_from_pixbuf(GTK_IMAGE(widget), icon); g_object_unref(icon); }
             g_clear_error(&error);
         }
@@ -805,6 +855,7 @@ static gboolean mapped(GSignalInvocationHint *hint, guint n, const GValue *value
         g_signal_connect(widget, "focus-in-event", G_CALLBACK(focus_in), NULL);
         g_signal_connect(widget, "focus-out-event", G_CALLBACK(focus_out), NULL);
         dock_window();
+        popup_geometry_bind(widget, simple_pages ? 380 : 760, 560);
         state("mapped", "1");
         GtkWidget *hidden = find(widget, "initial-hidden");
         gboolean prewarm = !seen_window && GTK_IS_LABEL(hidden) && g_str_equal(gtk_label_get_text(GTK_LABEL(hidden)), "true");

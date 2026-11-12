@@ -19,7 +19,6 @@ button:active { background: rgba($primary, .28); }
 .music-artist, .music-time { font-size: 10px; }
 .music-progress trough { min-height: 2px; border-radius: 2px; background: rgba($on_surface, .12); }
 .music-progress progress { min-height: 2px; border-radius: 2px; background: $primary; }
-.music-card.open .music-progress trough, .music-card.open .music-progress progress { min-height: 3px; }
 .music-button, .music-hide { padding: 5px; }
 .music-hide { color: $on_surface_variant; opacity: .55; }
 .music-hide:hover { opacity: 1; }
@@ -28,3 +27,15 @@ button:active { background: rgba($primary, .28); }
 @import "desktop-style";
 
 .popup.music-popup button:focus { box-shadow: inset 0 0 0 2px $primary; }
+
+.popup.music-popup.motion button {
+  transition: background-color 160ms ease-out, opacity 160ms ease-out;
+}
+.popup.music-popup.motion .music-button image {
+  transition: -gtk-icon-transform 160ms cubic-bezier(.22, 1, .36, 1);
+}
+.popup.music-popup.motion .music-button:hover image { -gtk-icon-transform: scale(1.08); }
+.popup.music-popup.motion .music-button:active image { -gtk-icon-transform: scale(.92); }
+.popup.music-popup.still, .popup.music-popup.still * {
+  transition: none; animation: none; -gtk-icon-transform: none;
+}

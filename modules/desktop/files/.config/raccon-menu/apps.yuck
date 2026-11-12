@@ -1,0 +1,93 @@
+(defwidget home-edit-controls [app]
+  (box :class "home-edit-controls" :visible {app.editing} :space-evenly true :spacing 2
+    (button :tooltip "Move earlier" :active {app.can_move_previous}
+      :onclick "~/.local/bin/desktop-menu favorite move ${app.ref} previous" :timeout "5s"
+      (menu-icon :name "go-previous-symbolic"))
+    (button :class "home-remove" :tooltip "Remove from Home"
+      :onclick "~/.local/bin/desktop-menu favorite remove ${app.ref}" :timeout "5s"
+      (menu-icon :name "list-remove-symbolic"))
+    (button :tooltip "Move later" :active {app.can_move_next}
+      :onclick "~/.local/bin/desktop-menu favorite move ${app.ref} next" :timeout "5s"
+      (menu-icon :name "go-next-symbolic"))))
+
+(defwidget menu-recent []
+  (box :class "recent-apps" :visible {!editing} :orientation "v" :space-evenly false :spacing 6
+    (box :space-evenly false :spacing 6
+      (label :class "muted" :xalign 0 :hexpand true :text "Recent apps")
+      (button :class "recent-toggle" :tooltip "Only launches from Raccon Menu are recorded. Off by default. Disabling stops tracking; Clear removes saved history."
+        :onclick "~/.local/bin/desktop-menu recent ${catalogue.recent_enabled ? 'disable' : 'enable'}" :timeout "5s"
+        (label :text {catalogue.recent_enabled ? 'Disable' : 'Enable'}))
+      (button :class "recent-clear"
+        :tooltip "Clear recent apps" :onclick "~/.local/bin/desktop-menu recent clear" :timeout "5s"
+        (menu-icon :name "edit-clear-symbolic")))
+    (label :class "muted" :visible {catalogue.recent_enabled && arraylength(catalogue.recent) == 0}
+      :wrap true :xalign 0 :limit-width 32 :text "No recent apps yet. Launch an app from Raccon Menu to add it.")
+    (box :class "recent-list" :visible {catalogue.recent_enabled} :space-evenly true :spacing 4
+      (for app in {catalogue.recent}
+        (button :class "recent-launch" :tooltip {app.name}
+          :onclick "~/.local/bin/desktop-menu ${app.action} ${app.value}" :timeout "5s"
+          (box :halign "center"
+            (label :class "file-key" :visible false :text {app.has_file ? app.file : ''})
+            (image :class "app-icon" :icon {app.icon} :icon-size "large-toolbar")))))))
+
+(defwidget menu-home []
+  (box :class "home-content" :orientation "v" :space-evenly false :spacing 10
+    (box :class "daily-apps" :orientation "v" :space-evenly true :spacing 8
+      (for row in {jq(catalogue.favorites, 'map(map(. + {editing: ' + (editing ? 'true' : 'false') + '}))')}
+        (box :space-evenly true :spacing 8
+          (for app in row
+            (box :class "home-tile" :orientation "v" :space-evenly false :spacing 4
+              (button :class "daily-app" :active {app.available}
+                :tooltip {app.available ? app.name : app.name + ' · Not installed'}
+                :onclick "~/.local/bin/desktop-menu ${app.action} ${app.value}" :timeout "5s"
+                (box :orientation "v" :space-evenly false :spacing 6
+                  (label :class "file-key" :visible false :text {app.has_file ? app.file : ''})
+                  (box :class "daily-icon-slot" :width 32 :height 32 :halign "center"
+                    (image :class "daily-icon" :icon {app.icon} :icon-size "dnd"))
+                  (label :visible {app.editing} :text {app.name} :limit-width 12)))
+              (home-edit-controls :app app))))))
+    (menu-recent)
+    (label :class "home-empty muted" :visible {catalogue.home_count == 0 && !editing}
+      :wrap true :xalign 0 :limit-width 32 :text "Your Home is empty. Choose Edit to add apps.")
+    (box :class "home-edit-panel" :visible {editing} :orientation "v" :space-evenly false :spacing 8
+      (label :class "muted" :xalign 0 :wrap true :limit-width 32
+        :text "Use the arrows to reorder. Add more from Apps.")
+      (box :space-evenly true :spacing 4
+        (for app in {catalogue.shortcuts}
+          (button :class "shortcut-add" :tooltip {app.pinned ? 'Already on Home' : 'Add to Home'}
+            :active {!app.pinned && catalogue.home_count < catalogue.home_limit}
+            :onclick "~/.local/bin/desktop-menu favorite add ${app.ref}" :timeout "5s"
+            (label :text {app.name}))))
+      (box :space-evenly false :spacing 6
+        (button :class "edit-apps" :hexpand true :onclick "~/.local/bin/desktop-menu apps" :timeout "3s"
+          (box :space-evenly false :spacing 8
+            (menu-icon :name "list-add-symbolic")
+            (label :text "Choose applications")))
+        (button :class "home-reset" :tooltip "Restore default shortcuts"
+          :onclick "~/.local/bin/desktop-menu favorite reset" :timeout "5s"
+          (menu-icon :name "edit-undo-symbolic"))))))
+
+(defwidget menu-apps [content_height]
+  (box :orientation "v" :space-evenly false :spacing 4
+    (label :class "muted" :visible {editing} :xalign 0 :wrap true :limit-width 32
+      :text {catalogue.home_count >= catalogue.home_limit ? 'Home is full. Remove an app to add another.' : 'Use + to add an app to Home.'})
+    (label :class "no-results muted" :visible false :wrap true :text "No matches. Try another name.")
+    (scroll :class "apps-scroll" :height content_height :hscroll false :vscroll true
+      (box :class "apps-list" :orientation "v" :space-evenly false :spacing 2
+        (for app in {jq(catalogue.search, 'map(. + {editing: ' + (editing ? 'true' : 'false') + '})')}
+          (box :class "app-row" :space-evenly false :spacing 4
+            (button :class "app-launch" :hexpand true :tooltip {app.name}
+              :onclick "~/.local/bin/desktop-menu ${app.action} ${app.value}" :timeout "5s"
+              (box :space-evenly false :spacing 12
+                (label :class "search-key" :visible false :text {app.search})
+                (label :class "file-key" :visible false :text {app.has_file ? app.file : ''})
+                (box :class "app-icon-slot" :width 24 :height 24 :valign "center"
+                  (image :class "app-icon" :icon {app.icon} :icon-size "large-toolbar"))
+                (box :orientation "v" :space-evenly false :hexpand true
+                  (label :class "app-name" :xalign 0 :limit-width 28 :text {app.name})
+                  (label :class "app-category muted" :xalign 0 :text {app.category}))))
+            (button :class "app-pin ${app.pinned ? 'pinned' : ''}" :visible {app.editing && app.pinnable}
+              :active {app.pinned || catalogue.home_count < catalogue.home_limit}
+              :tooltip {app.pinned ? 'Remove from Home' : 'Add to Home'}
+              :onclick "~/.local/bin/desktop-menu favorite ${app.pinned ? 'remove' : 'add'} ${app.ref}" :timeout "5s"
+              (menu-icon :name {app.pinned ? 'list-remove-symbolic' : 'list-add-symbolic'}))))))))

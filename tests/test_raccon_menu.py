@@ -139,7 +139,7 @@ class MenuTests(unittest.TestCase):
             (Path(tmp) / 'favorites.json').write_text('{"not": "a list"}')
             self.assertEqual(len(menu.daily_apps(catalog)[0]), 3)
         self.assertEqual([app['name'] for row in rows for app in row],
-                         ['Browser', 'Files', 'Terminal', 'Steam'])
+                         ['Browser', 'Files', 'Terminal', 'Steam', 'missing'])
         self.assertEqual(rows[1][0]['value'], 'a'*64)
 
     def test_transient_ipc_retry_does_not_retry_real_errors(self):

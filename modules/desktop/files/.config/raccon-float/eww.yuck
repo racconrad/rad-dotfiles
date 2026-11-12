@@ -8,6 +8,7 @@
   "python3 $HOME/.local/lib/raccon_menu/backend.py listen-appearance")
 ; Controls and body map together; missing previews arrive from the listener.
 (defvar shown false)
+(defvar session_visible false)
 (defvar body false)
 (deflisten video_preview :initial '{"active":false,"selection":"","clip":"","playback":"","message":""}'
   "python3 $HOME/.local/lib/raccon_menu/wall_preview.py watch")
@@ -75,27 +76,28 @@
 
 
 ; One click arms the tile, a second one runs it; lock needs no confirmation.
-(defwidget session-tile [action title icon order]
-  (revealer :reveal body :transition {desktop.motion ? "slideup" : "none"} :duration "${180 + order * 35}ms"
+(defwidget session-tile [action title icon]
+  (revealer :reveal body :transition {desktop.motion ? "slideup" : "none"} :duration "240ms"
     (button :class "session-tile ${action == 'poweroff' || action == 'reboot' ? 'danger' : ''} ${armed == action ? 'armed' : ''}"
       :tooltip {armed == action ? "${title} · Click again to confirm" : title}
       :timeout "20s" :onclick "$HOME/.local/bin/raccon-float run ${action}"
       (box :class "session-body" :orientation "v" :space-evenly false :spacing 10
         (box :class "session-icon" :halign "center" :valign "center" :vexpand true (menu-icon :name icon :size 32))
-        (label :class "session-title" :visible {armed == action} :text title)
-        (image :visible {armed == action} :icon "emblem-ok-symbolic" :icon-size "button")))))
+        (label :class "session-title" :text title)
+        (image :style {armed == action ? "opacity: 1;" : "opacity: 0;"} :icon "emblem-ok-symbolic" :icon-size "button")))))
 
 (defwidget session-card []
   (box :class "panel float-card" :orientation "v" :space-evenly false :spacing 20
+    (label :class "resident-visible" :visible false :text {session_visible ? "true" : "false"})
     (float-head :title {who.user} :subtitle "${who.host} · up ${who.uptime}" :icon "avatar-default-symbolic"
       :close "$HOME/.local/bin/raccon-float close")
     (eventbox :class "session-row ${armed != '' ? 'has-armed' : ''}"
       (box :space-evenly false :spacing 0
-        (session-tile :order 0 :action "lock" :title "Lock" :icon "system-lock-screen-symbolic")
-        (session-tile :order 1 :action "suspend" :title "Suspend" :icon "media-playback-pause-symbolic")
-        (session-tile :order 2 :action "logout" :title "Log out" :icon "system-log-out-symbolic")
-        (session-tile :order 3 :action "reboot" :title "Restart" :icon "system-reboot-symbolic")
-        (session-tile :order 4 :action "poweroff" :title "Shut down" :icon "system-shutdown-symbolic")))))
+        (session-tile :action "lock" :title "Lock" :icon "system-lock-screen-symbolic")
+        (session-tile :action "suspend" :title "Suspend" :icon "media-playback-pause-symbolic")
+        (session-tile :action "logout" :title "Log out" :icon "system-log-out-symbolic")
+        (session-tile :action "reboot" :title "Restart" :icon "system-reboot-symbolic")
+        (session-tile :action "poweroff" :title "Shut down" :icon "system-shutdown-symbolic")))))
 
 ; Sized to the card (a fullscreen surface repainted 1920x1080 on every animation frame).
 (defwidget float-stage [style]
@@ -108,5 +110,5 @@
 
 (defwindow session [style]
   :monitor 0 :geometry (geometry :anchor "center")
-  :stacking "overlay" :exclusive false :focusable true :namespace "raccon-float"
+  :stacking "overlay" :exclusive false :focusable false :namespace "raccon-float"
   (float-stage :style style (session-card)))

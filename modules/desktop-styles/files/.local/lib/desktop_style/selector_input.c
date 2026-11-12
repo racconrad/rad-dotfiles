@@ -4,8 +4,10 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "../raccon_menu/navigation.h"
-#include "../raccon_menu/resident_surface.h"
+#include "navigation.h"
+#include "resident_surface.h"
+#include "soft_icons.h"
+#include "popup_geometry.h"
 
 static const gchar *sections[]={"header","style-list","preview-column","footer",NULL};
 static GtkWidget *resident;
@@ -50,7 +52,7 @@ static gboolean motion(GtkWidget *window) {
 static gboolean fade_frame(GtkWidget *window,GdkFrameClock *clock,gpointer unused) {
     gint64 now=gdk_frame_clock_get_frame_time(clock);
     if(!fade_started)fade_started=now;
-    gdouble t=MIN(1.,(now-fade_started)/(fade_target?130000.:90000.));
+    gdouble t=MIN(1.,(now-fade_started)/(fade_target?240000.:160000.));
     gdouble eased=1.-(1.-t)*(1.-t)*(1.-t);
     gtk_widget_set_opacity(window,fade_from+(fade_target-fade_from)*eased);
     if(t<1.)return G_SOURCE_CONTINUE;
@@ -149,7 +151,7 @@ static void configure_extras(GtkWidget *window) {
     if(below)gtk_style_context_add_class(context,"extras-below");
     else gtk_style_context_remove_class(context,"extras-below");
     if(GTK_IS_BOX(shell))gtk_orientable_set_orientation(GTK_ORIENTABLE(shell),below?GTK_ORIENTATION_VERTICAL:GTK_ORIENTATION_HORIZONTAL);
-    guint ms=enabled?(shell&&nav_class(shell,"compact-motion")?140:200):0;
+    guint ms=enabled?(shell&&nav_class(shell,"compact-motion")?140:240):0;
     if(GTK_IS_REVEALER(reveal)) {
         gtk_revealer_set_transition_type(GTK_REVEALER(reveal),enabled?(below?GTK_REVEALER_TRANSITION_TYPE_SLIDE_DOWN:GTK_REVEALER_TRANSITION_TYPE_SLIDE_RIGHT):GTK_REVEALER_TRANSITION_TYPE_NONE);
         gtk_revealer_set_transition_duration(GTK_REVEALER(reveal),ms);
@@ -234,7 +236,9 @@ static gboolean focus_in(GtkWidget *window,GdkEventFocus *event,gpointer unused)
 }
 static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *values,gpointer unused) {
     GtkWidget *window=g_value_get_object(&values[0]);
+    soft_icons_apply(window);
     if(!GTK_IS_WINDOW(window)||!nav_find(window,"style-selector"))return TRUE;
+    popup_geometry_bind(window,1040,740);
     gboolean first=!g_object_get_data(G_OBJECT(window),"style-bound");
     if(resident!=window) {
         stop_fade();
@@ -266,7 +270,7 @@ static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *val
     /* Exclusive focus is an opening request, never a persistent grab. */
     g_timeout_add_full(G_PRIORITY_DEFAULT,120,release_keyboard,g_object_ref(window),g_object_unref);
     GtkWidget *preview=nav_find(window,"preview-stack");
-    if(GTK_IS_STACK(preview))gtk_stack_set_transition_duration(GTK_STACK(preview),nav_find(window,"compact-motion")?140:220);
+    if(GTK_IS_STACK(preview))gtk_stack_set_transition_duration(GTK_STACK(preview),nav_find(window,"compact-motion")?140:240);
     if(!warming)g_idle_add_full(G_PRIORITY_DEFAULT_IDLE,initial_focus,g_object_ref(window),g_object_unref);
     return TRUE;
 }

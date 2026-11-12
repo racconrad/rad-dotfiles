@@ -171,6 +171,29 @@ def device_info(row=None):
 
 def presentation(kind, data):
     """Paginate the cached snapshot without rescans or nested scrolling."""
+    data = dict(data)
+    if not data.get('ready'):
+        status, message = 'loading', {'audio': 'Loading audio devices…', 'connections': 'Loading networks…',
+                                      'bluetooth': 'Loading Bluetooth devices…'}[kind]
+    elif data.get('error') or not data.get('available'):
+        status, message = 'error', data.get('error') or 'Service unavailable. Retry to check again.'
+    elif kind == 'audio':
+        status = 'ready' if data.get('outputs') and data.get('inputs') else 'empty'
+        message = '' if status == 'ready' else ('No audio devices found.' if not data.get('outputs') and not data.get('inputs')
+                                                else 'No output device found.' if not data.get('outputs') else 'No microphone found.')
+    elif not data.get('enabled'):
+        status, message = 'off', 'Turn on Wi-Fi to see networks.' if kind == 'connections' else 'Turn on Bluetooth to connect.'
+    elif kind == 'bluetooth' and data.get('scanning'):
+        status, message = 'loading', 'Scanning for Bluetooth devices…'
+    else:
+        rows = data.get('networks' if kind == 'connections' else 'devices', [])
+        if not rows:
+            status, message = 'empty', 'No networks found. Scan again.' if kind == 'connections' else 'No devices found. Scan to discover.'
+        elif not any(row.get('active' if kind == 'connections' else 'connected') for row in rows):
+            status, message = 'disconnected', 'Disconnected. Choose a network.' if kind == 'connections' else 'Disconnected. Choose a device.'
+        else:
+            status, message = 'ready', ''
+    data.update(status=status, message=message)
     if kind == 'audio': return data
     group = 'networks' if kind == 'connections' else 'devices'
     rows = data.get(group, [])
@@ -384,6 +407,10 @@ def main(args):
     configure()
     operation = args[0] if args else 'audio'
     if operation == 'listen': listen(args[1]);return
+    if operation == 'retry':
+        if len(args) != 2 or args[1] not in SERVICE_PAGES or args[1] == 'calendar':
+            raise ValueError('Invalid service.')
+        wake(args[1]);return
     if operation == 'diagnose': shell.main(['diagnose']);return
     if operation == 'prepare': shell.show('home', prewarm=True);return
     if operation == 'close': shell.close();return

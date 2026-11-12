@@ -71,8 +71,11 @@ static gboolean nav_key(GtkWidget *window,GdkEventKey *event) {
         return TRUE;
     }
     if(key!=GDK_KEY_Left&&key!=GDK_KEY_Right&&key!=GDK_KEY_Up&&key!=GDK_KEY_Down)return FALSE;
-    /* Native text editing and slider steps keep their own arrow semantics. */
-    if(GTK_IS_EDITABLE(focus)||GTK_IS_RANGE(focus))return FALSE;
+    /* Keep editing and slider-axis steps; perpendicular arrows leave the control. */
+    gboolean horizontal=key==GDK_KEY_Left||key==GDK_KEY_Right;
+    if(GTK_IS_EDITABLE(focus)&&horizontal)return FALSE;
+    if(GTK_IS_RANGE(focus)&&horizontal==
+       (gtk_orientable_get_orientation(GTK_ORIENTABLE(focus))==GTK_ORIENTATION_HORIZONTAL))return FALSE;
     GPtrArray *items=g_ptr_array_new();nav_collect(window,items,NULL);
     gint fx=0,fy=0;
     if(focus) {gtk_widget_translate_coordinates(focus,window,0,0,&fx,&fy);fx+=gtk_widget_get_allocated_width(focus)/2;fy+=gtk_widget_get_allocated_height(focus)/2;}

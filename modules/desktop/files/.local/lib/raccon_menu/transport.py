@@ -8,7 +8,7 @@ PAGES = {'home': '0', 'apps': '1', 'modes': '2', 'session': '3', 'audio': '4', '
 
 def source_revision(source):
     directory = os.path.dirname(source)
-    dependencies = [os.path.join(directory, name) for name in ('navigation.h', 'resident_surface.h', 'backend.py')]
+    dependencies = [os.path.join(directory, name) for name in ('navigation.h', 'resident_surface.h', 'soft_icons.h', 'popup_geometry.h', 'backend.py')]
     return str(max([os.stat(source).st_mtime_ns] + [os.stat(p).st_mtime_ns for p in dependencies if os.path.exists(p)]))
 
 

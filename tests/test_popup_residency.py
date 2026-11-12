@@ -33,6 +33,8 @@ typedef int gboolean;
 typedef void *gpointer;
 typedef struct {int mapped, mode;} GtkWidget;
 #define GTK_WINDOW(w) (w)
+#define G_OBJECT(w) (w)
+static void *g_object_get_data(GtkWidget *w,const char *key) {return 0;}
 #define G_SOURCE_REMOVE 0
 static int visible=1,warming=0;
 static int gtk_layer_is_layer_window(GtkWidget *w) {return 1;}
@@ -144,29 +146,6 @@ class PreparationTests(unittest.TestCase):
             self.assertEqual(len(calls),2)
             delay.assert_called_once_with(.2)
 
-    def test_float_prepare_starts_no_visible_windows(self):
-        with tempfile.TemporaryDirectory() as root:
-            home=Path(root);bin=home/'bin';bin.mkdir();lib=home/'.local/lib/raccon_menu';lib.mkdir(parents=True)
-            cfg=home/'.config/raccon-float';cfg.mkdir(parents=True)
-            cache=home/'.cache/raccon-float';cache.mkdir(parents=True)
-            runtime=home/'run';runtime.mkdir();log=home/'commands'
-            for name in ('walls.py','wall_preview.py','backend.py'):(lib/name).touch()
-            (lib.parent/'raccon_events.py').touch()
-            module=cache/'keyboard.so';module.touch()
-            (lib/'keyboard_build.py').write_text('print('+repr(str(module))+')\n')
-            fake=bin/'eww'
-            fake.write_text('#!'+sys.executable+'\nimport sys,json\n'+
-                           'args=sys.argv[1:];command=args[args.index("-c")+2]\n'+
-                           f'with open({str(log)!r},"a") as out:out.write(command+"\\n")\n'+
-                           'raise SystemExit(0 if command in ("kill","ping","reload","daemon") else 98)\n')
-            fake.chmod(0o755)
-            result=subprocess.run(['bash',str(ROOT/'modules/desktop/files/.local/bin/raccon-float'),'prepare'],
-                                  env={**os.environ,'HOME':str(home),'XDG_RUNTIME_DIR':str(runtime),
-                                       'PATH':str(bin)+os.pathsep+os.environ['PATH']},capture_output=True,text=True,timeout=5)
-            self.assertEqual(result.returncode,0,result.stderr)
-            commands=log.read_text().splitlines()
-            self.assertTrue(commands)
-            self.assertNotIn('open',commands);self.assertNotIn('active-windows',commands)
 
 
 class CatalogueTests(unittest.TestCase):

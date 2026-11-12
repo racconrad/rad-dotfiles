@@ -46,7 +46,7 @@ def get_tile_status():
     is_float = ws in floating
     # Format readable workspace numbers (e.g. 1:0:1 -> WS 2)
     return {
-        "text": "󰉈" if is_float else "󱂬",
+        "text": "\ueb19" if is_float else "\ueb06",
         "alt": "float" if is_float else "tile",
         "tooltip": f"Current workspace: {'Floating mode' if is_float else 'Tiled mode'}\nClick: Toggle mode",
         "class": "floating" if is_float else "tiled"

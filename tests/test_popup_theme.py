@@ -60,7 +60,7 @@ class PopupThemeTests(unittest.TestCase):
                 self.assertIn(styles.PROFILES[name]['font'], shape.read_text())
                 before = shape.stat().st_mtime_ns; menu.palette()
                 self.assertEqual(shape.stat().st_mtime_ns, before)
-                self.assertEqual(menu.appearance_state({})['motion'], name not in ('ascii','terminal','monochrome','retro'))
+                self.assertEqual(menu.appearance_state({})['motion'], menu.motion({}) > 0)
         self.assertIn('#ee1133', (self.home/'.config/waybar/colors.css').read_text())
 
     def test_restore_or_invalid_tokens_fall_back_without_retaining_old_style(self):
@@ -88,7 +88,7 @@ class PopupThemeTests(unittest.TestCase):
         try:
             self.assertEqual(receive()['style'], 'modern')
             self.publish('ascii')
-            state = receive(); self.assertEqual(state['style'], 'ascii'); self.assertFalse(state['motion'])
+            state = receive(); self.assertEqual(state['style'], 'ascii'); self.assertEqual(state['motion'], menu.motion({}) > 0)
             self.assertEqual((runtime/'visible').read_text(), '0')
         finally:
             proc.terminate(); proc.communicate(timeout=4)

@@ -55,13 +55,19 @@ int main(int argc, char **argv) {
         GtkWidget *audio = row("configuracion de audio");
         GtkWidget *brave = row("brave navegador");
         gtk_container_add(GTK_CONTAINER(list), audio);
-        gtk_container_add(GTK_CONTAINER(list), brave);
+        GtkWidget *brave_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+        gtk_style_context_add_class(gtk_widget_get_style_context(brave_row), "app-row");
+        gtk_container_add(GTK_CONTAINER(brave_row), brave);
+        GtkWidget *pin = gtk_button_new_with_label("Pin");
+        gtk_container_add(GTK_CONTAINER(brave_row), pin);
+        gtk_container_add(GTK_CONTAINER(list), brave_row);
         gtk_widget_show_all(root); /* The toplevel stays hidden throughout. */
         g_signal_connect(entry, "changed", G_CALLBACK(entry_changed), NULL);
         gtk_entry_set_text(GTK_ENTRY(entry), "AÚDIO configuración");
         g_assert_cmpuint(result_count, ==, 1);
         g_assert(gtk_widget_get_visible(audio));
         g_assert(!gtk_widget_get_visible(brave));
+        g_assert(!gtk_widget_get_visible(brave_row));
         g_assert(gtk_stack_get_visible_child(GTK_STACK(pages)) == list);
         entry_accept(GTK_ENTRY(entry), GTK_WINDOW(menu_window));
         g_assert_cmpuint(launches, ==, 1);
@@ -70,6 +76,8 @@ int main(int argc, char **argv) {
         entry_accept(GTK_ENTRY(entry), GTK_WINDOW(menu_window));
         g_assert_cmpuint(launches, ==, 1);
         gtk_entry_set_text(GTK_ENTRY(entry), "");
+        g_assert(gtk_widget_get_visible(brave_row));
+        g_assert(gtk_widget_get_visible(pin));
         g_assert(gtk_stack_get_visible_child(GTK_STACK(pages)) == home);
         gtk_window_set_focus(GTK_WINDOW(menu_window), brave);
         GdkEventKey event = {0}; event.keyval = GDK_KEY_b;
@@ -97,6 +105,44 @@ int main(int argc, char **argv) {
         }
         select_page(0);
         g_assert(!gtk_revealer_get_reveal_child(GTK_REVEALER(side)));
+        /* File icons keep their fixed slot without losing custom app artwork. */
+        GtkWidget *icon_button = gtk_button_new();
+        gtk_style_context_add_class(gtk_widget_get_style_context(icon_button), "app-launch");
+        GtkWidget *icon_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+        gtk_container_add(GTK_CONTAINER(icon_button), icon_row);
+        gchar *icon_file = g_build_filename(runtime_dir, "icon.png", NULL);
+        GdkPixbuf *large_icon = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, 256, 128);
+        gdk_pixbuf_fill(large_icon, 0xffffffff);
+        g_assert(gdk_pixbuf_save(large_icon, icon_file, "png", NULL, NULL));
+        g_object_unref(large_icon);
+        GtkWidget *icon_key = gtk_label_new(icon_file);
+        gtk_style_context_add_class(gtk_widget_get_style_context(icon_key), "file-key");
+        gtk_container_add(GTK_CONTAINER(icon_row), icon_key);
+        GtkWidget *slot = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+        gtk_container_add(GTK_CONTAINER(icon_row), slot);
+        GtkWidget *app_image = gtk_image_new_from_icon_name("application-x-executable", GTK_ICON_SIZE_LARGE_TOOLBAR);
+        gtk_style_context_add_class(gtk_widget_get_style_context(app_image), "app-icon");
+        gtk_container_add(GTK_CONTAINER(slot), app_image);
+        GValue icon_value = G_VALUE_INIT;
+        g_value_init(&icon_value, GTK_TYPE_WIDGET); g_value_set_object(&icon_value, app_image);
+        mapped(NULL, 1, &icon_value, NULL);
+        g_assert(gtk_image_get_storage_type(GTK_IMAGE(app_image)) == GTK_IMAGE_PIXBUF);
+        GdkPixbuf *small_icon = gtk_image_get_pixbuf(GTK_IMAGE(app_image));
+        g_assert_cmpint(gdk_pixbuf_get_width(small_icon), ==, 24);
+        g_assert_cmpint(gdk_pixbuf_get_height(small_icon), ==, 12);
+        gtk_style_context_remove_class(gtk_widget_get_style_context(icon_button), "app-launch");
+        gtk_style_context_add_class(gtk_widget_get_style_context(icon_button), "daily-app");
+        gtk_style_context_remove_class(gtk_widget_get_style_context(app_image), "app-icon");
+        gtk_style_context_add_class(gtk_widget_get_style_context(app_image), "daily-icon");
+        g_object_set_data(G_OBJECT(app_image), "file-icon", NULL);
+        gtk_image_set_from_icon_name(GTK_IMAGE(app_image), "application-x-executable", GTK_ICON_SIZE_DND);
+        mapped(NULL, 1, &icon_value, NULL);
+        g_assert(gtk_image_get_storage_type(GTK_IMAGE(app_image)) == GTK_IMAGE_PIXBUF);
+        small_icon = gtk_image_get_pixbuf(GTK_IMAGE(app_image));
+        g_assert_cmpint(gdk_pixbuf_get_width(small_icon), ==, 32);
+        g_assert_cmpint(gdk_pixbuf_get_height(small_icon), ==, 16);
+        g_value_unset(&icon_value); gtk_widget_destroy(icon_button);
+        unlink(icon_file); g_free(icon_file);
         /* User slider changes win over a stale provider value; never run pactl. */
         GtkWidget *slider = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 0, 100, 1);
         Volume *volume = &volumes[0];
@@ -174,6 +220,19 @@ int main(int argc, char **argv) {
         g_assert(strstr(received, "second fixture") != NULL);
         g_free(received); unlink(receipt); g_free(receipt); unlink(backend); g_free(backend); backend = NULL;
         g_value_unset(&password_value);
+        visible = TRUE; super_down = TRUE; super_used = FALSE;
+        GtkWidget *click_target = gtk_button_new();
+        GValue click_target_value = G_VALUE_INIT;
+        g_value_init(&click_target_value, GTK_TYPE_WIDGET);
+        g_value_set_object(&click_target_value, click_target);
+        mapped(NULL, 1, &click_target_value, NULL);
+        GdkEventButton button = {0}; button.type = GDK_BUTTON_PRESS;
+        gboolean handled = FALSE;
+        g_signal_emit_by_name(click_target, "button-press-event", &button, &handled);
+        event.keyval = GDK_KEY_Super_L; event.type = GDK_KEY_RELEASE;
+        key_release(menu_window, &event, NULL);
+        g_assert(visible);
+        g_value_unset(&click_target_value); gtk_widget_destroy(click_target);
         simple_pages = FALSE;
         /* Eww maps a replacement before destroying the old theme window. */
         GtkWidget *previous = menu_window;

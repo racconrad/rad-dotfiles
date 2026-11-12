@@ -1,0 +1,31 @@
+/* Keep interaction feedback after theme overrides, without resizing the bar. */
+window#waybar .modules-left,
+window#waybar .modules-right,
+window#waybar #taskbar {
+  transition: opacity 240ms ease-out, background-color 160ms ease-out;
+}
+
+window#waybar label.module,
+window#waybar #workspaces button,
+window#waybar #taskbar button {
+  transition: background-color 160ms ease-out, color 160ms ease-out,
+    opacity 160ms ease-out, -gtk-icon-transform 160ms cubic-bezier(.22, 1, .36, 1);
+}
+
+window#waybar #custom-launcher:hover,
+window#waybar #custom-power:hover,
+window#waybar #custom-music-play:hover,
+window#waybar #custom-hardware-toggle:hover {
+  -gtk-icon-transform: scale(1.10);
+}
+
+window#waybar #workspaces button:focus,
+window#waybar #taskbar button:focus {
+  box-shadow: inset 0 0 0 2px @primary;
+}
+
+/* The generated theme can otherwise reset icon transforms on every child. */
+window#waybar #taskbar button:hover { -gtk-icon-transform: scale(1.12); }
+window#waybar #taskbar button.active { -gtk-icon-transform: scale(1.06); }
+window#waybar #taskbar button.active:hover { -gtk-icon-transform: scale(1.16); }
+window#waybar #taskbar button:active { -gtk-icon-transform: scale(.94); }

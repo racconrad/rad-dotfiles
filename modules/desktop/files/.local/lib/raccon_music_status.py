@@ -22,7 +22,7 @@ TIPS = dict(open='Show music player', prev='Previous',
 
 
 def snapshot(status, card_open):
-    icons = dict(open='󰝚', prev='󰒮', play='󰏤' if status == 'Playing' else '󰐊', next='󰒭')
+    icons = dict(open='\ueb3b', prev='\ueba4', play='\ueb4b' if status == 'Playing' else '\ueb68', next='\ueba6')
     active = status in ('Playing', 'Paused') and not card_open
     return {mode: dict(text=icon, tooltip=TIPS[mode], **{'class': status.lower()})
             if active else dict(text='') for mode, icon in icons.items()}

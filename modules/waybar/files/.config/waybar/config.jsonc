@@ -72,11 +72,11 @@
     ]
   },
   "custom/hardware-toggle": {
-    "exec": "printf '󰒓'",
+    "exec": "printf '\ueb91'",
     "interval": "once",
     "format": "{}",
     "tooltip": true,
-    "tooltip-format": "Hardware · click to show or hide"
+    "tooltip-format": "Hardware \u00b7 click to show or hide"
   },
   "custom/ws1": {
     "exec": "~/.local/bin/wf-ws-label 1",
@@ -86,7 +86,7 @@
     "on-click": "~/.local/bin/wf-ws goto 1"
   },
   "custom/workspace-base": {
-    "exec": "printf '󰍹'",
+    "exec": "printf '\ueb31'",
     "interval": "once",
     "format": "{}",
     "tooltip": true,
@@ -216,11 +216,11 @@
   },
   "wireplumber": {
     "format": "{icon}  {volume}%",
-    "format-muted": "󰝟",
+    "format-muted": "\uebe2",
     "format-icons": [
-      "󰕿",
-      "󰖀",
-      "󰕾"
+      "\uebe0",
+      "\uebe0",
+      "\uebe6"
     ],
     "on-click": "~/.local/bin/desktop-panel audio",
     "on-click-right": "pavucontrol",
@@ -228,60 +228,62 @@
     "on-scroll-down": "swayosd-client --output-volume lower",
     "max-volume": 150,
     "on-click-middle": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
-    "tooltip-format": "Volume: {volume}% · click: audio devices and settings"
+    "tooltip-format": "Volume: {volume}% \u00b7 click: audio devices and settings"
   },
   "network": {
-    "format-wifi": "󰤨  {signalStrength}%",
-    "format-ethernet": "󰈀",
-    "format-disconnected": "󰤭",
-    "tooltip-format-wifi": "{essid} · {ipaddr}\nClick: Wi-Fi",
-    "tooltip-format-ethernet": "{ifname} · {ipaddr}",
+    "format-wifi": "\uebea  {signalStrength}%",
+    "format-ethernet": "\ueb31",
+    "format-disconnected": "\uebe9",
+    "tooltip-format-wifi": "{essid} \u00b7 {ipaddr}\nClick: Wi-Fi",
+    "tooltip-format-ethernet": "{ifname} \u00b7 {ipaddr}",
     "on-click": "~/.local/bin/desktop-panel connections",
-    "tooltip-format-disconnected": "Disconnected · click to view networks"
+    "tooltip-format-disconnected": "Disconnected \u00b7 click to view networks"
   },
   "cpu": {
-    "format": "󰻠 {usage}%",
+    "format": "\uea02 {usage}%",
     "interval": 3,
-    "tooltip-format": "CPU · {usage}% · click: btop",
+    "tooltip-format": "CPU \u00b7 {usage}% \u00b7 click: btop",
     "on-click": "kitty -e btop"
   },
   "memory": {
-    "format": "󰍛 {percentage}%",
+    "format": "\ueaf1 {percentage}%",
     "interval": 5,
-    "tooltip-format": "RAM · {used:0.1f} / {total:0.1f} GiB"
+    "tooltip-format": "RAM \u00b7 {used:0.1f} / {total:0.1f} GiB"
   },
   "custom/power": {
-    "format": "⏻",
+    "format": "\ueb70",
     "tooltip": true,
-    "tooltip-format": "Session · lock, exit, reboot or power off",
+    "tooltip-format": "Session \u00b7 lock, exit, reboot or power off",
     "on-click": "~/.local/bin/raccon-float session"
   },
   "custom/launcher": {
-    "format": "Menu",
+    "format": "\ueaef Menu",
     "tooltip": true,
-    "tooltip-format": "Raccon · Super to open\nRight click: pick wallpaper",
+    "tooltip-format": "Raccon \u00b7 Super to open\nRight click: pick wallpaper",
     "on-click": "~/.local/bin/desktop-menu",
     "on-click-right": "~/.local/bin/wallpaper-pick"
   },
   "temperature": {
-    "format": "󰔄 {temperatureC}°",
+    "format": "\uebc0 {temperatureC}\u00b0",
     "critical-threshold": 85,
-    "interval": 5
+    "interval": 5,
+    "tooltip": true,
+    "tooltip-format": "Temperature: {temperatureC}\u00b0C"
   },
   "disk#root": {
-    "format": "󰋊 / {percentage_used}%",
+    "format": "\ueaf1 / {percentage_used}%",
     "path": "/",
     "interval": 60,
-    "tooltip-format": "/ · {used} used / {total}"
+    "tooltip-format": "/ \u00b7 {used} used / {total}"
   },
   "disk#home": {
-    "format": "󰋜 {percentage_used}%",
+    "format": "\ueaf9 {percentage_used}%",
     "path": "@RDOT_HOME@",
     "interval": 60,
-    "tooltip-format": "Home · {used} usados / {total}"
+    "tooltip-format": "Home \u00b7 {used} used / {total}"
   },
   "custom/updates": {
-    "format": "󰚰 {}",
+    "format": "\ueab0 {}",
     "return-type": "json",
     "exec": "~/.local/bin/raccon-update check",
     "interval": 7200,
@@ -292,8 +294,8 @@
   "idle_inhibitor": {
     "format": "{icon}",
     "format-icons": {
-      "activated": "󰅶",
-      "deactivated": "󰾪"
+      "activated": "\uebb6",
+      "deactivated": "\ueb33"
     },
     "tooltip-format-activated": "Keep awake: ON",
     "tooltip-format-deactivated": "Keep awake: OFF"
@@ -301,22 +303,26 @@
   "backlight": {
     "format": "{icon} {percent}%",
     "format-icons": [
-      "󰃞",
-      "󰃟",
-      "󰃠"
+      "\uebb6",
+      "\uebb6",
+      "\uebb6"
     ],
     "on-scroll-up": "swayosd-client --brightness raise",
-    "on-scroll-down": "swayosd-client --brightness lower"
+    "on-scroll-down": "swayosd-client --brightness lower",
+    "tooltip": true,
+    "tooltip-format": "Brightness: {percent}% \u00b7 scroll to adjust"
   },
   "bluetooth": {
-    "format": "󰂯",
+    "format": "\uea48",
     "format-off": "",
-    "format-connected": "󰂱 {num_connections}",
+    "format-connected": "\uea48 {num_connections}",
     "tooltip-format-connected": "{device_enumerate}",
     "tooltip-format-enumerate-connected": "{device_alias} {device_battery_percentage}%",
     "on-click": "~/.local/bin/desktop-panel bluetooth",
     "format-disabled": "",
-    "format-no-controller": ""
+    "format-no-controller": "",
+    "tooltip": true,
+    "tooltip-format": "Bluetooth \u00b7 click to manage devices"
   },
   "exclusive": true,
   "wlr/taskbar": {
@@ -333,23 +339,23 @@
   "custom/desktop-mode": {
     "exec": "~/.local/bin/desktop-power watch",
     "return-type": "json",
-    "format": "{text}  {icon}",
+    "format": "{text}\u2002\u2002{icon}",
     "tooltip": true,
     "on-click-right": "~/.local/bin/desktop-menu modes",
     "exec-on-event": false,
     "cursor": true,
     "on-click": "~/.local/bin/desktop-menu modes",
     "format-icons": {
-      "performance": "󰾆",
-      "balanced": "󰾅",
-      "complete": "󰓅",
-      "working": "󰲋",
-      "applying-0": "◴",
-      "applying-1": "◷",
-      "applying-2": "◶",
-      "applying-3": "◵",
+      "performance": "\uead6",
+      "balanced": "\ueb91",
+      "complete": "\uebb6",
+      "working": "\ueb31",
+      "applying-0": "\ueb82",
+      "applying-1": "\ueb82",
+      "applying-2": "\ueb82",
+      "applying-3": "\ueb82",
       "default": "",
-      "auto": "󰁪"
+      "auto": "\ueb92"
     }
   }
 }

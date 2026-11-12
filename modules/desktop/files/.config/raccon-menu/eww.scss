@@ -25,7 +25,9 @@ button:disabled { opacity: .5; }
 .daily-app image { color: $primary; transition: -gtk-icon-transform 140ms ease-out; }
 .daily-app:hover image { -gtk-icon-transform: scale(1.09); }
 .daily-app label { font-size: 12px; font-weight: 500; }
-.app-launch { padding: 10px; }
+.app-launch { min-height: 28px; padding: 8px 10px; }
+.app-icon-slot, .app-icon { min-width: 24px; min-height: 24px; }
+.app-name { font-size: 13px; }
 .app-launch.first-match { background: rgba($primary, .12); }
 .app-launch image { color: $primary; }
 .no-results { padding: 18px 4px; }
@@ -64,22 +66,20 @@ scrollbar slider { min-width: 4px; border-radius: 8px; background: rgba($seconda
 .dock-right .side-panel { margin-left: 0; margin-right: 4px; }
 
 
-/* Motion layer, after the theme import on purpose: styles such as Terminal set `transition: none` on
-   popup buttons and panels, which made every hover snap. input.c adds `enter` (start pose) for one
-   frame and `entering` (stagger delays) for the length of the entrance; `.still` keeps it all off. */
+/* Theme overrides must not suppress interaction feedback. */
 $ease: cubic-bezier(.22, 1, .36, 1);
 $spring: cubic-bezier(.22, 1, .36, 1);
-.popup.motion button { transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out; }
-.popup.motion .daily-app { transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out,
+.popup.motion button { transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; }
+.popup.motion .daily-app { transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out,
   opacity 260ms ease-out; }
-.popup.motion .daily-app image { transition: -gtk-icon-transform 420ms $spring; }
+.popup.motion .daily-app image { transition: -gtk-icon-transform 160ms $spring; }
 .popup.motion .daily-app:hover image { -gtk-icon-transform: scale(1.08); }
 .popup.motion .daily-app:active image { -gtk-icon-transform: scale(.88); transition-duration: 90ms; }
-.popup.motion .nav-tab image, .popup.motion .quick image, .popup.motion .close image { transition: -gtk-icon-transform 360ms $spring; }
+.popup.motion .nav-tab image, .popup.motion .quick image, .popup.motion .close image { transition: -gtk-icon-transform 160ms $spring; }
 .popup.motion .nav-tab:hover image, .popup.motion .quick:hover image { -gtk-icon-transform: scale(1.06); }
 .popup.motion .close:hover image { -gtk-icon-transform: scale(1.06); }
-.popup.motion .app-launch image { transition: -gtk-icon-transform 300ms $spring; }
-.popup.motion .app-launch:hover image, .popup.motion .app-launch.first-match image { -gtk-icon-transform: scale(1.15); }
+.popup.motion .app-launch image { transition: -gtk-icon-transform 160ms $spring; }
+.popup.motion .app-launch:hover image, .popup.motion .app-launch.first-match image { -gtk-icon-transform: scale(1.03); }
 .popup.motion .header, .popup.motion .search-bar, .popup.motion .utilities, .popup.motion .navigation {
   transition: opacity 240ms ease-out; }
 /* Shared interaction rhythm with the floating wallpaper/session cards. */
@@ -88,14 +88,14 @@ $spring: cubic-bezier(.22, 1, .36, 1);
 }
 .popup.motion .session-choice:hover image, .popup.motion .mode-row:hover image { -gtk-icon-transform: scale(1.12); }
 .popup.motion button:active image { -gtk-icon-transform: scale(.92); transition-duration: 90ms; }
-.popup.motion .search-bar image { transition: -gtk-icon-transform 350ms $spring; }
+.popup.motion .search-bar image { transition: -gtk-icon-transform 160ms $spring; }
 .popup.motion .search-bar:hover image { -gtk-icon-transform: scale(1.06); }
 @keyframes menu-select {
   0% { -gtk-icon-transform: scale(.82) rotate(-8deg); }
   65% { -gtk-icon-transform: scale(1.2) rotate(3deg); }
   100% { -gtk-icon-transform: scale(1); }
 }
-.popup.motion .nav-tab.current image { animation: none; }
+.popup.motion .nav-tab.current image { animation: menu-select 240ms ease-out 1; }
 .popup.still, .popup.still * { transition: none; animation: none; -gtk-icon-transform: none; }
 
 .popup button:focus { box-shadow: inset 0 0 0 2px $outline_variant; }
@@ -136,3 +136,21 @@ $spring: cubic-bezier(.22, 1, .36, 1);
 .popup button.calendar-day.selected label { color: $on_primary; text-decoration-color: $on_primary; }
 .popup .calendar-entry { background: $surface_container_highest; padding: 8px; }
 .popup .agenda-scroll { min-height: 100px; }
+
+.home-edit { padding: 8px; color: $on_surface_variant; }
+.home-edit.active, .app-pin.pinned { color: $primary; background: rgba($primary, .12); }
+.home-edit-panel { padding-top: 8px; border-top: 1px solid rgba($outline_variant, .4); }
+.home-edit-controls button { padding: 5px 3px; min-width: 20px; min-height: 20px; }
+.home-edit-controls .home-remove:hover { color: $error; background: rgba($error, .1); }
+.home-tile { min-width: 0; }
+.home-empty { padding: 12px 0; }
+.shortcut-add { padding: 8px 4px; }
+.shortcut-add label { font-size: 11px; }
+.edit-apps { background: rgba($primary, .08); }
+.app-row { min-height: 44px; }
+.app-pin { padding: 8px; min-width: 22px; }
+
+.app-category { font-size: 11px; }
+.recent-apps { padding-top: 8px; border-top: 1px solid rgba($outline_variant, .4); }
+.recent-list button { min-width: 24px; min-height: 24px; padding: 8px; }
+.recent-toggle, .recent-clear { padding: 6px 8px; }

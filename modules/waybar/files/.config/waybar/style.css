@@ -4,7 +4,7 @@
 @import "islands.css";
 
 * {
-  font-family: "Inter", "JetBrainsMono Nerd Font Propo", sans-serif;
+  font-family: "Inter", "Eva-Icons", "JetBrainsMono Nerd Font Propo", sans-serif;
   font-size: 13px;
   font-weight: 500;
   min-height: 0;
@@ -78,12 +78,10 @@ tooltip label {
   transition: all 180ms cubic-bezier(0.25, 1, 0.4, 1);
 }
 
-/* Hover: app scales up dynamically with bouncy spring physics */
+/* Paint-only feedback preserves the pointer target. */
 #taskbar button:hover {
   background-color: alpha(@primary, 0.15);
   -gtk-icon-transform: scale(1.26);
-  margin: 0px 4px;
-  padding: 4px 10px;
   border-bottom: 2px solid alpha(@primary, 0.6);
 }
 
@@ -98,8 +96,6 @@ tooltip label {
   background-color: alpha(@primary, 0.28);
   border-bottom: 2px solid @primary;
   -gtk-icon-transform: scale(1.32);
-  margin: 0px 5px;
-  padding: 4px 11px;
 }
 
 #taskbar button.minimized {
@@ -115,7 +111,7 @@ tooltip label {
 
 /* ---------- Left island ---------- */
 #custom-launcher {
-  font-family: "JetBrainsMono Nerd Font Propo";
+  font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo";
   font-size: 19px;
   min-width: 26px;
   color: @primary;
@@ -137,7 +133,7 @@ tooltip label {
 }
 
 #workspaces button {
-  font-family: "JetBrainsMono Nerd Font Propo";
+  font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo";
   font-size: 12px;
   font-weight: 700;
   color: @outline;
@@ -166,7 +162,7 @@ tooltip label {
 }
 
 #custom-workspace-base {
-  font-family: "JetBrainsMono Nerd Font Propo";
+  font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo";
   font-size: 16px;
   color: @primary;
   padding: 0 8px 0 10px;
@@ -183,7 +179,7 @@ tooltip label {
 }
 
 #custom-hardware-toggle {
-  font-family: "JetBrainsMono Nerd Font Propo";
+  font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo";
   font-size: 16px;
   color: @primary;
   padding: 0 8px;
@@ -258,7 +254,7 @@ tooltip label {
 #temperature,
 #disk,
 #custom-updates {
-  font-family: "JetBrainsMono Nerd Font Propo", "Inter";
+  font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo", "Inter";
 }
 
 #idle_inhibitor,
@@ -279,7 +275,7 @@ tooltip label {
 #custom-music-prev,
 #custom-music-play,
 #custom-music-next {
-  font-family: "JetBrainsMono Nerd Font Propo", "Inter";
+  font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo", "Inter";
   font-size: 15px;
   padding: 0 6px;
   color: @on_surface_variant;
@@ -369,7 +365,7 @@ tooltip label {
 
 /* Custom workspace buttons (custom/ws1..ws10, see wf-ws-watch): same look as #workspaces button */
 #custom-ws1, #custom-ws2, #custom-ws3, #custom-ws4, #custom-ws5, #custom-ws6, #custom-ws7, #custom-ws8, #custom-ws9, #custom-ws10 {
-  font-family: "JetBrainsMono Nerd Font Propo";
+  font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo";
   font-size: 12px;
   font-weight: 700;
   color: @outline;
@@ -461,29 +457,6 @@ window#waybar #custom-desktop-mode.applying {
 
 @import "@RDOT_HOME@/.config/desktop-style/current/waybar.css";
 
-/* Quick terminal: filled underline = visible, quiet underline = running hidden. */
-#custom-quick-terminal,
-#custom-quick-terminal-hide,
-#custom-quick-terminal-close {
-  font-family: "JetBrainsMono Nerd Font Propo";
-  font-size: 17px;
-  min-width: 28px;
-  padding: 0 4px;
-  border-bottom: 2px solid transparent;
-  color: @on_surface_variant;
-}
-#custom-quick-terminal.visible {
-  color: @primary;
-  border-bottom-color: @primary;
-}
-#custom-quick-terminal.hidden {
-  color: @primary;
-  border-bottom-color: transparent;
-}
-#custom-quick-terminal-hide:hover,
-#custom-quick-terminal:hover { color: @primary; }
-#custom-quick-terminal-close:hover { color: @error; }
-
-#custom-quick-terminal.visible { background-color: transparent; border-bottom-width: 1px; }
-
 @import "orientation.css";
+
+@import "motion.css";

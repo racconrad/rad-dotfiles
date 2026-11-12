@@ -16,7 +16,7 @@ def send(args):
             if json.loads((home/'.config/desktop-style/selector.json').read_text()).get('backend')=='rofi':return False
         except (OSError,ValueError):pass
         sources=[here/'selector_input.c',here.parent/'raccon_menu/navigation.h']
-        sources.extend(p for p in (here.parent/'raccon_menu/resident_surface.h',) if p.is_file())
+        sources.extend(p for p in (here.parent/'raccon_menu/resident_surface.h',here.parent/'raccon_menu/soft_icons.h',here.parent/'raccon_menu/popup_geometry.h') if p.is_file())
         revision=str(max(p.stat().st_mtime_ns for p in sources))
         if (root/'revision').read_text().strip()!=revision or not (root/'mapped').exists():return False
         fd=os.open(root/'control',os.O_WRONLY|os.O_NONBLOCK|os.O_NOFOLLOW)

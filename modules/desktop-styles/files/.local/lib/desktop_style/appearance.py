@@ -130,7 +130,7 @@ tooltip label {{ padding: 0; }}
 {root} .gen-title, {root} .pl-title {{ color: {accent}; }}
 '''
 
-    bar=f'window#waybar, window#waybar * {{ font-family: "{font}", "JetBrainsMono Nerd Font Propo", sans-serif; }}\n'
+    bar=f'window#waybar, window#waybar * {{ font-family: "{font}", "Eva-Icons", "JetBrainsMono Nerd Font Propo", sans-serif; }}\n'
     bar+=panel('window#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar')
     bar+='window#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar { padding: 0 6px; }\n'
     chips=['clock','hardware','workspaces','custom-workspace-base','cpu','memory','temperature','disk','network','bluetooth','wireplumber','backlight','idle_inhibitor','custom-desktop-mode','custom-notification','custom-power','custom-updates','custom-hardware-toggle','tray','custom-music-open','custom-music-prev','custom-music-play','custom-music-next','battery','power-profiles-daemon']+[f'custom-ws{i}' for i in range(1,11)]

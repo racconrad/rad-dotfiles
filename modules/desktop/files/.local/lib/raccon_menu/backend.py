@@ -46,6 +46,9 @@ _daemon_process = None
 sys.path.insert(0, str(HERE))
 from transport import send as native_send, source_revision
 import positioning
+import home_apps
+import recent_apps
+import search_catalogue
 # Providers may import GTK for accessibility settings; they must not load Eww's
 # visibility adapter or compete for its FIFO. Only ensure_daemon adds it back.
 if os.environ.get('RACCON_MENU_CONFIG'):
@@ -134,7 +137,7 @@ def normalize(text):
 
 
 def applications():
-    from gi.repository import Gio
+    from gi.repository import Gio, GLib
     apps = []
     for app in Gio.AppInfo.get_all():
         app_id = app.get_id()
@@ -144,10 +147,19 @@ def applications():
         names = icon.get_names() if isinstance(icon, Gio.ThemedIcon) else []
         filename = icon.get_file().get_path() if isinstance(icon, Gio.FileIcon) else ''
         has_file = bool(filename and Path(filename).is_file())
+        name = app.get_display_name()
+        if isinstance(app, Gio.DesktopAppInfo):
+            name = app.get_string('Name') or name
+            entry = GLib.KeyFile()
+            try:
+                entry.load_from_file(app.get_filename(), GLib.KeyFileFlags.KEEP_TRANSLATIONS)
+                name = entry.get_locale_string('Desktop Entry', 'Name', 'en') or name
+            except (GLib.Error, TypeError):
+                pass
         apps.append(dict(id=app_id, token=hashlib.sha256(app_id.encode()).hexdigest(),
-            name=app.get_display_name(), icon=names[0] if names else 'application-x-executable',
+            name=name, icon=names[0] if names else 'application-x-executable',
             file=filename if has_file else str(CONFIG / 'assets/empty.svg'), has_file=has_file,
-            search=normalize(app.get_display_name() + ' ' + (app.get_description() or ''))))
+            search=normalize(name + ' ' + app.get_display_name() + ' ' + (app.get_description() or ''))))
     apps.sort(key=lambda a: normalize(a['name']))
     write(STATE / 'apps.json', json.dumps(apps, ensure_ascii=False))
     return apps
@@ -167,7 +179,7 @@ def cached_applications():
 def load_apps():
     # The resident GTK list is filtered locally, never replaced per keystroke.
     catalog = cached_applications()
-    update(catalogue=dict(apps=catalog, favorites=daily_apps(catalog)), apps_loading=False)
+    update(catalogue=catalogue(catalog), apps_loading=False)
 
 
 def watch_catalogue():
@@ -175,19 +187,21 @@ def watch_catalogue():
     from gi.repository import Gio, GLib
     previous = None
     pending = 0
+    current = read(STATE/'apps.json', [])
 
     def emit(catalog):
         nonlocal previous
-        value = json.dumps(dict(apps=catalog, favorites=daily_apps(catalog)), ensure_ascii=False)
+        value = json.dumps(catalogue(catalog), ensure_ascii=False)
         if value != previous:
             print(value, flush=True)
             previous = value
 
     def refresh():
-        nonlocal pending
+        nonlocal pending, current
         pending = 0
         try:
-            emit(applications())  # Enumerating also rearms AppInfoMonitor.
+            current = applications()  # Enumerating also rearms AppInfoMonitor.
+            emit(current)
         except (OSError, RuntimeError) as exc:
             print('Raccon catalogue: '+str(exc), file=sys.stderr)
         return GLib.SOURCE_REMOVE
@@ -197,28 +211,30 @@ def watch_catalogue():
         if not pending:
             pending = GLib.timeout_add(150, refresh)
 
+    def preferences_changed(_monitor, path, other, _event):
+        names = {item.get_basename() for item in (path, other) if item is not None}
+        if names & {'home-apps.json', 'favorites.json', 'recent-apps.json'}:
+            emit(current)
+
+    STATE.mkdir(parents=True, exist_ok=True)
+    preferences = Gio.File.new_for_path(str(STATE)).monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, None)
+    preferences.connect('changed', preferences_changed)
     monitor = Gio.AppInfoMonitor.get()
     monitor.connect('changed', changed)
-    emit(read(STATE/'apps.json', []))
+    emit(current)
     pending = GLib.idle_add(refresh)
     GLib.MainLoop().run()
 
 
+def catalogue(catalog):
+    value = home_apps.presentation(STATE, catalog)
+    value['search'] = search_catalogue.rows(value['apps'])
+    value.update(recent_apps.presentation(STATE, catalog))
+    return value
+
+
 def daily_apps(catalog):
-    items = [dict(name='Browser', icon='web-browser', action='shortcut', value='browser'),
-             dict(name='Files', icon='system-file-manager', action='shortcut', value='files'),
-             dict(name='Terminal', icon='utilities-terminal', action='shortcut', value='terminal')]
-    # Each user's own favourite apps live in local state, never in the dots.
-    preferred = read(STATE/'favorites.json', [])
-    preferred = [app_id for app_id in preferred if isinstance(app_id, str)] if isinstance(preferred, list) else []
-    by_id = {app['id']: app for app in catalog}
-    for app_id in preferred:
-        app = by_id.get(app_id)
-        if app:
-            items.append(dict(name=app['name'], icon=app['icon'], action='launch', value=app['token']))
-        if len(items) == 6:
-            break
-    return [items[i:i + 3] for i in range(0, len(items), 3)]
+    return catalogue(catalog)['favorites']
 
 
 @lru_cache(maxsize=1)
@@ -252,6 +268,12 @@ def identity():
 def filter_apps(query):
     words = normalize(query).split()
     return [app for app in read(STATE / 'apps.json', []) if all(word in app['search'] for word in words)]
+
+
+def filter_search(query):
+    words = normalize(query).split()
+    rows = search_catalogue.rows(read(STATE / 'apps.json', []))
+    return [row for row in rows if all(word in normalize(row['search']) for word in words)]
 
 
 def appearance_tokens():
@@ -333,7 +355,7 @@ def appearance_state(status=None):
     strict = tokens.get('strict') is True or style in ('ascii', 'monochrome', 'terminal', 'retro')
     factor = motion(read(POWER / 'status.json') if status is None else status)
     return dict(style=style, ascii=style == 'ascii', strict=strict,
-                motion=factor > 0 and not strict, duration=f'{round(240 * factor)}ms')
+                motion=factor > 0, duration=f'{round(240 * factor)}ms')
 
 
 def listen_appearance():
@@ -475,7 +497,7 @@ def initial_values(page, active):
     if cached_desktop:values['desktop']=cached_desktop
     if not active:
         catalog = read(STATE / 'apps.json', [])
-        values.update(catalogue=dict(apps=catalog, favorites=daily_apps(catalog)), apps_loading=False, busy=False)
+        values.update(catalogue=catalogue(catalog), apps_loading=False, busy=False)
     return values
 
 
@@ -602,7 +624,11 @@ def launch_app(token):
     if app is None:
         raise ValueError('App is no longer installed.')
     close()
-    app.launch([], Gio.AppLaunchContext())
+    if app.launch([], Gio.AppLaunchContext()):
+        try:
+            recent_apps.record(STATE, item['id'])
+        except (OSError, ValueError) as exc:
+            print('Raccon recent apps: ' + str(exc), file=sys.stderr)
 
 
 def shortcut(name):
@@ -615,6 +641,11 @@ def shortcut(name):
         raise ValueError('Invalid shortcut.')
     close()
     subprocess.Popen(commands[name], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if 'shortcut:' + name in home_apps.SHORTCUTS:
+        try:
+            recent_apps.record(STATE, 'shortcut:' + name)
+        except (OSError, ValueError) as exc:
+            print('Raccon recent apps: ' + str(exc), file=sys.stderr)
 
 
 def session_action(action):
@@ -639,7 +670,7 @@ def main(args):
     elif command == 'listen-appearance': listen_appearance()
     elif command == 'catalogue':
         catalog = cached_applications()
-        print(json.dumps(dict(apps=catalog, favorites=daily_apps(catalog)), ensure_ascii=False))
+        print(json.dumps(catalogue(catalog), ensure_ascii=False))
     elif command == 'watch-catalogue': watch_catalogue()
     elif command == 'palette': palette()
     elif command == 'diagnose':
@@ -667,15 +698,32 @@ def main(args):
             print(log.read_text()[-2500:])
     elif command == 'query':
         query = args[1] if len(args) > 1 else ''
-        write(STATE / 'query.json', json.dumps(query))
-        results = filter_apps(query)
+        results = filter_search(query)
         update(apps=results, query_empty=not bool(results))
     elif command == 'apply': apply_mode()
     elif command == 'launch': launch_app(args[1])
+    elif command == 'search-action':
+        if len(args) != 2:
+            raise ValueError('Invalid search action.')
+        main(search_catalogue.resolve(args[1]))
+    elif command == 'recent':
+        if len(args) != 2:
+            raise ValueError('Invalid recent applications arguments.')
+        recent_apps.edit(STATE, args[1])
+        try:
+            update(error='')
+        except (OSError, RuntimeError, subprocess.TimeoutExpired):
+            pass
+    elif command == 'favorite':
+        home_apps.edit(STATE, cached_applications(), args[1:])
+        try:
+            update(error='')
+        except (OSError, RuntimeError, subprocess.TimeoutExpired):
+            pass
     elif command == 'launch-first':
-        results = filter_apps(args[1] if len(args) > 1 else '')
+        results = filter_search(args[1] if len(args) > 1 else '')
         if results:
-            launch_app(results[0]['token'])
+            main([results[0]['action'], results[0]['value']])
     elif command == 'shortcut': shortcut(args[1])
     elif command == 'control-action':
         os.execv(sys.executable, [sys.executable, str(HERE / 'panels.py'), *args[1:]])

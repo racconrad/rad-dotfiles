@@ -6,17 +6,16 @@
   "python3 $HOME/.local/lib/raccon_menu/music.py")
 
 (defvar music_open false)
+(defvar card_visible false)
 (deflisten desktop :initial '{"style":"original","motion":true}'
   "python3 $HOME/.local/lib/raccon_menu/backend.py listen-appearance")
 
 (defwidget music-button [icon tip cmd]
   (button :class "music-button" :tooltip tip :onclick cmd :timeout "3s" (menu-icon :name icon)))
 
-; Compact by default; hover reveals time and track skipping. Waybar's music module reopens it.
+; Track controls stay visible for keyboard and pointer access.
 (defwidget menu-music []
-  (eventbox :visible {music.visible}
-    :onhover "eww -c $HOME/.config/raccon-music update music_open=true"
-    :onhoverlost "eww -c $HOME/.config/raccon-music update music_open=false"
+  (eventbox :visible {music.visible || !card_visible}
     (box :class "panel music-card ${music_open ? 'open' : ''}" :orientation "v" :space-evenly false :spacing 8 :width 290
       (box :space-evenly false :spacing 10
         (box :class "music-art ${music.has_art ? '' : 'empty'}" :width 40 :height 40 :valign "center"
@@ -31,14 +30,15 @@
           :onclick "$HOME/.local/bin/raccon-music close"
           (menu-icon :name "window-close-symbolic")))
       (progress :class "music-progress" :value {music.percent} :orientation "h")
-      (revealer :reveal music_open :transition "slidedown" :duration "160ms"
-        (box :class "music-extra" :space-evenly false :spacing 2
+      (box :class "music-extra" :space-evenly false :spacing 2
           (label :class "music-time muted" :xalign 0 :hexpand true :text {music.time})
           (music-button :icon "media-skip-backward-symbolic" :tip "Previous" :cmd "playerctl previous")
-          (music-button :icon "media-skip-forward-symbolic" :tip "Next" :cmd "playerctl next"))))))
+          (music-button :icon "media-skip-forward-symbolic" :tip "Next" :cmd "playerctl next")))))
 
 (defwindow raccon-music [anchor y]
   :monitor 0
   :geometry (geometry :x "4px" :y y :width "1px" :height "1px" :anchor anchor)
-  :stacking "overlay" :exclusive false :focusable true :namespace "raccon-music"
-  (box :class "popup music-popup style-${desktop.style ?: 'original'} ${desktop.motion ? 'motion' : 'still'}" (menu-music)))
+  :stacking "overlay" :exclusive false :focusable false :namespace "raccon-music"
+  (box :class "popup music-popup style-${desktop.style ?: 'original'} ${desktop.motion ? 'motion' : 'still'}"
+    (label :class "resident-visible" :visible false :text {card_visible ? "true" : "false"})
+    (menu-music)))
