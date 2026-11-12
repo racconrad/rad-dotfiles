@@ -34,6 +34,7 @@ def pick_modules(installed, plain=False):
 
 
 def inspect_plan(home, plan, receipt):
+    from wayfire_layers import generated_is_current
     baseline, conflicts = {}, []
     for relative, value in plan.items():
         path = install.safe_destination(home, relative)
@@ -43,6 +44,8 @@ def inspect_plan(home, plan, receipt):
         print(f"  {'add' if baseline[relative] == 'missing' else 'replace'} {relative}")
         previous = receipt.get("files", {}).get(relative, {})
         expected = str(previous.get("sha256", "")) + ":" + oct(previous.get("mode", 0))
+        if relative == '.config/wayfire.ini' and generated_is_current(home):
+            continue
         if baseline[relative] != "missing" and baseline[relative] != expected:
             conflicts.append(relative)
     baseline[".rdot"] = install.digest(install.safe_destination(home, ".rdot"))

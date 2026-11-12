@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT / 'scripts') not in sys.path:
     sys.path.insert(0, str(ROOT / 'scripts'))
 from terminal_ui import Terminal
+from wayfire_layers import layer_plan
 CATALOG = json.loads((ROOT / 'modules.json').read_text())
 RELEASE = json.loads((ROOT / '.rdot').read_text())
 MASCOT = (ROOT / 'assets/raccoon.txt').read_text()
@@ -455,6 +456,7 @@ def file_plan(home, modules, choices, selection=None, render_modules=None):
                                                           'widgets': document['widgets']}), 0o600)
             if 'widgets-motion' not in modules and document.get('animation'):
                 plan['.config/eww/animation.json'] = (json_bytes(document['animation']), 0o644)
+    layer_plan(home, plan, ROOT)
     return plan
 
 
@@ -545,9 +547,12 @@ def apply_plan(home, plan, modules, choices, selection=None, partial=False, expe
         if selection is not None:
             receipt['selection'] = selection
         receipt['files'] = {rel: {'sha256': hashlib.sha256(data).hexdigest(), 'mode': mode}
-                            for rel, (data, mode) in plan.items()}
+                            for rel, (data, mode) in plan.items() if rel != '.config/wayfire/user.ini'}
         if partial:
             receipt['files'] = {**previous.get('files', {}), **receipt['files']}
+        receipt['files'].pop('.config/wayfire/user.ini', None)
+        if '.config/wayfire/raccon.ini' in plan:
+            receipt['files'].pop('.config/wayfire.ini', None)
         comparable = {k: previous.get(k) for k in receipt}
         if not changes and comparable == receipt:
             print('Everything is up to date. No files were replaced.')

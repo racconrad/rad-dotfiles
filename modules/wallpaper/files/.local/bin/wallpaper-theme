@@ -24,10 +24,19 @@ case "${file,,}" in
 esac
 
 # Keep the 3D cube skydome in sync with the wallpaper.
-ini="$HOME/.config/wayfire.ini"
+config_root="${XDG_CONFIG_HOME:-$HOME/.config}"
+ini="${WAYFIRE_CONFIG_FILE:-$config_root/wayfire.ini}"
+layered=false
+if [[ "$ini" == "$config_root/wayfire.ini" && -f "$config_root/wayfire/raccon.ini" ]]; then
+  ini="$config_root/wayfire/raccon.ini"
+  layered=true
+fi
 if grep -q '^skydome_texture' "$ini"; then
   escaped="$(printf '%s' "$still" | sed 's/[&#\\]/\\&/g')"
   sed -i "s#^skydome_texture = .*#skydome_texture = ${escaped}#" "$ini"
+fi
+if $layered; then
+  "$HOME/.local/bin/wayfire-config" sync
 fi
 
 # Color scheme style (see wallpaper-scheme); default Material "tonal spot".

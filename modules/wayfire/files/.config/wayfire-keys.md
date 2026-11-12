@@ -1,6 +1,19 @@
 # Wayfire window-management shortcuts
 
-Source of truth: `~/.config/wayfire.ini` (+ `~/.local/bin/wf-tile`). `Super` = logo key.
+`Super` = logo key. Window controls use `~/.local/bin/wf-tile`.
+
+## Configuration layers
+
+- `~/.config/wayfire/raccon.ini`: defaults managed by the installer.
+- `~/.config/wayfire/user.ini`: your overrides; updates never replace this file.
+- `~/.config/wayfire.ini`: generated effective configuration; do not edit directly.
+
+User values take priority. Lists such as `[core] plugins` replace the entire base
+value, so include every plugin you want to keep. Existing custom settings migrate
+to `user.ini` on the first layered installation. The user service
+`raccon-wayfire-config.service` watches both layers and regenerates the effective
+configuration automatically. Invalid edits leave the last valid configuration
+active. Run `wayfire-config sync` to validate and apply edits manually.
 
 New windows float by default. Use snapping or explicit tiling when you need a
 structured layout; opening an application does not rearrange other windows.

@@ -4,7 +4,12 @@
 # Usage: display-mode [laptop|mirror|extend-right|extend-left|external]
 set -euo pipefail
 
-CFG="$HOME/.config/wayfire.ini"
+CONFIG_ROOT="${XDG_CONFIG_HOME:-$HOME/.config}"
+CFG="${WAYFIRE_CONFIG_FILE:-$CONFIG_ROOT/wayfire.ini}"
+layered=false
+if [[ "$CFG" == "$CONFIG_ROOT/wayfire.ini" && -f "$CONFIG_ROOT/wayfire/raccon.ini" ]]; then
+  layered=true
+fi
 BEGIN="# >>> display-mode (managed by ~/.local/bin/display-mode) >>>"
 END="# <<< display-mode <<<"
 
@@ -68,11 +73,28 @@ block() {
   echo "$END"
 }
 
-tmp=$(mktemp)
-awk -v b="$BEGIN" -v e="$END" '$0==b{skip=1} !skip{print} $0==e{skip=0}' "$CFG" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > "$tmp"
-{ cat "$tmp"; echo; block; } > "$CFG.new"
-rm -f "$tmp"
-cat "$CFG.new" > "$CFG" && rm -f "$CFG.new"   # keep inode for Wayfire's watcher
+if $layered; then
+  BLOCK="$(block)" CONFIG_ROOT="$CONFIG_ROOT" python3 - <<'PYTHON'
+import os
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path.home() / '.local/lib'))
+from wayfire_config import atomic_write, merge, sync
+root = Path(os.environ['CONFIG_ROOT'])
+user = root / 'wayfire/user.ini'
+previous = user.read_bytes() if user.exists() else b''
+updated = merge(previous, os.environ['BLOCK'].encode())
+if previous != updated:
+    atomic_write(user, updated)
+sync(root)
+PYTHON
+else
+  tmp=$(mktemp)
+  awk -v b="$BEGIN" -v e="$END" '$0==b{skip=1} !skip{print} $0==e{skip=0}' "$CFG" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > "$tmp"
+  { cat "$tmp"; echo; block; } > "$CFG.new"
+  rm -f "$tmp"
+  cat "$CFG.new" > "$CFG" && rm -f "$CFG.new"   # keep inode for Wayfire's watcher
+fi
 
 case "$choice" in
   laptop) notify "Solo laptop" ;;

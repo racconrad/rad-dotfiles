@@ -545,13 +545,17 @@ def set_managed(settings):
         text=re.sub(r'("'+key+r'"\s*:\s*)("[^"]*"|\d+)',lambda m:m[1]+json.dumps(value),text,count=1)
     write(path,text)
     bar_changed=text!=old
-    path=HOME/'.config/wayfire.ini'; ini=path.read_text()
-    def change(match):
-        section=match[0]
-        for key,value in settings['window'].items():
-            section=re.sub(r'(?m)^('+key+r'\s*=\s*).*$',lambda m:m[1]+str(value),section,count=1)
-        return section
-    write(path,re.sub(r'(?ms)^\[pixdecor\]\n.*?(?=^\[|\Z)',change,ini))
+    if (HOME/'.config/wayfire/raccon.ini').exists():
+        from wayfire_config import set_options
+        set_options(HOME/'.config', 'pixdecor', settings['window'])
+    else:
+        path=HOME/'.config/wayfire.ini'; ini=path.read_text()
+        def change(match):
+            section=match[0]
+            for key,value in settings['window'].items():
+                section=re.sub(r'(?m)^('+key+r'\s*=\s*).*$',lambda m:m[1]+str(value),section,count=1)
+            return section
+        write(path,re.sub(r'(?ms)^\[pixdecor\]\n.*?(?=^\[|\Z)',change,ini))
     if settings.get('fuzzel'):
         path=HOME/'.config/fuzzel/fuzzel.ini';text=path.read_text()
         for section,values in settings['fuzzel'].items():
