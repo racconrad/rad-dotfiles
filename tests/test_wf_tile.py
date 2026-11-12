@@ -40,6 +40,9 @@ class DwindleTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.base=Path(self.temp.name)
+        config=self.base/'wayfire.ini'
+        config.write_text('[simple-tile]\ntile_by_default = true\n')
+        p=patch.object(tile,'INI',str(config));p.start();self.addCleanup(p.stop)
         p=patch.dict(os.environ,{'XDG_RUNTIME_DIR':self.temp.name});p.start();self.addCleanup(p.stop)
         p=patch.object(tile,'FLOAT_STATE',str(self.base/'floating.json'));p.start();self.addCleanup(p.stop)
 

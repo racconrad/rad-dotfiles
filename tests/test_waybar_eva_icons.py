@@ -56,8 +56,10 @@ class WaybarEvaIconTests(unittest.TestCase):
         script = ROOT / 'modules/wayfire/files/.local/bin/wf-tile-mode'
         with tempfile.TemporaryDirectory() as home:
             state = Path(home) / 'floating.json'
+            config = Path(home) / 'wayfire.ini'
+            config.write_text('[simple-tile]\ntile_by_default = true\n')
             env = {**os.environ, 'HOME': home, 'XDG_CACHE_HOME': str(Path(home) / 'cache'),
-                   'WF_TILE_FLOAT_STATE': str(state)}
+                   'WF_TILE_FLOAT_STATE': str(state), 'WAYFIRE_CONFIG_FILE': str(config)}
             run = lambda: json.loads(subprocess.check_output(
                 [sys.executable, str(script), 'status'], env=env, text=True))
             self.assertEqual(run()['text'], '\ueb06')
