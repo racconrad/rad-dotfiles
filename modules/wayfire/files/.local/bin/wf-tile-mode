@@ -28,10 +28,12 @@ def get_tile_status():
                 pass
 
     ws = '1:0:0'
+    reported_mode = None
     if out:
         try:
             data = json.loads(out)
             ws = data.get('workspace', '1:0:0')
+            reported_mode = data.get('floating')
         except ValueError:
             pass
 
@@ -43,7 +45,16 @@ def get_tile_status():
         except (ValueError, OSError):
             pass
 
-    is_float = ws in floating
+    is_float = reported_mode if isinstance(reported_mode, bool) else ws in floating
+    if reported_mode is None and not floating:
+        config = Path(os.environ.get('WAYFIRE_CONFIG_FILE', Path.home() / '.config/wayfire.ini'))
+        try:
+            import re
+            text = config.read_text()
+            section = re.search(r'^\[simple-tile\]\s*$([\s\S]*?)(?=^\[|\Z)', text, re.MULTILINE)
+            is_float = bool(section and re.search(r'^tile_by_default\s*=\s*false\s*$', section.group(1), re.MULTILINE | re.IGNORECASE))
+        except OSError:
+            pass
     # Format readable workspace numbers (e.g. 1:0:1 -> WS 2)
     return {
         "text": "\ueb19" if is_float else "\ueb06",

@@ -472,6 +472,26 @@ def load_floating():
 def save_floating(keys):
     atomic_json(FLOAT_STATE, sorted(keys))
 
+def workspace_floating(key):
+    modes = load_floating()
+    if key in modes or key.startswith("2:"):
+        return True
+    if "tile:" + key in modes:
+        return False
+    try:
+        return (get_ini_option("simple-tile", "tile_by_default") or "").lower() == "false"
+    except OSError:
+        return False
+
+
+def save_workspace_mode(key, floating):
+    modes = load_floating()
+    modes.discard(key)
+    modes.discard("tile:" + key)
+    modes.add(key if floating else "tile:" + key)
+    save_floating(modes)
+
+
 def ws_key(wset, x, y):
     return f"{wset}:{x}:{y}"
 
@@ -518,8 +538,7 @@ def cmd_mode(ipc, wanted, skip_ids=()):
     out = ipc.call("window-rules/get-focused-output")["info"]
     ws = {"x": out["workspace"]["x"], "y": out["workspace"]["y"]}
     key = ws_key(out["wset-index"], ws["x"], ws["y"])
-    floating = load_floating()
-    current = "float" if key in floating else "tile"
+    current = "float" if workspace_floating(key) else "tile"
     if wanted == "toggle":
         wanted = "float" if current == "tile" else "tile"
     if wanted == current:
@@ -531,13 +550,13 @@ def cmd_mode(ipc, wanted, skip_ids=()):
         set_layout(ipc, out, ws, {"vertical-split": []})
         for n, v in enumerate(v for v in views if v["id"] in tiled and not v.get("fullscreen")):
             make_floating(ipc, out, v, n, restore=True)
-        floating.add(key)
-        notify("Workspace flotante")
+        notify("Floating workspace")
     else:
-        floating.discard(key)
         rule = get_ini_option("simple-tile", "tile_by_default") or ""
         skip_apps = set(re.findall(r'app_id is "([^"]+)"', rule))
+        skip_apps.update({"waypaper", "pavucontrol", "org.pulseaudio.pavucontrol", "nm-connection-editor", "swappy"})
         skip_titles = set(re.findall(r'title is "([^"]+)"', rule))
+        skip_titles.update({"Picture-in-Picture", "Picture in picture"})
         eligible = [v for v in views if v['id'] not in skip_ids and not v.get('fullscreen') and
                     v.get('app-id') not in skip_apps and v.get('title') not in skip_titles]
         for view in eligible:
@@ -545,8 +564,8 @@ def cmd_mode(ipc, wanted, skip_ids=()):
         vids = [view['id'] for view in eligible]
         if vids:
             set_layout(ipc, out, ws, dwindle_layout(vids))
-        notify("Workspace en tiling")
-    save_floating(floating)
+        notify("Tiled workspace")
+    save_workspace_mode(key, wanted == "float")
 
 
 def cmd_adopt(ipc, vid, anchors=(), direction=None):
@@ -561,7 +580,7 @@ def cmd_adopt(ipc, vid, anchors=(), direction=None):
     layout = ipc.call('simple-tile/get-layout', {'wset-index': view['wset-index'], 'workspace': ws}).get('layout')
     paths = dict(leaves(layout or {}))
     if vid not in paths: return
-    floating = view['wset-index'] == 2 or ws_key(view['wset-index'], ws['x'], ws['y']) in load_floating()
+    floating = workspace_floating(ws_key(view['wset-index'], ws['x'], ws['y']))
     if floating:
         rest = prune_tree(layout, {vid})
         set_layout(ipc, out, ws, strip_geometry(rest) if rest else {'vertical-split': []})

@@ -88,7 +88,7 @@ class Engine:
         out, focus, views = self.t.current_views(ipc)
         ws, layout = self.t.get_layout(ipc, out)
         return {'key': self.context(out), 'tree': self.t.strip_geometry(copy.deepcopy(layout or EMPTY)),
-                'focus': focus.get('id'), 'floating': self.context(out) in self.t.load_floating(),
+                'focus': focus.get('id'), 'floating': self.t.workspace_floating(self.context(out)),
                 'views': {str(v['id']): {'geometry': copy.deepcopy(v['geometry']),
                           'tiled': v['id'] in dict(self.t.leaves(layout or {}))}
                           for v in views if not v.get('fullscreen') and not self.is_scratch(v['id'])}}
@@ -123,9 +123,7 @@ class Engine:
             if vid in available and not item['tiled']:
                 self.checked('window-rules/configure-view', {'id': vid, 'tiled-edges': 0,
                              'geometry': self.clamp_geometry(item['geometry'], out['workarea'])})
-        modes = self.t.load_floating()
-        (modes.add if saved['floating'] else modes.discard)(saved['key'])
-        self.t.save_floating(modes)
+        self.t.save_workspace_mode(saved['key'], saved['floating'])
         if saved.get('focus') in available:
             self.checked('window-rules/focus-view', {'id': saved['focus']})
 
@@ -395,7 +393,7 @@ class Engine:
         self.checked('window-rules/focus-view', {'id': view['id']})
         if operation == 'release':
             self.scratch.pop(slot); self.save_scratch()
-            if self.context(out) not in self.t.load_floating() and out['wset-index'] != 2:
+            if not self.t.workspace_floating(self.context(out)):
                 ws, tree = self.t.get_layout(self.ipc, out)
                 self.t.set_layout(self.ipc, out, ws, self.t.strip_geometry(self.t.insert_dwindle(tree, view['id'])))
             self.tip(f'Scratchpad {slot} released')
@@ -540,7 +538,8 @@ class Engine:
             return {'pid': os.getpid(), 'version': 2, 'resident': True, 'smart_gaps': self.preferences.get('smart_gaps', False),
                     'gap_error': self.gap_error, 'mode': self.modal['mode'] if self.modal else None,
                     'preselection': self.preselection, 'scratchpads': self.scratch,
-                    'workspace': self.context(self.output())}
+                    'workspace': self.context(self.output()),
+                    'floating': self.t.workspace_floating(self.context(self.output()))}
         else:
             raise ValueError('Unknown action: '+' '.join(args))
         if before:

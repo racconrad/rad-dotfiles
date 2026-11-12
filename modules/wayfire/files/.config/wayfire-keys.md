@@ -2,6 +2,9 @@
 
 Source of truth: `~/.config/wayfire.ini` (+ `~/.local/bin/wf-tile`). `Super` = logo key.
 
+New windows float by default. Use snapping or explicit tiling when you need a
+structured layout; opening an application does not rearrange other windows.
+
 ## Application menu
 
 | Shortcut | Action |
@@ -106,17 +109,18 @@ Tiled windows are positioned by simple-tile; press Super+T to float first.
 | Super+Ctrl+Tab | Scale (all workspaces) |
 | Alt+Tab / Alt+Shift+Tab | Switcher next / previous |
 | Super+Ctrl+LeftDrag, Super+MiddleDrag | Cube |
-| 3-finger swipe | Switch workspace |
+| 3-finger drag | Move a window using native touchpad dragging |
+| 4-finger horizontal swipe | Switch workspace |
 
 ## Power button
 
 Waybar: a short click does nothing. Hold the left mouse button for 2 seconds, then release to power off. A hold longer than 12 seconds expires. Super+L or Super+Ctrl+Q opens Raccon session actions. Super+Shift+L locks directly.
 
-Raccon Menu: `Super+L` o `Super+Ctrl+Q` abre Sesión; `Ctrl+1–4` cambia sección; `Ctrl+F` busca aplicaciones. El indicador de batería abre un selector de modo con Aplicar explícito.
+Raccon Menu: `Super+L` or `Super+Ctrl+Q` opens session actions; `Ctrl+1–4` changes section; `Ctrl+F` searches applications. The battery indicator opens a power-mode selector with explicit Apply.
 
-## Automatic Dwindle layout
+## Explicit Dwindle layout
 
-`wf-tile watch` listens for newly mapped windows. Two windows form columns; the next divides the active column into rows; the following divides the active row into columns. Other tiles and their manual split ratios stay intact. It does not re-layout continuously when focus changes.
+`Super+Shift+T` tiles the current workspace on demand. `Super+T` toggles only the focused window. Newly opened windows remain floating with the shipped configuration. `wf-tile watch` preserves Dwindle insertion for configurations that explicitly enable automatic tiling; it does not continuously rearrange windows on focus changes.
 
 The dedicated tiling observer owns insertion and floating-workspace adoption. `wf-focus-fx` handles opacity only, avoiding two competing floating operations. Workspace 10 and workspaces set to floating with Super+Shift+T remain floating, and utility/Picture-in-Picture exceptions are preserved.
 
@@ -125,3 +129,15 @@ Super+T remembers the size and position you chose while floating, and restores t
 Tiled resizing applies the real client geometry directly (`simple-tile.animation_duration = 0`) instead of crossfading snapshots. Other compositor effects remain configured as before. Super+Ctrl+T rebuilds the current tile nodes to recover their scale transforms without toggling the whole desktop or losing the split tree.
 
 Validation: `python3 tests/check_tiling_installed.py` uses a private Wayfire and animated test clients to check Dwindle cuts, per-window floating geometry restoration, workspace floating, utility exceptions, resize and live content updates. It does not move user windows.
+
+## Experimental native Snap Tiling
+
+The native `snap-tiling` plugin is not enabled by the default configuration.
+Build and install it explicitly before adding it to Wayfire's plugin list.
+Before enabling it, disable `vswipe` if native four-finger gestures are enabled,
+and remove overlapping legacy focus/resize bindings from `[command]`. Do not
+let `simple-tile` and the native plugin manage the same windows.
+
+The default configuration remains usable without the experimental plugin:
+`Super+Shift+Arrows` snaps floating windows, `Super+S` shows workspaces, and
+`Super+grave` shows windows on the current workspace.
