@@ -414,7 +414,7 @@ def safe_destination(home, relative):
     return destination
 
 
-def file_plan(home, modules, choices, selection=None):
+def file_plan(home, modules, choices, selection=None, render_modules=None):
     plan = {}
     options = validate_widget_options((selection or {}).get('widgets', {}))
     for module in modules:
@@ -432,7 +432,7 @@ def file_plan(home, modules, choices, selection=None):
             safe_destination(home, relative)
             if relative in plan:
                 raise ValueError(f'Two modules write {relative}')
-            plan[relative] = (render(relative, source.read_bytes(), home, modules, choices),
+            plan[relative] = (render(relative, source.read_bytes(), home, render_modules or modules, choices),
                               source.stat().st_mode & 0o777)
     # Parent of the Eww palette is created before Matugen writes to it.
     if 'widgets' in modules:
@@ -514,7 +514,7 @@ def undo(home, backup, records):
             atomic_write(dest, source.read_bytes(), record['mode'])
 
 
-def apply_plan(home, plan, modules, choices, selection=None):
+def apply_plan(home, plan, modules, choices, selection=None, partial=False, expected=None):
     plan = dict(plan)
     if selection is not None:
         selection = validate_selection(selection)
@@ -523,6 +523,9 @@ def apply_plan(home, plan, modules, choices, selection=None):
         # Check again after taking the lock and before changing any files.
         for relative in [*plan, '.rdot']:
             safe_destination(home, relative)
+        for relative, baseline in (expected or {}).items():
+            if digest(safe_destination(home, relative)) != baseline:
+                raise ValueError(f'File changed after preview: {relative}; review the update again.')
         changes = {rel: value for rel, value in plan.items() if not unchanged(home / rel, *value)}
         previous = read_receipt(home)
         old_modules = set(previous.get('modules', []))
@@ -537,10 +540,14 @@ def apply_plan(home, plan, modules, choices, selection=None):
             if value in modules:
                 receipt_choices[key] = value
         receipt = {**RELEASE, 'modules': sorted(all_modules), 'choices': receipt_choices}
+        if partial and 'selection' in previous:
+            receipt['selection'] = previous['selection']
         if selection is not None:
             receipt['selection'] = selection
         receipt['files'] = {rel: {'sha256': hashlib.sha256(data).hexdigest(), 'mode': mode}
                             for rel, (data, mode) in plan.items()}
+        if partial:
+            receipt['files'] = {**previous.get('files', {}), **receipt['files']}
         comparable = {k: previous.get(k) for k in receipt}
         if not changes and comparable == receipt:
             print('Everything is up to date. No files were replaced.')
@@ -1321,6 +1328,8 @@ def run_setup(selection, home):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Raccon Dots - personal desktop setup with saved profiles.')
+    parser.add_argument('--update', action='store_true', help='Refresh installed modules; no packages or setup')
+    parser.add_argument('--force-update', action='store_true', help='Overwrite locally modified files during --update (backups retained)')
     parser.add_argument('--modules', help='Comma-separated features/apps; terminal, shell, launcher, etc. are accepted')
     parser.add_argument('--target', type=Path, default=Path.home(), help='Target HOME; use a temporary directory to try the setup')
     parser.add_argument('--dry-run', action='store_true', help='Preview without writing files, installing packages or running app setup')
@@ -1353,6 +1362,11 @@ def main(argv=None):
     args.target = original_target.resolve()
     if args.target == Path('/') or (args.target.exists() and not args.target.is_dir()):
         parser.error('--target must be a valid HOME directory.')
+    if args.force_update and not args.update:
+        parser.error('--force-update requires --update.')
+    if args.update:
+        from module_update import run
+        return run(args)
     if args.list:
         print(f'Raccon Dots {RELEASE["version"]}\n')
         for key, info in CATALOG['modules'].items():
