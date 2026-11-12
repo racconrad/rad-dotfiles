@@ -10,9 +10,19 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 def run_native_layout_geometry():
     source = r'''
 #include <layout.hpp>
+#include <selection.hpp>
 #include <cassert>
 int main() {
     using snap::layout;
+    auto grid = layout({0,0,1000,800},5);
+    assert(snap::select_direction(grid,0,1,0)==1);
+    assert(snap::select_direction(grid,0,0,1)==2);
+    assert(snap::select_direction(grid,0,-1,0)==0);
+    assert(snap::select_at(grid,800,600)==3);
+    auto row_slots=layout({0,0,1000,800},3);
+    assert(snap::select_at(row_slots,500,700)==1);
+    assert(!snap::fits({0,0,190,500},200,100));
+    assert(snap::fits({0,0,400,500},200,100));
     auto pair = layout({10,20,1000,800},0);
     assert(pair.size()==2);
     assert(pair[0].width==495 && pair[1].width==495);

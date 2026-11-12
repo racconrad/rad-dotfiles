@@ -4,6 +4,22 @@
     <_short>Snap Tiling</_short>
     <_long>Native slot preview and grouped window placement.</_long>
     <category>Window Management</category>
+    <option name="gap" type="int"><_short>Window gap</_short><default>10</default><min>0</min><max>100</max></option>
+    <option name="focus_left" type="key"><_short>Focus left</_short><default>&lt;super&gt; KEY_LEFT</default></option>
+    <option name="resize_left" type="key"><_short>Resize left</_short><default>&lt;super&gt; &lt;ctrl&gt; &lt;alt&gt; KEY_LEFT</default></option>
+    <option name="focus_right" type="key"><_short>Focus right</_short><default>&lt;super&gt; KEY_RIGHT</default></option>
+    <option name="resize_right" type="key"><_short>Resize right</_short><default>&lt;super&gt; &lt;ctrl&gt; &lt;alt&gt; KEY_RIGHT</default></option>
+    <option name="focus_up" type="key"><_short>Focus up</_short><default>&lt;super&gt; KEY_UP</default></option>
+    <option name="resize_up" type="key"><_short>Resize up</_short><default>&lt;super&gt; &lt;ctrl&gt; &lt;alt&gt; KEY_UP</default></option>
+    <option name="focus_down" type="key"><_short>Focus down</_short><default>&lt;super&gt; KEY_DOWN</default></option>
+    <option name="resize_down" type="key"><_short>Resize down</_short><default>&lt;super&gt; &lt;ctrl&gt; &lt;alt&gt; KEY_DOWN</default></option>
+    <option name="detach" type="key"><_short>Restore floating window</_short><default>&lt;super&gt; &lt;shift&gt; KEY_SPACE</default></option>
+    <option name="threshold" type="int">
+      <_short>Top edge activation distance</_short>
+      <default>25</default>
+      <min>1</min>
+      <max>200</max>
+    </option>
     <option name="toggle" type="key">
       <_short>Open snap selector</_short>
       <default>&lt;super&gt; KEY_Z</default>

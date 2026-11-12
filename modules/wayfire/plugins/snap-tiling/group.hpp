@@ -1,5 +1,6 @@
 #pragma once
 #include "layout.hpp"
+#include "selection.hpp"
 #include <wayfire/core.hpp>
 #include <wayfire/output.hpp>
 #include <wayfire/seat.hpp>
@@ -9,14 +10,21 @@
 #include <wayfire/txn/transaction-manager.hpp>
 #include <linux/input-event-codes.h>
 #include <map>
+#include <wayfire/option-wrapper.hpp>
 
 namespace snap
 {
 class group_controller
 {
     wf::output_t *output;
+    wf::option_wrapper_t<int> gap_option{"snap-tiling/gap"};
     std::vector<std::weak_ptr<wf::toplevel_view_interface_t>> group;
   public:
+    int gap() const
+    {
+        auto area = output->workarea->get_workarea();
+        return std::clamp(int(gap_option), 0, int(std::max(0.0, std::min(area.width, area.height) / 8)));
+    }
     double ratio = 0.5;
     unsigned group_pattern = 6;
     std::map<std::weak_ptr<wf::toplevel_view_interface_t>, wf::geometry_t,
@@ -76,26 +84,34 @@ class group_controller
         auto geometry = first->get_geometry();
         if (group_pattern < 3)
             return point.y >= area.y && point.y < area.y + area.height &&
-                std::abs(point.x - geometry.x - geometry.width - 5) <= 6;
+                std::abs(point.x - geometry.x - geometry.width - gap() / 2.0) <= 6;
         return point.x >= area.x && point.x < area.x + area.width &&
-            std::abs(point.y - geometry.y - geometry.height - 5) <= 6;
+            std::abs(point.y - geometry.y - geometry.height - gap() / 2.0) <= 6;
     }
     void divider_move(wf::pointf_t point)
     {
         auto bounds = output->get_layout_geometry();
         auto area = output->workarea->get_workarea();
         double previous = ratio;
-        ratio = group_pattern < 3 ? (point.x - bounds.x - area.x - 5) / (area.width - 10) :
-            (point.y - bounds.y - area.y - 5) / (area.height - 10);
+        ratio = group_pattern < 3 ? (point.x - bounds.x - area.x - gap() / 2.0) / (std::max(1.0, area.width - gap())) :
+            (point.y - bounds.y - area.y - gap() / 2.0) / (std::max(1.0, area.height - gap()));
         ratio = std::clamp(ratio, 0.2, 0.8);
         if (!arrange_group()) ratio = previous;
     }
-    wf::signal::connection_t<wf::view_unmapped_signal> unmapped = [this] (wf::view_unmapped_signal *event)
+    wf::signal::connection_t<wf::view_disappeared_signal> unmapped = [this] (wf::view_disappeared_signal *event)
     {
         bool changed = false;
         for (auto& weak : group)
             if (auto view = weak.lock(); view && view.get() == event->view.get())
-            { weak.reset(); changed = true; }
+            {
+                if (view->is_mapped())
+                {
+                    view->toplevel()->pending().tiled_edges = 0;
+                    wf::get_core().tx_manager->schedule_object(view->toplevel());
+                }
+                saved.erase(view->weak_from_this());
+                weak.reset(); changed = true;
+            }
         if (!changed) return;
         std::vector<std::shared_ptr<wf::toplevel_view_interface_t>> remaining;
         for (auto weak : group)
@@ -127,7 +143,7 @@ class group_controller
     bool arrange_group()
     {
         auto area = output->workarea->get_workarea();
-        auto cells = snap::layout({int(area.x), int(area.y), int(area.width), int(area.height)}, group_pattern, 10, ratio);
+        auto cells = snap::layout({int(area.x), int(area.y), int(area.width), int(area.height)}, group_pattern, gap(), ratio);
         if (cells.size() != group.size()) return false;
         auto tx = wf::txn::transaction_t::create();
         for (unsigned i = 0; i < group.size(); ++i)
@@ -136,7 +152,7 @@ class group_controller
             if (!view || !view->is_mapped() || view->get_output() != output) continue;
             auto cell = cells[i];
             auto minimum = view->toplevel()->get_min_size();
-            if (cell.width < std::max(200, minimum.width) || cell.height < std::max(200, minimum.height)) return false;
+            if (!fits(cell, minimum.width, minimum.height)) return false;
         }
         for (unsigned i = 0; i < group.size(); ++i)
         {
@@ -151,10 +167,43 @@ class group_controller
         return true;
     }
 
-    explicit group_controller(wf::output_t *output) : output(output) { output->connect(&unmapped); }
+    void reset()
+    {
+        for (auto weak : group) if (auto view = weak.lock()) restore(view);
+        group.clear();
+        group_pattern = 6;
+    }
+    void release_workspace()
+    {
+        for (auto weak : group)
+            if (auto view = weak.lock(); view && view->is_mapped())
+            {
+                view->toplevel()->pending().tiled_edges = 0;
+                wf::get_core().tx_manager->schedule_object(view->toplevel());
+            }
+        group.clear();
+        saved.clear();
+        group_pattern = 6;
+    }
+    wf::signal::connection_t<wf::workspace_changed_signal> workspace_changed =
+        [this] (auto*) { release_workspace(); };
+    wf::signal::connection_t<wf::workspace_set_changed_signal> workspace_set_changed =
+        [this] (auto*) { release_workspace(); };
+    wf::signal::connection_t<wf::workarea_changed_signal> workarea_changed =
+        [this] (auto*) { if (!arrange_group()) reset(); };
+    explicit group_controller(wf::output_t *output) : output(output)
+    {
+        output->connect(&unmapped);
+        output->connect(&workspace_changed);
+        output->connect(&workspace_set_changed);
+        output->connect(&workarea_changed);
+    }
     ~group_controller()
     {
         unmapped.disconnect();
+        workspace_changed.disconnect();
+        workspace_set_changed.disconnect();
+        workarea_changed.disconnect();
         while (!saved.empty())
         {
             auto view = saved.begin()->first.lock();
@@ -167,6 +216,20 @@ class group_controller
         auto area = output->workarea->get_workarea();
         auto cells = layout({int(area.x), int(area.y), int(area.width), int(area.height)}, pattern);
         if (cells.empty()) return;
+        const double next_ratio = group_pattern == pattern ? ratio :
+            (pattern == 1 ? 1.0 / 3 : (pattern == 4 ? 0.7 : 0.5));
+        cells = layout({int(area.x), int(area.y), int(area.width), int(area.height)}, pattern, gap(), next_ratio);
+        auto proposed = group_pattern == pattern ? group : decltype(group)(cells.size());
+        for (auto& weak : proposed) if (weak.lock() == view) weak.reset();
+        proposed[selected % cells.size()] = view;
+        for (unsigned i = 0; i < proposed.size(); ++i)
+        {
+            auto member = proposed[i].lock();
+            if (!member) continue;
+            if (!member->is_mapped() || member->get_output() != output) return;
+            auto minimum = member->toplevel()->get_min_size();
+            if (!fits(cells[i], minimum.width, minimum.height)) return;
+        }
         if (group_pattern != pattern)
         {
             for (auto weak : group) if (auto member = weak.lock()) restore(member);

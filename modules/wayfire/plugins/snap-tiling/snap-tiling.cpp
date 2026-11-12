@@ -1,4 +1,5 @@
 #include "layout.hpp"
+#include "selection.hpp"
 #include "gestures.hpp"
 #include "divider.hpp"
 #include "group.hpp"
@@ -31,6 +32,8 @@ class snap_output : public wf::per_output_plugin_instance_t,
     std::unique_ptr<snap::gestures> gestures;
     std::unique_ptr<snap::divider> divider;
     std::unique_ptr<snap::group_controller> groups;
+    std::vector<std::unique_ptr<wf::option_wrapper_t<wf::keybinding_t>>> bindings;
+    wf::option_wrapper_t<int> threshold{"snap-tiling/threshold"};
     wf::option_wrapper_t<wf::keybinding_t> toggle_option{"snap-tiling/toggle"};
     wf::signal::connection_t<wf::move_drag::drag_motion_signal> drag_motion = [this] (wf::move_drag::drag_motion_signal *event)
     {
@@ -38,7 +41,8 @@ class snap_output : public wf::per_output_plugin_instance_t,
         auto area = output->get_layout_geometry();
         auto position = event->current_position;
         if (drag->current_output != output || !drag->view || position.y < area.y ||
-            position.y > area.y + 25 || position.x < area.x || position.x >= area.x + area.width)
+            (!drag_preview && position.y > area.y + std::clamp(int(threshold), 1, 200)) ||
+            position.y >= area.y + area.height || position.x < area.x || position.x >= area.x + area.width)
         {
             if (drag_preview) close();
             return;
@@ -47,8 +51,8 @@ class snap_output : public wf::per_output_plugin_instance_t,
         drag_preview = visible = true;
         target = drag->view->weak_from_this();
         auto workarea = output->workarea->get_workarea();
-        auto cells = snap::layout({int(workarea.x), int(workarea.y), int(workarea.width), int(workarea.height)}, pattern);
-        if (!cells.empty()) selected = std::min(unsigned(cells.size() - 1), unsigned((position.x - area.x) * cells.size() / area.width));
+        auto cells = snap::layout({int(workarea.x), int(workarea.y), int(workarea.width), int(workarea.height)}, pattern, groups->gap(), pattern == groups->group_pattern ? groups->ratio : -1);
+        if (!cells.empty()) selected = snap::select_at(cells, position.x - area.x, position.y - area.y);
         output->render->damage_whole();
     };
     wf::signal::connection_t<wf::move_drag::drag_done_signal> drag_done = [this] (wf::move_drag::drag_done_signal *event)
@@ -79,7 +83,7 @@ class snap_output : public wf::per_output_plugin_instance_t,
         auto pass = output->render->get_current_pass();
         if (!pass) return;
         auto area = output->workarea->get_workarea();
-        auto cells = snap::layout({int(area.x), int(area.y), int(area.width), int(area.height)}, pattern, 10, pattern == groups->group_pattern ? groups->ratio : -1);
+        auto cells = snap::layout({int(area.x), int(area.y), int(area.width), int(area.height)}, pattern, groups->gap(), pattern == groups->group_pattern ? groups->ratio : -1);
         auto render_target = pass->get_target();
         for (unsigned i = 0; i < cells.size(); ++i)
         {
@@ -108,6 +112,13 @@ class snap_output : public wf::per_output_plugin_instance_t,
         close();
     }
 
+    void add_binding(const std::string& name, wf::key_callback* callback)
+    {
+        auto option = std::make_unique<wf::option_wrapper_t<wf::keybinding_t>>("snap-tiling/" + name);
+        output->add_key(*option, callback);
+        bindings.push_back(std::move(option));
+    }
+
   public:
     void init() override
     {
@@ -123,15 +134,13 @@ class snap_output : public wf::per_output_plugin_instance_t,
         drag->connect(&drag_done);
         grab = std::make_unique<wf::input_grab_t>("snap-tiling", output, this);
         output->add_key(toggle_option, &toggle);
-        for (auto code : {KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN})
+        const char* directions[] = {"left", "right", "up", "down"};
+        for (auto direction : directions)
         {
-            output->add_key(std::make_shared<wf::config::option_t<wf::keybinding_t>>("snap-tiling/resize",
-                wf::keybinding_t{WLR_MODIFIER_LOGO | WLR_MODIFIER_ALT, uint32_t(code)}), &groups->resize);
-            output->add_key(std::make_shared<wf::config::option_t<wf::keybinding_t>>("snap-tiling/focus",
-                wf::keybinding_t{WLR_MODIFIER_LOGO, uint32_t(code)}), &groups->focus);
+            add_binding(std::string("focus_") + direction, &groups->focus);
+            add_binding(std::string("resize_") + direction, &groups->resize);
         }
-        output->add_key(std::make_shared<wf::config::option_t<wf::keybinding_t>>("snap-tiling/detach",
-            wf::keybinding_t{WLR_MODIFIER_LOGO | WLR_MODIFIER_SHIFT, KEY_SPACE}), &groups->detach);
+        add_binding("detach", &groups->detach);
         output->render->add_effect(&paint, wf::OUTPUT_EFFECT_OVERLAY);
     }
 
@@ -142,14 +151,15 @@ class snap_output : public wf::per_output_plugin_instance_t,
         {
           case KEY_ESC: close(); return;
           case KEY_ENTER: apply(); return;
-          case KEY_LEFT: case KEY_UP:
+          case KEY_LEFT: case KEY_UP: case KEY_RIGHT: case KEY_DOWN:
           {
               auto area = output->workarea->get_workarea();
-              auto count = snap::layout({int(area.x), int(area.y), int(area.width), int(area.height)}, pattern).size();
-              if (count) selected = (selected + count - 1) % count;
+              auto cells = snap::layout({int(area.x), int(area.y), int(area.width), int(area.height)}, pattern, groups->gap(), pattern == groups->group_pattern ? groups->ratio : -1);
+              selected = snap::select_direction(cells, selected,
+                  event.keycode == KEY_LEFT ? -1 : (event.keycode == KEY_RIGHT ? 1 : 0),
+                  event.keycode == KEY_UP ? -1 : (event.keycode == KEY_DOWN ? 1 : 0));
               break;
           }
-          case KEY_RIGHT: case KEY_DOWN: ++selected; break;
           case KEY_TAB: pattern = (pattern + 1) % 6; selected = 0; break;
           default:
             if (event.keycode >= KEY_1 && event.keycode <= KEY_6)
@@ -157,7 +167,7 @@ class snap_output : public wf::per_output_plugin_instance_t,
             else return;
         }
         auto area = output->workarea->get_workarea();
-        auto cells = snap::layout({int(area.x), int(area.y), int(area.width), int(area.height)}, pattern);
+        auto cells = snap::layout({int(area.x), int(area.y), int(area.width), int(area.height)}, pattern, groups->gap(), pattern == groups->group_pattern ? groups->ratio : -1);
         if (!cells.empty()) selected %= cells.size();
         output->render->damage_whole();
     }
@@ -172,6 +182,7 @@ class snap_output : public wf::per_output_plugin_instance_t,
         output->rem_binding(&groups->focus);
         output->rem_binding(&groups->detach);
         output->render->rem_effect(&paint);
+        bindings.clear();
         grab.reset();
         gestures.reset();
         divider.reset();
