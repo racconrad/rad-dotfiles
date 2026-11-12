@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 LIB = ROOT/'modules/desktop/files/.local/lib/raccon_menu'
+sys.path.insert(0, str(ROOT/'modules/desktop-styles/files/.local/lib'))
 
 
 def load(name, path):

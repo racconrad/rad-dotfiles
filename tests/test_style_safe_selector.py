@@ -34,7 +34,7 @@ class SafeSelectorTests(unittest.TestCase):
         for action in (self.engine.open_selector, self.engine.toggle_selector):
             with self.choose(code=1) as run:
                 action()
-                self.assertEqual(len(run.call_args.kwargs['input'].splitlines()), 7)
+                self.assertEqual(len(run.call_args.kwargs['input'].splitlines()), len(self.engine.PROFILES) + 1)
         self.engine.apply.assert_not_called()
         self.engine.reset.assert_not_called()
 
@@ -45,14 +45,14 @@ class SafeSelectorTests(unittest.TestCase):
         self.engine.reset.assert_not_called()
 
     def test_current_and_invalid_selections_do_nothing(self):
-        for value in ('1', '-1', '7', '99', 'bad', ''):
+        for value in ('1', '-1', str(len(self.engine.PROFILES) + 1), '99', 'bad', ''):
             with self.choose(value):
                 self.engine.open_selector()
         self.engine.apply.assert_not_called()
         self.engine.reset.assert_not_called()
 
     def test_restore_original(self):
-        with self.choose('6'):
+        with self.choose(str(len(self.engine.PROFILES))):
             self.engine.toggle_selector()
         self.engine.reset.assert_called_once_with()
 

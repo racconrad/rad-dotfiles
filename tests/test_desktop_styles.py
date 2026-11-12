@@ -96,9 +96,9 @@ class DesktopStylesTests(unittest.TestCase):
         self.assertEqual(initial['current'],'original')
         self.assertEqual(initial['selected'],'modern')
         self.assertFalse(initial['busy'])
-        self.assertEqual(len(initial['choices']),6)
+        self.assertEqual(len(initial['choices']),7)
         self.assertEqual([row['name'] for row in initial['choices']],
-                         ['Default','Transparent','Classic','Mono','Retro','Night'])
+                         ['Default','Transparent','Classic','Mono','Retro','Night','Raccon Retrofuture'])
         self.assertEqual(source.count(':image-height 280'),1)
         for name in ('waybar.css','raccon.scss','rofi.rasi'):
             self.assertNotIn(b'background:',plan['.config/desktop-style/current/'+name][0])
@@ -174,7 +174,7 @@ class DesktopStylesTests(unittest.TestCase):
         env={**os.environ,'HOME':str(self.home),'XDG_STATE_HOME':str(self.home/'.local/state')}
         result=subprocess.run([str(self.home/'.local/bin/desktop-style'),'list'],env=env,capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
-        self.assertEqual(len(json.loads(result.stdout)),6)
+        self.assertEqual(len(json.loads(result.stdout)),7)
         folder=self.home/'.local/state/desktop-power';folder.mkdir(parents=True)
         for mode,locks in (('working',False),('balanced',True)):
             (folder/'preference.json').write_text(json.dumps({'mode':mode}))

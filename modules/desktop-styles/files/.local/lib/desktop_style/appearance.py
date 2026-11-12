@@ -9,7 +9,7 @@ def resolve(name, profile, colors):
         widget_frame = 'none'
     return dict(style=name, font=profile['font'], radius=profile['radius'],
                 control_radius=min(profile['radius'], 10), border=profile['border'],
-                opacity=profile['alpha'] if name == 'glass' else 1,
+                opacity=profile['alpha'] if name in ('glass', 'retrofuture') else 1,
                 panel_padding=16 if strict or name == 'windows' else 20,
                 control_padding=8 if strict or name == 'windows' else 10,
                 position=profile['position'], continuous=profile.get('continuous',False),
@@ -261,6 +261,11 @@ window#osd progress, window#osd segment.active {{ min-height: 3px; background: {
     # gtk.css has USER priority, above each application's theme provider.
     # Mutable shape rules there would pin old radii in resident Eww processes.
     gtk='/* Global GTK files define color roles; shape and typography belong to the live application adapters. */\n'
-    return dict(widget_editor=editor+tooltip,widgets=widgets+tooltip,raccon=menu+tooltip,panels=panels+tooltip,selector=selector+tooltip,
+    outputs = dict(widget_editor=editor+tooltip,widgets=widgets+tooltip,raccon=menu+tooltip,panels=panels+tooltip,selector=selector+tooltip,
                 waybar=bar+tooltip,rofi=rofi,rofi_colors=rofi_colors,swaync=swaync+tooltip,swayosd=osd+tooltip,gtk=gtk,
                 tokens=json.dumps(t,ensure_ascii=False,indent=2)+'\n')
+
+    if name == 'retrofuture':
+        from desktop_style.retrofuture import decorate
+        return decorate(outputs, colors)
+    return outputs

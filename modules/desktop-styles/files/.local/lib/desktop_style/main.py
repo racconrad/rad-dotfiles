@@ -28,6 +28,7 @@ PROFILES = {
     'monochrome': dict(icon='format-text-code-symbolic', widget_frame='none', name='Mono', detail='Two colors from your wallpaper', font='JetBrainsMono Nerd Font Mono', radius=0, border=1, alpha=1, skin='monochrome', position='bottom'),
     'retro': dict(icon='applications-games-symbolic', widget_frame='retro', name='Retro', detail='Pixel type and a 16-color palette', font='Silkscreen', radius=0, border=2, alpha=1, skin='pixel', position='bottom'),
     'ascii': dict(icon='format-text-code-symbolic', widget_frame='ascii', name='Night', detail='Navy, ivory, coral and cyan', font='JetBrainsMono Nerd Font Mono', radius=0, border=1, alpha=1, skin='ascii', position='bottom'),
+    'retrofuture': dict(icon='applications-engineering-symbolic', widget_frame='future', name='Raccon Retrofuture', detail='Smoked metal, luminous instruments and a sculpted dock', font='Inter', radius=22, border=1, alpha=.96, skin='glass', position='bottom'),
 }
 STYLE_ALIASES = {'gnome':'modern','windows':'modern','default':'modern','simple':'modern',
                  'transparent':'glass','classic':'terminal','mono':'monochrome','night':'ascii','ascii bloom':'ascii'}
@@ -336,6 +337,9 @@ def contrasting_tone(background,seed):
 def palette(style, source):
     style=normalize_style(style)
     colors = dict(source)
+    if style == 'retrofuture':
+        from desktop_style.retrofuture import palette as retrofuture_palette
+        return retrofuture_palette(source)
     if style == 'ascii':
         # An art-directed companion to ASCII Bloom, independent of the active
         # wallpaper. Keep the original source intact for every other profile.
@@ -532,6 +536,10 @@ def managed_settings():
     section=re.search(r'(?ms)^\[pixdecor\]\n(.*?)(?=^\[|\Z)',ini)[1]
     result=dict(bar={k:json.loads(re.search(r'"'+k+r'"\s*:\s*("[^"]*"|\d+)',bar)[1]) for k in BAR_KEYS},
                 window={k:re.search(r'(?m)^'+k+r'\s*=\s*(.*)$',section)[1] for k in WINDOW_KEYS})
+    from desktop_style.waybar import Document
+    taskbar=Document(bar).data.get('wlr/taskbar')
+    if isinstance(taskbar,dict):
+        result['taskbar']={'exists':'icon-size' in taskbar,'icon_size':taskbar.get('icon-size')}
     fuzzel=HOME/'.config/fuzzel/fuzzel.ini'
     if fuzzel.exists():
         parser=configparser.ConfigParser(interpolation=None);parser.read(fuzzel)
@@ -543,6 +551,11 @@ def set_managed(settings):
     path=HOME/'.config/waybar/config.jsonc'; text=path.read_text(); old=text
     for key,value in settings['bar'].items():
         text=re.sub(r'("'+key+r'"\s*:\s*)("[^"]*"|\d+)',lambda m:m[1]+json.dumps(value),text,count=1)
+    if 'taskbar' in settings:
+        from desktop_style.waybar import Document, DELETE
+        if isinstance(Document(text).data.get('wlr/taskbar'),dict):
+            size=settings['taskbar']
+            text=Document(text).patch(('wlr/taskbar','icon-size'),size['icon_size'] if size['exists'] else DELETE)
     write(path,text)
     bar_changed=text!=old
     if (HOME/'.config/wayfire/raccon.ini').exists():
@@ -574,8 +587,11 @@ def set_managed(settings):
 
 def configure_windows(style):
     settings=managed_settings(); p=PROFILES[style]
+    if 'taskbar' in settings:
+        original=read(STATE/'geometry.json').get('taskbar',settings['taskbar'])
+        settings['taskbar']={'exists':True,'icon_size':32} if style=='retrofuture' else original
     settings['window'].update(rounded_corner_radius=str(p['radius']),border_size=str(p['border']),
-                              shadow_radius='24' if style=='glass' else '0',title_font=p['font']+' 10')
+                              shadow_radius='24' if style in ('glass', 'retrofuture') else '0',title_font=p['font']+' 10')
     if settings.get('fuzzel'):
         settings['fuzzel']['main']['font']=p['font']+':size=12'
         settings['fuzzel']['border'].update(radius=str(p['radius']),width=str(p['border']))
@@ -805,12 +821,14 @@ def preview(style, source):
     p=bar_profile(style); r=p['radius']; bg=c['surface']; panel=c['surface_container']; fg=c['on_surface']; accent=c['primary']; edge=c['outline_variant']
     ybar=0 if p['position']=='top' else 234
     svg=[f'<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280"><rect width="440" height="280" rx="12" fill="{bg}"/>']
-    if style=='glass':
+    if style in ('glass','retrofuture'):
         svg.append(f'<path d="M0 120 L440 20 V200 L0 280 Z" fill="{accent}" opacity=".42"/>')
     def rect(x,y,w,h,fill,rad=r): svg.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{rad}" fill="{fill}" fill-opacity="{p["alpha"]}" stroke="{edge}" stroke-width="{p["border"]}"/>')
     def label(x,y,text,size=12,color=fg): svg.append(f'<text x="{x}" y="{y}" fill="{color}" font-family="{escape(p["font"])}" font-size="{size}">{escape(text)}</text>')
     rect(18,48,130,88,panel); label(30,78,'10:24',25); label(30,105,'My desktop',10)
     rect(166,48,254,158,panel); label(182,76,'Raccon Menu',14)
+    if style=='retrofuture':
+        svg.append(f'<path d="M180 84 H406" stroke="{c["secondary"]}" stroke-width="1"/>')
     for i,name in enumerate(('Apps','Files','Terminal')):
         rect(180+i*76,94,66,64,bg,min(r,8)); label(185+i*76,134,name,9)
     rect(180,173,226,19,bg,min(r,5)); label(188,186,'Search apps',9)
@@ -829,6 +847,9 @@ def preview(style, source):
         for x,y in ((26,156),(34,156),(50,156),(58,156),(26,164),(34,164),(42,164),(50,164),(58,164),(34,172),(50,172)):
             rect(x,y,8,8,accent,0)
     svg.append('</svg>')
+    if style=='retrofuture':
+        from desktop_style.retrofuture import preview_svg
+        svg=[preview_svg(c,p['font'])]
     path=CONFIG/'previews'/f'{style}.svg';write(path,''.join(svg))
     # Decode a small cached raster when opening the picker. SVG/font rendering
     # belongs to this background preparation, once per palette/layout change.

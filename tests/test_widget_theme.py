@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
 BASE=ROOT/'modules/desktop-styles/files/.local/lib/desktop_style'
+sys.path.insert(0, str(BASE.parent))
 def load(name):
     spec=importlib.util.spec_from_file_location('widget_theme_'+name, BASE/(name+'.py'))
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
@@ -38,7 +39,7 @@ class WidgetThemeTests(unittest.TestCase):
             colors,_=styles.palette(name,self.source)
             output=appearance.build(name,profile,colors)
             tokens=json.loads(output['tokens'])
-            self.assertIn(tokens['widgets']['frame'], ('none','monochrome','terminal','retro','glass','modern','gnome','windows','ascii'))
+            self.assertIn(tokens['widgets']['frame'], ('none','monochrome','terminal','retro','future','glass','modern','gnome','windows','ascii'))
             self.assertEqual(tokens['widgets']['fx'], 'none' if tokens['strict'] else 'focus')
             self.assertIn(profile['font'], output['widget_editor'])
             self.assertNotIn(chrome+' .rw-window-titlebar {', output['widgets'])
