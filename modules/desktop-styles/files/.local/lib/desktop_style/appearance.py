@@ -263,8 +263,11 @@ window#osd progress, window#osd segment.active {{ min-height: 3px; background: {
     gtk='/* Global GTK files define color roles; shape and typography belong to the live application adapters. */\n'
     outputs = dict(widget_editor=editor+tooltip,widgets=widgets+tooltip,raccon=menu+tooltip,panels=panels+tooltip,selector=selector+tooltip,
                 waybar=bar+tooltip,rofi=rofi,rofi_colors=rofi_colors,swaync=swaync+tooltip,swayosd=osd+tooltip,gtk=gtk,
-                tokens=json.dumps(t,ensure_ascii=False,indent=2)+'\n')
+                wlogout='',gtklock='',tokens=json.dumps(t,ensure_ascii=False,indent=2)+'\n')
 
+    if name == 'expressive':
+        from desktop_style.expressive_surfaces import decorate
+        return decorate(outputs, colors, t)
     if name == 'retrofuture':
         from desktop_style.retrofuture import decorate
         return decorate(outputs, colors)

@@ -155,7 +155,7 @@ static void configure_extras(GtkWidget *window) {
     if(GTK_IS_REVEALER(reveal)) {
         gtk_revealer_set_transition_type(GTK_REVEALER(reveal),enabled?(below?GTK_REVEALER_TRANSITION_TYPE_SLIDE_DOWN:GTK_REVEALER_TRANSITION_TYPE_SLIDE_RIGHT):GTK_REVEALER_TRANSITION_TYPE_NONE);
         gtk_revealer_set_transition_duration(GTK_REVEALER(reveal),ms);
-        gtk_widget_set_valign(reveal,below?GTK_ALIGN_START:GTK_ALIGN_END);
+        gtk_widget_set_valign(reveal,GTK_ALIGN_START);
         gtk_widget_set_halign(reveal,below?GTK_ALIGN_END:GTK_ALIGN_FILL);
     }
     GtkWidget *pages=nav_find(window,"extra-pages");
@@ -238,7 +238,7 @@ static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *val
     GtkWidget *window=g_value_get_object(&values[0]);
     soft_icons_apply(window);
     if(!GTK_IS_WINDOW(window)||!nav_find(window,"style-selector"))return TRUE;
-    popup_geometry_bind(window,1040,740);
+    // popup_geometry_bind(window,1040,740);
     gboolean first=!g_object_get_data(G_OBJECT(window),"style-bound");
     if(resident!=window) {
         stop_fade();

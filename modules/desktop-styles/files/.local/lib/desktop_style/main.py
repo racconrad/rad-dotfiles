@@ -29,6 +29,7 @@ PROFILES = {
     'retro': dict(icon='applications-games-symbolic', widget_frame='retro', name='Retro', detail='Pixel type and a 16-color palette', font='Silkscreen', radius=0, border=2, alpha=1, skin='pixel', position='bottom'),
     'ascii': dict(icon='format-text-code-symbolic', widget_frame='ascii', name='Night', detail='Navy, ivory, coral and cyan', font='JetBrainsMono Nerd Font Mono', radius=0, border=1, alpha=1, skin='ascii', position='bottom'),
     'retrofuture': dict(icon='applications-engineering-symbolic', widget_frame='future', name='Raccon Retrofuture', detail='Smoked metal, luminous instruments and a sculpted dock', font='Inter', radius=22, border=1, alpha=.96, skin='glass', position='bottom'),
+    'expressive': dict(icon='preferences-desktop-theme-symbolic', widget_frame='none', name='Raccon Expressive', detail='Wallpaper colors, bold type and playful sculpted shapes', font='Inter', radius=32, border=0, alpha=1, skin='minimal', position='bottom'),
 }
 STYLE_ALIASES = {'gnome':'modern','windows':'modern','default':'modern','simple':'modern',
                  'transparent':'glass','classic':'terminal','mono':'monochrome','night':'ascii','ascii bloom':'ascii'}
@@ -337,6 +338,9 @@ def contrasting_tone(background,seed):
 def palette(style, source):
     style=normalize_style(style)
     colors = dict(source)
+    if style == 'expressive':
+        from desktop_style.expressive import palette as expressive_palette
+        return expressive_palette(source)
     if style == 'retrofuture':
         from desktop_style.retrofuture import palette as retrofuture_palette
         return retrofuture_palette(source)
@@ -465,7 +469,7 @@ def integrations(style=None):
     for path in (HOME/'.config/rofi').glob('*.rasi'):
         if path.name != 'colors.rasi': ensure_import(path, f'@import "{CURRENT}/rofi.rasi"')
     ensure_import(CONFIG/'eww.scss',f'@import "{CURRENT}/selector.scss";')
-    for name in ('swaync','swayosd'):
+    for name in ('swaync','swayosd','wlogout','gtklock'):
         ensure_import(HOME/'.config'/name/'style.css',f'@import "{CURRENT}/{name}.css";')
 
 
@@ -589,7 +593,7 @@ def configure_windows(style):
     settings=managed_settings(); p=PROFILES[style]
     if 'taskbar' in settings:
         original=read(STATE/'geometry.json').get('taskbar',settings['taskbar'])
-        settings['taskbar']={'exists':True,'icon_size':32} if style=='retrofuture' else original
+        settings['taskbar']={'exists':True,'icon_size':32} if style in ('retrofuture','expressive') else original
     settings['window'].update(rounded_corner_radius=str(p['radius']),border_size=str(p['border']),
                               shadow_radius='24' if style in ('glass', 'retrofuture') else '0',title_font=p['font']+' 10')
     if settings.get('fuzzel'):
@@ -734,7 +738,7 @@ def apply(style, wallpaper=False):
             if HOME/'.config/cava/config' in outputs:
                 outputs[HOME/'.config/cava/config']=outputs[HOME/'.config/cava/config'].replace('gradient = 1','gradient = 0')+f"\nforeground = '{colors['primary']}'\n"
         outputs.update({CURRENT/'raccon.scss':menu,CURRENT/'waybar.css':bar,CURRENT/'rofi.rasi':rofi})
-        for name in ('widgets','panels','swaync','swayosd'):
+        for name in ('widgets','panels','swaync','swayosd','wlogout','gtklock'):
             outputs[CURRENT/(name+'.css')]=appearance[name]
         outputs[CURRENT/'selector.scss']=appearance['selector']
         outputs[CURRENT/'tokens.json']=with_widget_frame(appearance['tokens'])
@@ -773,7 +777,7 @@ def apply(style, wallpaper=False):
         save(STATE/'original.json',original)
         previous.update(snapshot([HOME/'.config/waybar/config.jsonc', STATE/'waybar-horizontal.json']))
         # Validate standalone GTK styles before publishing any outputs.
-        for name in ('raccon','waybar','selector','widgets','panels','swaync','swayosd','gtk','widget_editor'):
+        for name in ('raccon','waybar','selector','widgets','panels','swaync','swayosd','gtk','widget_editor','wlogout','gtklock'):
             validate_css(appearance[name])
         with tempfile.TemporaryDirectory() as tmp:
             for index, text in enumerate([outputs[widget_palette]] if widgets_available() else []):
@@ -850,6 +854,9 @@ def preview(style, source):
     if style=='retrofuture':
         from desktop_style.retrofuture import preview_svg
         svg=[preview_svg(c,p['font'])]
+    if style=='expressive':
+        from desktop_style.expressive_preview import preview_svg
+        svg=[preview_svg(c,p)]
     path=CONFIG/'previews'/f'{style}.svg';write(path,''.join(svg))
     # Decode a small cached raster when opening the picker. SVG/font rendering
     # belongs to this background preparation, once per palette/layout change.
