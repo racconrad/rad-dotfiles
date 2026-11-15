@@ -1,0 +1,13 @@
+#!/bin/sh
+if command -v raccon >/dev/null 2>&1; then
+    exec raccon countdown "$@"
+fi
+if [ -x "$HOME/.local/bin/raccon" ]; then
+    exec "$HOME/.local/bin/raccon" countdown "$@"
+fi
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+REPO_COUNTDOWN="$SCRIPT_DIR/../../../../../crates/raccon/target/release/countdown"
+if [ -x "$REPO_COUNTDOWN" ]; then
+    exec "$REPO_COUNTDOWN" "$@"
+fi
+exec python3 "$HOME/.local/lib/raccon_countdown/cli.py" "$@"

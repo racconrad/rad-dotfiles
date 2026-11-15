@@ -19,21 +19,24 @@ $spring: cubic-bezier(.22, 1, .36, 1);
    so the window never resizes while it moves. */
 .popup.float-popup { padding: 0 12px; }
 .popup.float-popup .panel.float-card { background: rgba($surface_container, $opacity); border: $border solid $outline_variant;
-  border-radius: $radius; padding: $panel_padding + 10px; box-shadow: none; opacity: 0; margin-top: 28px; margin-bottom: 0;
+  border-radius: $radius; padding: 14px 16px; box-shadow: none; opacity: 0; margin-top: 28px; margin-bottom: 0;
   transition: opacity 160ms ease-out, margin-top 160ms $ease, margin-bottom 160ms $ease; }
 .popup.float-popup.on .panel.float-card { opacity: 1; margin-top: 0; margin-bottom: 28px; transition-duration: 240ms; }
 
 .popup.float-popup button { border: none; box-shadow: none; border-radius: $control_radius;
   transition: background-color 160ms ease-out, color 160ms ease-out; }
 .popup.float-popup button:focus { box-shadow: none; }
-.popup.float-popup .float-badge { background: $primary_container; color: $on_primary_container; border-radius: $control_radius; padding: $control_padding + 4px; }
+.popup.float-popup .float-badge { background: $primary_container; color: $on_primary_container; border-radius: $control_radius; padding: 6px 8px; }
 .popup.float-popup .float-badge image { color: $on_primary_container; }
-.popup.float-popup .float-title { font-size: 22px; font-weight: 800; }
+.popup.float-popup .float-title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
 .popup.float-popup .float-subtitle { font-size: 12px; }
-.popup.float-popup .float-close { padding: $control_padding + 2px; border-radius: $pill; background: $surface_container_high; }
-.popup.float-popup .nav-tab { padding: $control_padding + 2px $control_padding * 2; border-radius: $pill; background: $surface_container_high; }
+.popup.float-popup .float-close { padding: 0; border-radius: $pill; background: $surface_container_high; min-width: 28px; min-height: 28px; }
+.popup.float-popup .nav-tab { padding: 5px 12px; border-radius: $pill; background: $surface_container_high; font-size: 12px; font-weight: 500; }
+.popup.float-popup .nav-tab .tab-title { font-size: 12px; font-weight: 600; }
+.popup.float-popup .nav-tab .tab-count { font-size: 11px; margin-left: 2px; }
 .popup.float-popup .nav-tab.current, .popup.float-popup .nav-tab.current label, .popup.float-popup .nav-tab.current image {
   background: $primary; color: $on_primary; }
+.popup.float-popup .nav-tab.current .tab-count { color: $on_primary; opacity: .85; }
 .popup.float-popup button.float-close:hover, .popup.float-popup button.nav-tab:hover:not(.current) { background: $surface_container_highest; }
 .popup.float-popup button.float-close:hover image, .popup.float-popup button.nav-tab:hover:not(.current) label,
 .popup.float-popup button.nav-tab:hover:not(.current) image { color: $on_surface; }
@@ -42,14 +45,15 @@ $spring: cubic-bezier(.22, 1, .36, 1);
 .popup.float-popup button.wall-tile,
 .popup.float-popup button.wall-tile:hover, .popup.float-popup button.wall-tile:focus,
 .popup.float-popup button.wall-tile:active {
-  padding: 4px; background: transparent; border: none; box-shadow: none;
+  padding: 3px; background: transparent; border: none; box-shadow: none;
 }
 .wall-thumb { outline-color: $primary; background-color: $surface_container_high;
-  background-size: 340px 213px; background-repeat: no-repeat; background-position: center;
-  border-radius: $control_radius; min-width: 214px; min-height: 154px;
-  transition: opacity 160ms ease-out; }
+  background-size: cover; background-repeat: no-repeat; background-position: center;
+  border-radius: $control_radius; min-width: 168px; min-height: 105px;
+  transition: opacity 160ms ease-out, box-shadow 160ms ease-out; }
 .popup.float-popup button.wall-tile:active .wall-thumb { opacity: .76; }
-.popup.float-popup button.wall-tile:focus .wall-thumb { opacity: .88; }
+.popup.float-popup button.wall-tile:focus .wall-thumb { opacity: 1; box-shadow: inset 0 0 0 2.5px $primary; }
+.popup.float-popup button.wall-tile.current .wall-thumb { box-shadow: inset 0 0 0 2.5px $primary; }
 .popup.float-popup .panel.wallpaper-card { margin-top: 0; margin-bottom: 28px; transition: opacity 160ms ease-out; }
 .wall-pagination button:disabled { opacity: .4; }
 
@@ -111,7 +115,7 @@ $spring: cubic-bezier(.22, 1, .36, 1);
 .popup.float-popup button.wall-tile:focus .wall-thumb { opacity: 1; box-shadow: inset 0 0 0 3px $primary; }
 .popup.float-popup button.session-tile:focus .session-body { box-shadow: inset 0 0 0 3px $primary; }
 
-.video-marker { margin: 10px; padding: 6px; border-radius: $control_radius; background: $surface_container; }
+.video-marker { margin: 6px; padding: 4px 6px; border-radius: $control_radius; background: rgba($surface_container, 0.85); }
 .popup.float-popup .video-marker image { color: $on_surface; }
 
 /* Keep the profile's typography and surface policy above local card defaults. */

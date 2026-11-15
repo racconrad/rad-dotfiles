@@ -1,0 +1,162 @@
+// Floating countdown pill. Reuses active tokens, palette, and desktop styles.
+@import "palette";
+@import "tokens";
+$pill: if($control_radius == 0px, 0px, 99px);
+
+* { all: unset; font-family: $font, "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 13px; }
+window { background: transparent; color: $on_surface; }
+.muted { color: $on_surface_variant; }
+
+.countdown-popup .panel.countdown-card {
+  background: rgba($surface_container, $opacity);
+  border: $border solid $outline_variant;
+  border-radius: $pill;
+  padding: 6px 14px 8px 14px;
+  min-height: 34px;
+  transition: background-color 220ms ease, border-color 220ms ease, box-shadow 260ms ease;
+}
+
+.countdown-badge {
+  color: $primary;
+  padding: 2px 4px;
+}
+
+.countdown-badge-btn, .countdown-info-btn {
+  border-radius: $pill;
+  padding: 0 4px;
+  transition: opacity 160ms ease-out;
+}
+.countdown-badge-btn:hover, .countdown-info-btn:hover {
+  opacity: 0.82;
+}
+
+.countdown-time {
+  font-family: "JetBrainsMono Nerd Font Mono", monospace;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.countdown-label {
+  font-size: 10px;
+}
+
+.countdown-btn {
+  border-radius: $pill;
+  padding: 4px 6px;
+  color: $on_surface;
+  transition: background-color 140ms ease-out, color 140ms ease-out, -gtk-icon-transform 180ms cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.countdown-btn:hover {
+  background: rgba($primary, 0.16);
+  -gtk-icon-transform: scale(1.12);
+}
+.countdown-btn:active {
+  background: rgba($primary, 0.28);
+  -gtk-icon-transform: scale(0.92);
+}
+
+.countdown-btn.action-close:hover {
+  background: rgba($error, 0.2);
+  color: $error;
+}
+
+/* Progress bar along the pill bottom */
+.countdown-progress-track {
+  height: 3px;
+  background: rgba($outline_variant, 0.3);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.countdown-progress-bar {
+  height: 100%;
+  background: $primary;
+  border-radius: 99px;
+  transition: width 900ms linear, background-color 300ms ease;
+}
+.state-paused .countdown-progress-bar {
+  background: $tertiary;
+}
+
+@import "desktop-style";
+
+/* Fluid breathing glow on active running state */
+@keyframes countdown-breathe {
+  0% {
+    box-shadow: 0 0 0 0 rgba($primary, 0);
+    border-color: rgba($primary, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 14px 2px rgba($primary, 0.25);
+    border-color: rgba($primary, 0.8);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba($primary, 0);
+    border-color: rgba($primary, 0.4);
+  }
+}
+
+.state-running .countdown-card {
+  animation: countdown-breathe 2800ms ease-in-out infinite;
+}
+
+/* Fluid paused warning glow */
+@keyframes countdown-paused-glow {
+  0% {
+    border-color: rgba($tertiary, 0.35);
+    box-shadow: 0 0 4px rgba($tertiary, 0.1);
+  }
+  50% {
+    border-color: $tertiary;
+    box-shadow: 0 0 14px rgba($tertiary, 0.35);
+  }
+  100% {
+    border-color: rgba($tertiary, 0.35);
+    box-shadow: 0 0 4px rgba($tertiary, 0.1);
+  }
+}
+
+.state-paused .countdown-card {
+  animation: countdown-paused-glow 2200ms ease-in-out infinite;
+}
+
+/* Attention-grabbing pulse animation upon countdown expiration */
+@keyframes countdown-pulse {
+  0% {
+    background-color: rgba($error_container, 0.88);
+    border-color: $error;
+    box-shadow: 0 0 0 0 rgba($error, 0.7);
+    -gtk-icon-transform: scale(1);
+  }
+  50% {
+    background-color: $error;
+    border-color: $error;
+    color: $on_error;
+    box-shadow: 0 0 20px 4px rgba($error, 0.6);
+    -gtk-icon-transform: scale(1.04);
+  }
+  100% {
+    background-color: rgba($error_container, 0.88);
+    border-color: $error;
+    box-shadow: 0 0 0 0 rgba($error, 0.7);
+    -gtk-icon-transform: scale(1);
+  }
+}
+
+.state-ended .countdown-card {
+  border-color: $error;
+  animation: countdown-pulse 1000ms ease-in-out infinite alternate;
+}
+
+.state-ended .countdown-badge image,
+.state-ended .countdown-time {
+  color: $error;
+}
+
+.popup.countdown-popup.still, .popup.countdown-popup.still * {
+  transition: none;
+  animation: none;
+  -gtk-icon-transform: none;
+}

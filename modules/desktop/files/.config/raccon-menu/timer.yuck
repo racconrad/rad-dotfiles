@@ -1,0 +1,51 @@
+; Interactive countdown and Pomodoro timer panel.
+(deflisten countdown_state :initial '{"state":"idle","duration_seconds":0,"remaining_seconds":0,"time_formatted":"--:--","percent":0,"label":""}'
+  "countdown --listen")
+
+(defwidget timer-preset [label dur tip]
+  (button :class "timer-preset" :tooltip tip :timeout "3s"
+    :onclick "countdown start ${dur}"
+    (label :text label)))
+
+(defwidget menu-timer []
+  (box :class "timer-panel" :orientation "v" :space-evenly false :spacing 10
+    (label :class "side-title" :xalign 0 :text "Timer")
+    (box :class "timer-display state-${countdown_state.state}" :orientation "v" :space-evenly false :spacing 4
+      (label :class "timer-big-time" :text {countdown_state.state == 'idle' ? '25:00' : countdown_state.time_formatted})
+      (label :class "timer-state-label muted"
+        :text {countdown_state.state == 'ended' ? '¡Tiempo finalizado!' :
+               countdown_state.state == 'running' ? (countdown_state.label != '' ? countdown_state.label : 'En progreso…') :
+               countdown_state.state == 'paused' ? 'En pausa' : 'Listo para iniciar'}))
+    (box :class "timer-presets" :orientation "v" :space-evenly false :spacing 4
+      (label :class "section-subtitle muted" :xalign 0 :text "Presets")
+      (box :space-evenly true :spacing 4
+        (timer-preset :label "5m" :dur "5m" :tip "Short break · 5 min")
+        (timer-preset :label "15m" :dur "15m" :tip "Break · 15 min")
+        (timer-preset :label "25m" :dur "25m" :tip "Pomodoro · 25 min"))
+      (box :space-evenly true :spacing 4
+        (timer-preset :label "45m" :dur "45m" :tip "Deep work · 45 min")
+        (timer-preset :label "1h" :dur "1h" :tip "1 Hora")
+        (timer-preset :label "1h30" :dur "1h30m" :tip "90 min")))
+    (box :class "timer-actions" :space-evenly true :spacing 6
+      (button :class "timer-action-btn action-toggle ${countdown_state.state}"
+        :tooltip {countdown_state.state == 'paused' ? 'Reanudar' :
+                  countdown_state.state == 'ended' ? 'Descartar' :
+                  countdown_state.state == 'running' ? 'Pausar' : 'Iniciar 25m'}
+        :timeout "3s"
+        :onclick {countdown_state.state == 'idle' ? 'countdown start 25m' : 'countdown toggle'}
+        (box :space-evenly false :spacing 6 :halign "center"
+          (menu-icon :name {countdown_state.state == 'paused' ? 'media-playback-start-symbolic' :
+                            countdown_state.state == 'ended' ? 'emblem-ok-symbolic' :
+                            countdown_state.state == 'running' ? 'media-playback-pause-symbolic' :
+                            'media-playback-start-symbolic'})
+          (label :text {countdown_state.state == 'paused' ? 'Reanudar' :
+                        countdown_state.state == 'ended' ? 'OK' :
+                        countdown_state.state == 'running' ? 'Pausar' : 'Iniciar'})))
+      (button :class "timer-action-btn action-stop"
+        :visible {countdown_state.state != 'idle'}
+        :tooltip "Detener y reiniciar"
+        :timeout "3s"
+        :onclick "countdown stop"
+        (box :space-evenly false :spacing 6 :halign "center"
+          (menu-icon :name "media-playback-stop-symbolic")
+          (label :text "Stop"))))))

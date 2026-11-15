@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Timer
+GenericName=Countdown & Pomodoro Timer
+Comment=Floating countdown timer and Pomodoro tracker
+Exec=countdown ui
+Icon=alarm-symbolic
+Terminal=false
+Type=Application
+Categories=Utility;Clock;
+Keywords=timer;countdown;pomodoro;temporizador;reloj;

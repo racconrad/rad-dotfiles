@@ -5,7 +5,7 @@
 (deflisten walls :initial '{"rows":[],"section":"all","page":0,"pages":1,"counts":{"all":0,"images":0,"videos":0},"loading":true,"error":""}'
   "python3 $HOME/.local/lib/raccon_menu/walls.py watch")
 (deflisten desktop :initial '{"motion":true,"duration":"220ms"}'
-  "python3 $HOME/.local/lib/raccon_menu/backend.py listen-appearance")
+  "desktop-menu listen-appearance")
 ; Controls and body map together; missing previews arrive from the listener.
 (defvar shown false)
 (defvar session_visible false)
@@ -17,21 +17,22 @@
 (defvar who '{"user":"","host":"","uptime":""}')
 
 (defwidget float-head [title subtitle icon close]
-  (box :class "float-head" :space-evenly false :spacing 14
-    (box :class "float-badge" :valign "center" (menu-icon :name icon :size 28))
+  (box :class "float-head" :space-evenly false :spacing 12
+    (box :class "float-badge" :valign "center" (menu-icon :name icon :size 20))
     (box :orientation "v" :space-evenly false :hexpand true :valign "center"
       (label :class "float-title" :xalign 0 :text title)
       (label :class "float-subtitle muted" :xalign 0 :visible {subtitle != ""} :text subtitle))
     (children)
     (button :class "float-close" :valign "center" :halign "end" :tooltip "Close · Esc / Ctrl+W" :timeout "3s" :onclick close
-      (menu-icon :name "window-close-symbolic"))))
+      (menu-icon :name "window-close-symbolic" :size 16))))
 
 (defwidget kind-tab [id title icon]
   (button :class "nav-tab ${walls.section == id ? 'current' : ''}" :tooltip "${title} · ${walls.counts[id]}" :timeout "60s"
     :onclick "$HOME/.local/bin/raccon-float filter ${id}"
-    (box :space-evenly false :spacing 7
-      (menu-icon :name icon)
-      (label :text {walls.counts[id]}))))
+    (box :space-evenly false :spacing 6
+      (menu-icon :name icon :size 16)
+      (label :class "tab-title" :text title)
+      (label :class "tab-count muted" :text {walls.counts[id]}))))
 
 ; Preview is a sibling of Apply, so playing a video never applies it.
 (defwidget wall-tile [tile section]
@@ -46,11 +47,11 @@
           (label :class "preview-target" :visible false :text {tile.video ? "${section} ${tile.index}" : ""})
           (image :visible {!tile.has_thumb} :icon "image-missing-symbolic" :icon-size "dnd")))
       (box :class "video-marker" :visible {tile.video} :halign "end" :valign "end"
-        (menu-icon :name "video-x-generic-symbolic")))))
+        (menu-icon :name "video-x-generic-symbolic" :size 14)))))
 
 
 (defwidget wall-grid []
-  (scroll :class "wall-scroll" :hscroll false :vscroll true :height 486 :width 904
+  (scroll :class "wall-scroll" :hscroll false :vscroll true :height 344 :width 710
     (box :orientation "v" :space-evenly false :spacing 0 :valign "start"
       (label :class "muted" :visible {walls.error != ""} :text {walls.error})
       (label :class "muted" :visible {walls.counts[walls.section] == 0 && !walls.loading && walls.error == ""} :text "No files in this category.")
@@ -60,12 +61,12 @@
             (for tile in {row.tiles} (wall-tile :tile tile :section {walls.section}))))))))
 
 (defwidget wallpaper-card []
-  (box :class "panel float-card wallpaper-card" :orientation "v" :space-evenly false :spacing 16
+  (box :class "panel float-card wallpaper-card" :orientation "v" :space-evenly false :spacing 12
     (label :class "preview-playback" :visible false :text {video_preview.playback})
     (label :class "preview-active" :visible false :text {video_preview.active ? "true" : "false"})
     (float-head :title "Wallpapers" :subtitle "" :icon "preferences-desktop-wallpaper-symbolic"
       :close "$HOME/.local/bin/raccon-float close")
-    (box :class "kind-tabs" :space-evenly false :spacing 4 :valign "center"
+    (box :class "kind-tabs" :space-evenly false :spacing 6 :valign "center"
         (kind-tab :id "all" :title "All" :icon "view-grid-symbolic")
         (kind-tab :id "images" :title "Images" :icon "image-x-generic-symbolic")
         (kind-tab :id "videos" :title "Videos" :icon "video-x-generic-symbolic")

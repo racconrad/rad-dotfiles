@@ -3,49 +3,50 @@
 * { all: unset; font-family: "Inter", "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 13px; }
 window { background: transparent; color: $on_surface; }
 .panel, .side-panel { background: $island_background; border: 1px solid $island_outline;
-  border-radius: 20px; padding: 16px; transition: background-color 220ms ease-out, border-color 220ms ease-out; }
+  border-radius: 16px; padding: 12px; transition: background-color 220ms ease-out, border-color 220ms ease-out; }
 /* The global style may change the shape; keep Waybar's live status outline. */
 .popup .panel, .popup .side-panel { border: 1px solid $island_outline; }
-.side-panel { margin-left: 4px; padding: 12px; }
-button { border-radius: 12px; padding: 9px 10px; color: $on_surface;
+.side-panel { margin-left: 4px; padding: 10px; }
+button { border-radius: 10px; padding: 7px 9px; color: $on_surface;
   transition: background-color 120ms ease-out, color 120ms ease-out; }
 button:hover { background: rgba($primary, .16); }
 button:focus { box-shadow: inset 0 0 0 2px $primary; }
 button:active { background: rgba($primary, .28); }
 button:disabled { opacity: .5; }
-.title { font-size: 21px; font-weight: 600; letter-spacing: -.4px; }
-.avatar { border-radius: 12px; }
-.close { padding: 8px; color: $on_surface_variant; }
-.search-bar { padding: 11px 12px; border-radius: 12px; background: rgba($on_surface, .07); color: $on_surface_variant; }
+.title { font-size: 18px; font-weight: 600; letter-spacing: -.3px; }
+.avatar { border-radius: 10px; }
+.close { padding: 6px; color: $on_surface_variant; }
+.search-bar { padding: 8px 10px; border-radius: 10px; background: rgba($on_surface, .07); color: $on_surface_variant; }
 .app-search:focus { color: $on_surface; }
-.app-search { color: $on_surface; caret-color: $primary; min-height: 22px; }
+.app-search { color: $on_surface; caret-color: $primary; min-height: 20px; }
 .app-search selection { background: $primary; color: $on_primary; }
 .daily-apps { padding: 2px 0; }
-.daily-app { min-height: 60px; padding: 10px 6px; background: rgba($primary, .09); }
+.daily-app { min-height: 48px; padding: 8px 4px; background: rgba($primary, .08); border-radius: 10px; }
 .daily-app image { color: $primary; transition: -gtk-icon-transform 140ms ease-out; }
-.daily-app:hover image { -gtk-icon-transform: scale(1.09); }
-.daily-app label { font-size: 12px; font-weight: 500; }
-.app-launch { min-height: 28px; padding: 8px 10px; }
-.app-icon-slot, .app-icon { min-width: 24px; min-height: 24px; }
-.app-name { font-size: 13px; }
+.daily-app:hover image { -gtk-icon-transform: scale(1.08); }
+.daily-app label { font-size: 11px; font-weight: 500; }
+.app-launch { min-height: 26px; padding: 5px 8px; border-radius: 8px; }
+.app-icon-slot, .app-icon { min-width: 20px; min-height: 20px; }
+.app-name { font-size: 13px; font-weight: 500; }
 .app-launch.first-match { background: rgba($primary, .12); }
 .app-launch image { color: $primary; }
-.no-results { padding: 18px 4px; }
-.quick { color: $on_surface_variant; padding: 8px; }
+.no-results { padding: 14px 4px; }
+.quick { color: $on_surface_variant; padding: 6px; }
 .popup .quick, .popup .nav-tab { min-width: 22px; min-height: 22px; }
-.popup .mode-row, .popup .session-choice { min-width: 28px; min-height: 24px; }
-.quick label, .nav-tab label { font-size: 12px; }
+.popup .mode-row, .popup .session-choice { min-width: 22px; min-height: 22px; }
+.quick label, .nav-tab label { font-size: 11px; }
 .utilities { padding-top: 1px; }
-.navigation { padding-top: 8px; border-top: 1px solid rgba($outline_variant, .4); }
-.nav-tab { padding: 9px; color: $on_surface_variant; }
+.navigation { padding-top: 6px; border-top: 1px solid rgba($outline_variant, .35); }
+.nav-tab { padding: 7px; color: $on_surface_variant; border-radius: 8px; }
 .nav-tab.current { color: $primary; background: rgba($primary, .13); }
-.side-title { font-size: 15px; font-weight: 600; padding: 4px 8px 8px; }
-.mode-row, .session-choice { padding: 10px 8px; }
+.side-title { font-size: 13px; font-weight: 600; padding: 2px 4px 4px; }
+.mode-row, .session-choice { padding: 5px 6px; border-radius: 6px; }
 .mode-row.selected, .session-choice.selected { color: $primary; background: rgba($primary, .14); }
-.apply, .apply:hover { background: $primary; color: $on_primary; font-weight: 600; padding: 10px; margin-top: 6px; }
+.mode-name, .session-choice-text { font-size: 12px; font-weight: 500; }
+.apply, .apply:hover { background: $primary; color: $on_primary; font-weight: 600; padding: 5px 8px; margin-top: 2px; border-radius: 6px; }
 .apply:focus { box-shadow: inset 0 0 0 2px $on_primary; }
-.confirmation { padding: 12px 4px 2px; border-top: 1px solid rgba($outline_variant, .5); margin-top: 8px; }
-.confirmation label { font-size: 12px; }
+.confirmation { padding: 6px 4px 2px; border-top: 1px solid rgba($outline_variant, .4); margin-top: 4px; }
+.confirmation label { font-size: 11px; }
 .destructive, .destructive:hover { background: $error; color: $surface; font-weight: 600; }
 .muted { color: $on_surface_variant; }
 .error { color: $error; font-size: 12px; }
@@ -56,14 +57,106 @@ scrollbar slider { min-width: 4px; border-radius: 8px; background: rgba($seconda
 @import "controls";
 @import "desktop-style";
 
-.popup .agenda-calendar { padding: 6px; font-size: 12px; }
-.popup .agenda-calendar:selected { background-color: $primary; color: $on_primary; }
-.popup .calendar-entry { padding: 8px; min-width: 0; }
-.popup .calendar-add { padding: 8px; }
-.popup .agenda-scroll { min-height: 120px; }
-.popup .agenda-event button, .popup .agenda-task { padding: 6px; }
+.dock-left .panel { margin-left: 4px; }
+.dock-left .side-panel { margin-left: 6px; }
+.dock-right .panel { margin-right: 4px; }
+.dock-right .side-panel { margin-left: 0; margin-right: 6px; }
+.dock-top .panel { margin-top: 4px; }
+.dock-bottom .panel { margin-bottom: 4px; }
 
-.dock-right .side-panel { margin-left: 0; margin-right: 4px; }
+/* ---------- Timer Panel ---------- */
+.timer-panel {
+  padding: 10px 12px;
+  min-width: 170px;
+}
+.timer-display {
+  background: rgba($surface_container_highest, 0.6);
+  border-radius: 12px;
+  padding: 10px 8px;
+  border: 1px solid rgba($outline_variant, 0.4);
+  transition: border-color 200ms ease, background-color 200ms ease;
+}
+.timer-display.state-running {
+  border-color: rgba($primary, 0.6);
+  background: rgba($primary, 0.08);
+}
+.timer-display.state-paused {
+  border-color: rgba($tertiary, 0.6);
+  background: rgba($tertiary, 0.08);
+}
+.timer-display.state-ended {
+  border-color: $error;
+  background: rgba($error, 0.15);
+}
+.timer-big-time {
+  font-family: "JetBrainsMono Nerd Font Mono", monospace;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: $on_surface;
+}
+.timer-state-label {
+  font-size: 11px;
+  font-weight: 500;
+}
+.section-subtitle {
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.timer-preset {
+  background: rgba($surface_container_high, 0.7);
+  border-radius: 8px;
+  padding: 6px 2px;
+  color: $on_surface;
+  font-weight: 600;
+  font-size: 12px;
+  border: 1px solid rgba($outline_variant, 0.25);
+  transition: background-color 140ms ease-out, border-color 140ms ease-out, -gtk-icon-transform 180ms cubic-bezier(.34, 1.56, .64, 1);
+}
+.timer-preset:hover {
+  background: rgba($primary, 0.22);
+  border-color: rgba($primary, 0.5);
+  color: $primary;
+}
+.timer-preset:active {
+  background: rgba($primary, 0.35);
+  -gtk-icon-transform: scale(0.92);
+}
+.timer-actions {
+  margin-top: 6px;
+}
+.timer-action-btn {
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-weight: 600;
+  font-size: 12px;
+  transition: background-color 160ms ease-out, -gtk-icon-transform 180ms cubic-bezier(.34, 1.56, .64, 1);
+}
+.timer-action-btn.action-toggle {
+  background: $primary;
+  color: $on_primary;
+}
+.timer-action-btn.action-toggle:hover {
+  background: rgba($primary, 0.88);
+  -gtk-icon-transform: scale(1.04);
+}
+.timer-action-btn.action-toggle:active {
+  -gtk-icon-transform: scale(0.94);
+}
+.timer-action-btn.action-stop {
+  background: rgba($error, 0.18);
+  color: $error;
+  border: 1px solid rgba($error, 0.4);
+}
+.timer-action-btn.action-stop:hover {
+  background: $error;
+  color: $on_error;
+  -gtk-icon-transform: scale(1.04);
+}
+.timer-action-btn.action-stop:active {
+  -gtk-icon-transform: scale(0.94);
+}
 
 
 /* Theme overrides must not suppress interaction feedback. */
@@ -110,47 +203,58 @@ $spring: cubic-bezier(.22, 1, .36, 1);
 .popup .shortcuts-panel.ascii .key-cap { border-style: dashed; border-radius: 0; }
 
 /* Raccon's compact launcher rhythm; colour and geometry still follow the theme. */
-.popup .panel.panel { padding: 14px; }
+.popup .panel.panel { padding: 12px; }
 .popup .side-panel.side-panel { padding: 10px; }
-.popup .title { font-size: 19px; }
-.popup .search-bar { padding: 9px 10px; }
-.popup .search-bar entry { background: transparent; border: none; padding: 0; min-height: 22px; }
-.popup .nav-tab, .popup .quick { padding: 7px; }
+.popup .title { font-size: 17px; }
+.popup .search-bar { padding: 7px 9px; }
+.popup .search-bar entry { background: transparent; border: none; padding: 0; min-height: 20px; }
+.popup .nav-tab, .popup .quick { padding: 6px; }
 .popup .side-title { padding: 2px 0 4px; }
-.popup .service-content button { padding: 6px; }
-.popup .service-content .network-row, .popup .service-content .device-row { padding: 7px 6px; min-height: 26px; }
+.popup .service-content button { padding: 5px; }
+.popup .service-content .network-row, .popup .service-content .device-row { padding: 6px 5px; min-height: 24px; }
 .popup .service-content .network-row.selected, .popup .service-content .device-row.selected {
   background: rgba($primary, .12); color: $on_surface;
 }
 .popup .service-content .network-row:hover, .popup .service-content .device-row:hover {
   background: $primary; color: $on_primary;
 }
-.popup .calendar-navigation button { padding: 6px; }
-.popup .calendar-weekdays label { font-size: 11px; padding: 3px; }
-.popup button.calendar-day { padding: 2px; min-width: 24px; min-height: 22px; }
-.popup button.calendar-day label { font-size: 12px; }
-.popup button.calendar-day.other-month { color: $on_surface_variant; }
-.popup button.calendar-day.today { border-color: $primary; }
-.popup button.calendar-day.has-event label { text-decoration-line: underline; text-decoration-color: $primary; }
-.popup button.calendar-day.selected { background: $primary; color: $on_primary; border-color: $primary; }
-.popup button.calendar-day.selected label { color: $on_primary; text-decoration-color: $on_primary; }
-.popup .calendar-entry { background: $surface_container_highest; padding: 8px; }
-.popup .agenda-scroll { min-height: 100px; }
+/* Calendar visual styling */
+.calendar-panel { padding: 2px; }
+.calendar-today-btn { padding: 3px 5px; color: $on_surface_variant; border-radius: 6px; }
+.calendar-today-btn:hover { color: $primary; background: rgba($primary, .12); }
+.calendar-navigation { padding: 1px 0 3px; }
+.calendar-nav-prev, .calendar-nav-next { padding: 3px 5px; border-radius: 6px; color: $on_surface_variant; }
+.calendar-nav-prev:hover, .calendar-nav-next:hover { color: $primary; background: rgba($primary, .12); }
+.calendar-date-badge { font-size: 11px; font-weight: 600; color: $primary; background: rgba($primary, .1); border-radius: 6px; padding: 2px 6px; }
+.calendar-weekdays { padding: 2px 0 3px; border-bottom: 1px solid rgba($outline_variant, .25); margin-bottom: 2px; }
+.calendar-weekday { font-size: 10px; font-weight: 700; opacity: 0.6; }
+.calendar-grid { padding: 1px 0; }
+.popup button.calendar-day { padding: 1px; min-width: 22px; min-height: 22px; border-radius: 6px; transition: background-color 140ms ease-out, color 140ms ease-out; }
+.popup button.calendar-day label { font-size: 11px; font-weight: 500; }
+.popup button.calendar-day:hover { background: rgba($primary, .14); }
+.popup button.calendar-day.other-month { opacity: 0.35; color: $on_surface_variant; }
+.popup button.calendar-day.today { border: 1.5px solid $primary; font-weight: 600; }
+.popup button.calendar-day.selected { background: $primary; color: $on_primary; border-color: $primary; font-weight: 600; }
+.popup button.calendar-day.selected label { color: $on_primary; }
 
-.home-edit { padding: 8px; color: $on_surface_variant; }
-.home-edit.active, .app-pin.pinned { color: $primary; background: rgba($primary, .12); }
-.home-edit-panel { padding-top: 8px; border-top: 1px solid rgba($outline_variant, .4); }
-.home-edit-controls button { padding: 5px 3px; min-width: 20px; min-height: 20px; }
+.home-edit { padding: 5px; color: $on_surface_variant; opacity: 0.5; border-radius: 8px; transition: opacity 120ms ease-out, background-color 120ms ease-out; }
+.home-edit:hover { opacity: 1; color: $on_surface; background: rgba($primary, .12); }
+.home-edit.active, .app-pin.pinned { opacity: 1; color: $primary; background: rgba($primary, .14); }
+.home-edit-panel { padding-top: 6px; border-top: 1px solid rgba($outline_variant, .35); }
+.home-edit-controls button { padding: 4px 2px; min-width: 18px; min-height: 18px; }
 .home-edit-controls .home-remove:hover { color: $error; background: rgba($error, .1); }
 .home-tile { min-width: 0; }
-.home-empty { padding: 12px 0; }
-.shortcut-add { padding: 8px 4px; }
+.home-empty { padding: 10px 0; }
+.shortcut-add { padding: 6px 4px; }
 .shortcut-add label { font-size: 11px; }
 .edit-apps { background: rgba($primary, .08); }
-.app-row { min-height: 44px; }
-.app-pin { padding: 8px; min-width: 22px; }
+.app-row { min-height: 30px; }
+.app-pin { padding: 5px; min-width: 20px; }
 
-.app-category { font-size: 11px; }
-.recent-apps { padding-top: 8px; border-top: 1px solid rgba($outline_variant, .4); }
-.recent-list button { min-width: 24px; min-height: 24px; padding: 8px; }
-.recent-toggle, .recent-clear { padding: 6px 8px; }
+.app-category { font-size: 11px; opacity: 0.65; }
+.recent-apps { padding-top: 6px; border-top: 1px solid rgba($outline_variant, .35); }
+.recent-list button { min-width: 22px; min-height: 22px; padding: 5px; }
+.recent-toggle, .recent-clear { padding: 4px 6px; }
+.recent-toggle label { font-size: 11px; }
+.recent-title { font-size: 12px; font-weight: 500; }
+.recent-empty { font-size: 11px; padding: 4px 0; }

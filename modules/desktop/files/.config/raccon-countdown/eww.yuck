@@ -1,0 +1,47 @@
+; Raccon countdown floating pill widget.
+(defwidget menu-icon [name ?size]
+  (image :icon name :icon-size {(size ?: 18) >= 28 ? "dnd" : (size ?: 18) >= 24 ? "large-toolbar" : "button"}))
+
+(deflisten countdown :initial '{"state":"idle","duration_seconds":0,"remaining_seconds":0,"time_formatted":"--:--","percent":0,"label":""}'
+  "countdown --listen")
+
+(deflisten desktop :initial '{"style":"original","motion":true}'
+  "desktop-menu listen-appearance")
+
+(defwidget countdown-pill []
+  (box :class "panel countdown-card ${countdown.state} ${countdown.state == 'ended' ? 'ended' : ''}"
+       :orientation "v" :space-evenly false :spacing 2
+    (box :orientation "h" :space-evenly false :spacing 10
+      (button :class "countdown-badge-btn"
+              :tooltip "Abrir temporizador · Timer UI"
+              :timeout "3s"
+              :onclick "countdown ui"
+        (box :class "countdown-badge" :valign "center"
+          (menu-icon :name {countdown.state == "ended" ? "alarm-symbolic" : countdown.state == "paused" ? "media-playback-pause-symbolic" : "alarm-symbolic"} :size 18)))
+      (button :class "countdown-info-btn"
+              :tooltip "Abrir temporizador · Timer UI"
+              :timeout "3s"
+              :onclick "countdown ui"
+              :hexpand true
+        (box :orientation "v" :space-evenly false :valign "center"
+          (label :class "countdown-time" :xalign 0 :text {countdown.time_formatted})
+          (label :class "countdown-label muted" :xalign 0 :visible {countdown.label != ""} :text {countdown.label})))
+      (button :class "countdown-btn action-toggle"
+              :tooltip {countdown.state == "paused" ? "Resume" : countdown.state == "ended" ? "Dismiss" : "Pause"}
+              :timeout "3s"
+              :onclick "countdown toggle"
+        (menu-icon :name {countdown.state == "paused" ? "media-playback-start-symbolic" : countdown.state == "ended" ? "emblem-ok-symbolic" : "media-playback-pause-symbolic"} :size 16))
+      (button :class "countdown-btn action-close"
+              :tooltip "Stop · Cancel"
+              :timeout "3s"
+              :onclick "countdown stop"
+        (menu-icon :name "window-close-symbolic" :size 16)))
+    (box :class "countdown-progress-track" :visible {countdown.state == "running" || countdown.state == "paused"}
+      (box :class "countdown-progress-bar" :style "width: ${countdown.percent}%;"))))
+
+(defwindow raccon-countdown [?x ?y]
+  :monitor 0
+  :geometry (geometry :x {x ?: "0px"} :y {y ?: "18px"} :width "1px" :height "1px" :anchor "top center")
+  :stacking "overlay" :exclusive false :focusable false :namespace "raccon-countdown"
+  (box :class "popup countdown-popup style-${desktop.style ?: 'original'} ${desktop.motion ? 'motion' : 'still'} state-${countdown.state}"
+    (countdown-pill)))

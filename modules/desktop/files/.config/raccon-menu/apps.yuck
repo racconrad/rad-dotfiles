@@ -11,18 +11,18 @@
       (menu-icon :name "go-next-symbolic"))))
 
 (defwidget menu-recent []
-  (box :class "recent-apps" :visible {!editing} :orientation "v" :space-evenly false :spacing 6
+  (box :class "recent-apps" :visible {catalogue.recent_enabled ? true : editing} :orientation "v" :space-evenly false :spacing 4
     (box :space-evenly false :spacing 6
-      (label :class "muted" :xalign 0 :hexpand true :text "Recent apps")
+      (label :class "muted recent-title" :xalign 0 :hexpand true :text "Recent apps")
       (button :class "recent-toggle" :tooltip "Only launches from Raccon Menu are recorded. Off by default. Disabling stops tracking; Clear removes saved history."
         :onclick "~/.local/bin/desktop-menu recent ${catalogue.recent_enabled ? 'disable' : 'enable'}" :timeout "5s"
         (label :text {catalogue.recent_enabled ? 'Disable' : 'Enable'}))
       (button :class "recent-clear"
         :tooltip "Clear recent apps" :onclick "~/.local/bin/desktop-menu recent clear" :timeout "5s"
         (menu-icon :name "edit-clear-symbolic")))
-    (label :class "muted" :visible {catalogue.recent_enabled && arraylength(catalogue.recent) == 0}
+    (label :class "muted recent-empty" :visible {catalogue.recent_enabled && arraylength(catalogue.recent) == 0}
       :wrap true :xalign 0 :limit-width 32 :text "No recent apps yet. Launch an app from Raccon Menu to add it.")
-    (box :class "recent-list" :visible {catalogue.recent_enabled} :space-evenly true :spacing 4
+    (box :class "recent-list" :visible {catalogue.recent_enabled && arraylength(catalogue.recent) > 0} :space-evenly true :spacing 4
       (for app in {catalogue.recent}
         (button :class "recent-launch" :tooltip {app.name}
           :onclick "~/.local/bin/desktop-menu ${app.action} ${app.value}" :timeout "5s"
@@ -31,25 +31,25 @@
             (image :class "app-icon" :icon {app.icon} :icon-size "large-toolbar")))))))
 
 (defwidget menu-home []
-  (box :class "home-content" :orientation "v" :space-evenly false :spacing 10
-    (box :class "daily-apps" :orientation "v" :space-evenly true :spacing 8
+  (box :class "home-content" :orientation "v" :space-evenly false :spacing 8
+    (box :class "daily-apps" :orientation "v" :space-evenly true :spacing 6
       (for row in {jq(catalogue.favorites, 'map(map(. + {editing: ' + (editing ? 'true' : 'false') + '}))')}
-        (box :space-evenly true :spacing 8
+        (box :space-evenly true :spacing 6
           (for app in row
-            (box :class "home-tile" :orientation "v" :space-evenly false :spacing 4
+            (box :class "home-tile" :orientation "v" :space-evenly false :spacing 2
               (button :class "daily-app" :active {app.available}
                 :tooltip {app.available ? app.name : app.name + ' · Not installed'}
                 :onclick "~/.local/bin/desktop-menu ${app.action} ${app.value}" :timeout "5s"
-                (box :orientation "v" :space-evenly false :spacing 6
+                (box :orientation "v" :space-evenly false :spacing 4
                   (label :class "file-key" :visible false :text {app.has_file ? app.file : ''})
-                  (box :class "daily-icon-slot" :width 32 :height 32 :halign "center"
+                  (box :class "daily-icon-slot" :width 28 :height 28 :halign "center"
                     (image :class "daily-icon" :icon {app.icon} :icon-size "dnd"))
                   (label :visible {app.editing} :text {app.name} :limit-width 12)))
               (home-edit-controls :app app))))))
     (menu-recent)
     (label :class "home-empty muted" :visible {catalogue.home_count == 0 && !editing}
       :wrap true :xalign 0 :limit-width 32 :text "Your Home is empty. Choose Edit to add apps.")
-    (box :class "home-edit-panel" :visible {editing} :orientation "v" :space-evenly false :spacing 8
+    (box :class "home-edit-panel" :visible {editing} :orientation "v" :space-evenly false :spacing 6
       (label :class "muted" :xalign 0 :wrap true :limit-width 32
         :text "Use the arrows to reorder. Add more from Apps.")
       (box :space-evenly true :spacing 4
@@ -78,14 +78,13 @@
           (box :class "app-row" :space-evenly false :spacing 4
             (button :class "app-launch" :hexpand true :tooltip {app.name}
               :onclick "~/.local/bin/desktop-menu ${app.action} ${app.value}" :timeout "5s"
-              (box :space-evenly false :spacing 12
+              (box :space-evenly false :spacing 10
                 (label :class "search-key" :visible false :text {app.search})
                 (label :class "file-key" :visible false :text {app.has_file ? app.file : ''})
-                (box :class "app-icon-slot" :width 24 :height 24 :valign "center"
+                (box :class "app-icon-slot" :width 20 :height 20 :valign "center"
                   (image :class "app-icon" :icon {app.icon} :icon-size "large-toolbar"))
-                (box :orientation "v" :space-evenly false :hexpand true
-                  (label :class "app-name" :xalign 0 :limit-width 28 :text {app.name})
-                  (label :class "app-category muted" :xalign 0 :text {app.category}))))
+                (label :class "app-name" :xalign 0 :hexpand true :limit-width 22 :text {app.name})
+                (label :class "app-category muted" :xalign 1 :text {app.category})))
             (button :class "app-pin ${app.pinned ? 'pinned' : ''}" :visible {app.editing && app.pinnable}
               :active {app.pinned || catalogue.home_count < catalogue.home_limit}
               :tooltip {app.pinned ? 'Remove from Home' : 'Add to Home'}
