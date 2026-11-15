@@ -1,2 +1,20 @@
 #!/bin/sh
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+REPO_MENU="$SCRIPT_DIR/../../../../../crates/raccon/target/release/desktop-menu"
+if [ -x "$REPO_MENU" ]; then
+    exec "$REPO_MENU" "$@"
+fi
+REPO_RACCON="$SCRIPT_DIR/../../../../../crates/raccon/target/release/raccon"
+if [ -x "$REPO_RACCON" ]; then
+    exec "$REPO_RACCON" menu "$@"
+fi
+if command -v desktop-menu-rs >/dev/null 2>&1; then
+    exec desktop-menu-rs "$@"
+fi
+if command -v raccon >/dev/null 2>&1; then
+    exec raccon menu "$@"
+fi
+if [ -x "$HOME/.local/bin/raccon" ]; then
+    exec "$HOME/.local/bin/raccon" menu "$@"
+fi
 exec python3 "$HOME/.local/lib/raccon_menu/cli.py" "$@"

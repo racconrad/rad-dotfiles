@@ -30,8 +30,8 @@ WINDOW = 'raccon-menu'
 SIMPLE_PAGES = False
 BACKEND = HERE / 'backend.py'
 NAMES = dict(zip(MODES, ('Automatic', 'Power saver', 'Balanced', 'Full', 'Working')))
-ICONS = dict(zip(MODES, ('preferences-system-symbolic', 'battery-low-symbolic',
-    'power-profile-balanced-symbolic', 'weather-clear-symbolic', 'computer-symbolic')))
+ICONS = dict(zip(MODES, ('applications-engineering-symbolic', 'battery-low-symbolic',
+    'power-profile-balanced-symbolic', 'weather-clear-symbolic', 'format-text-code-symbolic')))
 ENGLISH_DESCRIPTIONS = {
     'Sin animaciones ni widgets; efectos mínimos y fondos animados pausados.':
         'Minimal effects; widgets hidden and animated wallpapers paused.',
@@ -148,7 +148,18 @@ def applications():
         filename = icon.get_file().get_path() if isinstance(icon, Gio.FileIcon) else ''
         has_file = bool(filename and Path(filename).is_file())
         name = app.get_display_name()
-        if isinstance(app, Gio.DesktopAppInfo):
+        desktop_info_type = None
+        try:
+            from gi.repository import GioUnix
+            desktop_info_type = getattr(GioUnix, 'DesktopAppInfo', None)
+        except (ImportError, AttributeError):
+            pass
+        if desktop_info_type is None:
+            try:
+                desktop_info_type = getattr(Gio, 'DesktopAppInfo', None)
+            except (AttributeError, TypeError):
+                pass
+        if desktop_info_type and isinstance(app, desktop_info_type):
             name = app.get_string('Name') or name
             entry = GLib.KeyFile()
             try:
@@ -285,7 +296,7 @@ def sync_popup_appearance(tokens, palette_text):
     """Eww watches its own directory; keep each popup's imports local."""
     override = CONFIG / '_desktop-style.scss'
     css = override.read_text() if override.exists() else '/* Original appearance */\n'
-    for name in ('raccon-float', 'raccon-music'):
+    for name in ('raccon-float', 'raccon-music', 'raccon-countdown'):
         folder = HOME / '.config' / name
         if not folder.is_dir():
             continue
@@ -293,18 +304,19 @@ def sync_popup_appearance(tokens, palette_text):
             path = folder / filename
             if not path.exists() or path.read_text() != text:
                 write(path, text)
-    folder = HOME / '.config/raccon-float'
-    if folder.is_dir():
-        def number(key, default):
-            value = tokens.get(key)
-            return value if type(value) in (int, float) and 0 <= value <= 100 else default
-        font = str(tokens.get('font') or 'Inter').replace('"', '').replace('\\', '').replace('\n', '')
-        text = (f'$radius: {number("radius", 20)}px;\n$control_radius: {number("control_radius", 12)}px;\n'
-                f'$border: {number("border", 0)}px;\n$opacity: {min(1, number("opacity", 1))};\n$font: "{font}";\n'
-                f'$panel_padding: {number("panel_padding", 16)}px;\n$control_padding: {number("control_padding", 8)}px;\n')
-        path = folder / '_tokens.scss'
-        if not path.exists() or path.read_text() != text:
-            write(path, text)
+    for name in ('raccon-float', 'raccon-countdown'):
+        folder = HOME / '.config' / name
+        if folder.is_dir():
+            def number(key, default):
+                value = tokens.get(key)
+                return value if type(value) in (int, float) and 0 <= value <= 100 else default
+            font = str(tokens.get('font') or 'Inter').replace('"', '').replace('\\', '').replace('\n', '')
+            text = (f'$radius: {number("radius", 20)}px;\n$control_radius: {number("control_radius", 12)}px;\n'
+                    f'$border: {number("border", 0)}px;\n$opacity: {min(1, number("opacity", 1))};\n$font: "{font}";\n'
+                    f'$panel_padding: {number("panel_padding", 16)}px;\n$control_padding: {number("control_padding", 8)}px;\n')
+            path = folder / '_tokens.scss'
+            if not path.exists() or path.read_text() != text:
+                write(path, text)
 
 
 def palette():
@@ -472,10 +484,10 @@ def geometry():
             monitor = display.get_monitor_at_point(x, y) or display.get_monitor(0)
             geo = monitor.get_geometry()
             index = next(i for i in range(display.get_n_monitors()) if display.get_monitor(i) == monitor)
-            return index, max(280, min(420, geo.width - 260)), max(150, min(244, geo.height - 280))
+            return index, max(280, min(360, geo.width - 260)), max(150, min(250, geo.height - 280))
     except (ImportError, AttributeError, RuntimeError, StopIteration):
         pass
-    return 0, 420, 244
+    return 0, 360, 250
 
 
 def close(super_key=False):

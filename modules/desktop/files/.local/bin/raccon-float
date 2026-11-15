@@ -10,8 +10,9 @@ lib="$HOME/.local/lib/raccon_menu"
 e() { eww --no-daemonize -c "$cfg" "$@"; }
 
 sync_theme() {
-  # Local imports are rewritten only on actual palette/shape changes. Eww
-  # observes its own folder, including updates while the card is open.
+  if command -v desktop-menu >/dev/null 2>&1; then
+    desktop-menu palette && return 0
+  fi
   python3 "$lib/backend.py" palette
 }
 
@@ -86,7 +87,11 @@ if [[ ${1:-} != prepare ]]; then
      { [[ $name == wallpaper ]] && e active-windows 2>/dev/null | grep -q '^wallpaper:' && [[ $(e get shown) == true ]]; }; then close; exit; fi
   close  # only one card at a time
 fi
-module=$(python3 "$lib/keyboard_build.py")
+if [[ -f "$lib/keyboard_build.py" ]]; then
+  module=$(python3 "$lib/keyboard_build.py")
+elif command -v desktop-menu >/dev/null 2>&1; then
+  module=$(desktop-menu keyboard-build)
+fi
 revision=$(stat -c '%y:%s' "$module" "$lib/walls.py" "$lib/wall_preview.py" "$lib/backend.py" "$HOME/.local/lib/raccon_events.py")
 key_stamp="$HOME/.cache/raccon-float/keyboard.loaded"
 if [[ $(cat "$key_stamp" 2>/dev/null || true) != "$revision" ]]; then
@@ -100,7 +105,11 @@ if ! e ping >/dev/null 2>&1; then
 fi  # detached pipes: the daemon must not hold our stdout
 sync_theme
 if [[ ${1:-} == prepare ]] && e active-windows | grep -q '^session:'; then
-  exec python3 "$lib/card_wait.py" raccon-float-session.ready
+  if [[ -f "$lib/card_wait.py" ]]; then
+    exec python3 "$lib/card_wait.py" raccon-float-session.ready
+  elif command -v desktop-menu >/dev/null 2>&1; then
+    exec desktop-menu card-wait raccon-float-session.ready
+  fi
 fi
 style=$(grep -oP '^\s*"style"\s*:\s*"\K[\w-]+' "$HOME/.config/desktop-style/current/tokens.json" 2>/dev/null || echo default)
 if [[ $name == wallpaper ]]; then
@@ -116,6 +125,12 @@ if ! e active-windows | grep -q "^$name:"; then
   if [[ $name == session ]]; then rm -f "${XDG_RUNTIME_DIR:-$HOME/.cache}/raccon-float-session.ready"; fi
   e open "$name" --arg style="$style"
 fi
-[[ ${1:-} != prepare ]] || exec python3 "$lib/card_wait.py" raccon-float-session.ready
+if [[ ${1:-} == prepare ]]; then
+  if [[ -f "$lib/card_wait.py" ]]; then
+    exec python3 "$lib/card_wait.py" raccon-float-session.ready
+  elif command -v desktop-menu >/dev/null 2>&1; then
+    exec desktop-menu card-wait raccon-float-session.ready
+  fi
+fi
 if [[ $name == session ]]; then e update session_visible=true; fi
 e update shown=true body=true

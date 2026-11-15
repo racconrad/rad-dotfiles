@@ -1,0 +1,28 @@
+[package]
+name = "raccon"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+libc = "0.2.191"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+walkdir = "2.5.0"
+
+[lib]
+name = "raccon"
+path = "src/lib.rs"
+
+[[bin]]
+name = "raccon"
+path = "src/bin/raccon.rs"
+
+[[bin]]
+name = "desktop-menu"
+path = "src/bin/desktop_menu.rs"
+
+[[bin]]
+name = "countdown"
+path = "src/bin/countdown.rs"

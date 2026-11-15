@@ -366,7 +366,8 @@ def render(relative, content, home, modules, choices):
             text = re.sub(r'^@import "(?:../raccon-menu/)?desktop-style";\n?', '', text, flags=re.M)
     elif relative.startswith('.config/rofi/') and relative.endswith('.rasi') and not relative.endswith('/colors.rasi'):
         style_import = f'@import "{home}/.config/desktop-style/current/rofi.rasi"'
-    elif relative in ('.config/swaync/style.css','.config/swayosd/style.css'):
+    elif relative in ('.config/swaync/style.css','.config/swayosd/style.css',
+                      '.config/wlogout/style.css','.config/gtklock/style.css'):
         name=relative.split('/')[1]
         style_import = f'@import "{home}/.config/desktop-style/current/{name}.css";'
     if style_import is not None:

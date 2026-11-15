@@ -142,7 +142,7 @@ static gboolean mapped(GSignalInvocationHint *hint,guint count,const GValue *val
     /* Hidden metadata labels do not map: bind them when their toplevel maps. */
     if(GTK_IS_WINDOW(w)&&gtk_window_get_window_type(GTK_WINDOW(w))==GTK_WINDOW_TOPLEVEL) {
         if(nav_find(w,"music-card")) popup_geometry_bind(w,360,160);
-        else if(nav_find(w,"wallpaper-card")) popup_geometry_bind(w,1100,700);
+        else if(nav_find(w,"wallpaper-card")) popup_geometry_bind(w,756,480);
         else if(nav_find(w,"session-row")) popup_geometry_bind(w,1100,360);
         if(!g_object_get_data(G_OBJECT(w),"float-keys")) {
             g_signal_connect(w,"key-press-event",G_CALLBACK(keys),NULL);

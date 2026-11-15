@@ -1,4 +1,14 @@
 #!/bin/sh
 set -eu
 rdot_repo=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+RACCON_BIN="$rdot_repo/crates/raccon/target/release/raccon"
+if [ -x "$RACCON_BIN" ]; then
+    exec "$RACCON_BIN" "$@"
+fi
+
+if command -v raccon >/dev/null 2>&1; then
+    exec raccon "$@"
+fi
+
 exec python3 "$rdot_repo/scripts/master.py" "$@"

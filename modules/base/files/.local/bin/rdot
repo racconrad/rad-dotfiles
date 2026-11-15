@@ -12,6 +12,9 @@ try:
     repository = Path(os.environ.get('RACCON_DOTS_ROOT') or settings.get('repository')
                       or str(Path.home() / 'projects/raccon-dots')).expanduser().resolve()
     script = repository / 'scripts/master.py'
+    raccon_bin = repository / 'crates/raccon/target/release/raccon'
+    if raccon_bin.is_file() and os.access(raccon_bin, os.X_OK):
+        os.execv(str(raccon_bin), [str(raccon_bin), *sys.argv[1:]])
     if not script.is_file() or not (repository / '.rdot').is_file():
         raise ValueError('No encuentro Raccon Dots. Define RACCON_DOTS_ROOT o ejecuta ./rdot master desde el repositorio.')
 except (OSError, ValueError, TypeError) as error:

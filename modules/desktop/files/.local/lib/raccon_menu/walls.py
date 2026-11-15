@@ -15,7 +15,32 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HOME = Path.home()
-DIR = Path(os.environ.get('WALLPAPER_DIR', '@RDOT_HOME@/Pictures/Wallpapers'))
+
+
+def _resolve_wallpaper_dir():
+    if 'WALLPAPER_DIR' in os.environ:
+        return Path(os.environ['WALLPAPER_DIR'])
+    default_dir = Path('@RDOT_HOME@/Pictures/Wallpapers')
+    if default_dir.is_dir() and any(default_dir.iterdir()):
+        return default_dir
+    cfg = HOME / '.config/waypaper/config.ini'
+    if cfg.is_file():
+        try:
+            for line in cfg.read_text().splitlines():
+                if line.strip().startswith('folder'):
+                    _, _, folder = line.partition('=')
+                    p = Path(os.path.expanduser(folder.strip()))
+                    if p.is_dir() and any(p.iterdir()):
+                        return p
+        except Exception:
+            pass
+    for candidate in (HOME / 'Pictures/Wallpapers', HOME / '.local/share/wallpapers/raccon'):
+        if candidate.is_dir() and any(candidate.iterdir()):
+            return candidate
+    return default_dir
+
+
+DIR = _resolve_wallpaper_dir()
 CACHE = Path(os.environ.get('XDG_CACHE_HOME', HOME / '.cache'))
 THUMBS = CACHE / 'raccon-float/thumbs'
 IMAGES = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
@@ -30,7 +55,8 @@ def kind_of(path):
 
 
 def catalogue():
-    files = sorted(p for p in DIR.iterdir() if p.is_file() and kind_of(p)) if DIR.is_dir() else []
+    target = DIR if DIR.is_dir() else _resolve_wallpaper_dir()
+    files = sorted(p for p in target.iterdir() if p.is_file() and kind_of(p)) if target.is_dir() else []
     return {k: [p for p in files if kind_of(p) == k] for k in ('images', 'videos')}
 
 

@@ -4,7 +4,6 @@
 #include "navigation.h"
 #include "resident_surface.h"
 #include "soft_icons.h"
-#include "popup_geometry.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -368,15 +367,22 @@ static void select_page(guint page) {
     GtkWidget *side_pages = find(menu_window, "side-pages");
     stack_index(side_pages, page >= 2 ? page - 2 : 0);
     GtkWidget *side_panel = find(menu_window, "side-panel");
-    if (side_panel) gtk_widget_set_size_request(side_panel, 292, -1);
+    if (side_panel) {
+        gint side_w = (page == 2 || page == 3) ? 170 : (page == 7) ? 210 : 240;
+        gtk_widget_set_size_request(side_panel, side_w, -1);
+    }
     GtkWidget *side = find(menu_window, "side-revealer");
     if (side && GTK_IS_REVEALER(side)) {
         gtk_widget_set_valign(side, dock_edge == 2 ? GTK_ALIGN_START : GTK_ALIGN_END);
         gtk_revealer_set_reveal_child(GTK_REVEALER(side), page >= 2);
     }
-    const gchar *classes[] = {"tab-home", "tab-apps", "tab-modes", "tab-session", "tab-audio", "tab-connections", "tab-bluetooth", "tab-calendar", "tab-shortcuts"};
+    GtkWidget *utilities = find(menu_window, "utilities");
+    if (utilities) gtk_widget_set_visible(utilities, page != 1);
+    GtkWidget *home_edit = find(menu_window, "home-edit");
+    if (home_edit) gtk_widget_set_visible(home_edit, page == 0);
+    const gchar *classes[] = {"tab-home", "tab-apps", "tab-modes", "tab-session", "tab-audio", "tab-connections", "tab-bluetooth", "tab-calendar", "tab-shortcuts", "tab-timer"};
     const gchar *panel_classes[] = {"tab-audio", "tab-connections", "tab-bluetooth", "tab-unused"};
-    for (guint i = 0; i < (simple_pages ? 4u : 9u); i++) {
+    for (guint i = 0; i < (simple_pages ? 4u : 10u); i++) {
         GtkWidget *tab = find(menu_window, simple_pages ? panel_classes[i] : classes[i]);
         if (!tab) continue;
         GtkStyleContext *context = gtk_widget_get_style_context(tab);
@@ -513,11 +519,12 @@ static void filter_current(void) {
     if (!GTK_IS_ENTRY(entry) || !list) return;
     gchar *query = search_normalize(gtk_entry_get_text(GTK_ENTRY(entry)));
     gboolean searching = *g_strstrip(query) != '\0';
-    const gchar *controls[] = {"utilities", "navigation"};
-    for (guint i = 0; i < G_N_ELEMENTS(controls); i++) {
-        GtkWidget *group = find(menu_window, controls[i]);
-        if (group) gtk_widget_set_visible(group, !searching);
-    }
+    GtkWidget *utilities = find(menu_window, "utilities");
+    if (utilities) gtk_widget_set_visible(utilities, current_page != 1 && !searching);
+    GtkWidget *navigation = find(menu_window, "navigation");
+    if (navigation) gtk_widget_set_visible(navigation, !searching);
+    GtkWidget *home_edit = find(menu_window, "home-edit");
+    if (home_edit) gtk_widget_set_visible(home_edit, current_page == 0 && !searching);
     gchar **words = g_strsplit_set(query, " \t\r\n", -1);
     gboolean first = FALSE;
     guint count = filter_rows(list, "app-launch", words, &first);
@@ -855,7 +862,6 @@ static gboolean mapped(GSignalInvocationHint *hint, guint n, const GValue *value
         g_signal_connect(widget, "focus-in-event", G_CALLBACK(focus_in), NULL);
         g_signal_connect(widget, "focus-out-event", G_CALLBACK(focus_out), NULL);
         dock_window();
-        popup_geometry_bind(widget, simple_pages ? 380 : 760, 560);
         state("mapped", "1");
         GtkWidget *hidden = find(widget, "initial-hidden");
         gboolean prewarm = !seen_window && GTK_IS_LABEL(hidden) && g_str_equal(gtk_label_get_text(GTK_LABEL(hidden)), "true");
