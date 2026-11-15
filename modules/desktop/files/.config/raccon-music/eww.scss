@@ -17,12 +17,28 @@ button:active { background: rgba($primary, .28); }
 .music-art.empty image { opacity: 1; color: $on_surface_variant; }
 .music-title { font-size: 12px; font-weight: 600; }
 .music-artist, .music-time { font-size: 10px; }
-.music-progress trough { min-height: 2px; border-radius: 2px; background: rgba($on_surface, .12); }
-.music-progress progress { min-height: 2px; border-radius: 2px; background: $primary; }
+.music-progress trough { min-height: 2px; border-radius: 2px; background: rgba($on_surface, .12); transition: min-height 160ms ease-out; }
+.music-progress:hover trough { min-height: 4px; }
+.music-progress progress { min-height: 2px; border-radius: 2px; background: $primary; transition: min-height 160ms ease-out; }
+.music-progress:hover progress { min-height: 4px; }
 .music-button, .music-hide { padding: 5px; }
 .music-hide { color: $on_surface_variant; opacity: .55; }
 .music-hide:hover { opacity: 1; }
 .music-extra { padding-top: 2px; }
+
+/* Dynamic equalizer soundwave */
+.music-equalizer {
+  margin-right: 6px;
+  opacity: .30;
+  transition: opacity 200ms ease;
+}
+.music-equalizer.active { opacity: 1; }
+.eq-bar {
+  min-width: 3px;
+  background: $primary;
+  border-radius: 2px;
+  min-height: 4px;
+}
 
 @import "desktop-style";
 
@@ -34,8 +50,48 @@ button:active { background: rgba($primary, .28); }
 .popup.music-popup.motion .music-button image {
   transition: -gtk-icon-transform 160ms cubic-bezier(.22, 1, .36, 1);
 }
-.popup.music-popup.motion .music-button:hover image { -gtk-icon-transform: scale(1.08); }
-.popup.music-popup.motion .music-button:active image { -gtk-icon-transform: scale(.92); }
+.popup.music-popup.motion .music-button:hover image { -gtk-icon-transform: scale(1.15); }
+.popup.music-popup.motion .music-button:active image { -gtk-icon-transform: scale(.88); }
+
+.popup.music-popup.motion .music-card.playing .music-art:not(.empty) {
+  box-shadow: 0 0 10px rgba($primary, 0.45);
+  animation: art-glow 2400ms ease-in-out infinite alternate;
+}
+
+.popup.music-popup.motion .music-equalizer.active .eq-bar-1 {
+  animation: eq-bounce-1 800ms ease-in-out infinite alternate;
+}
+.popup.music-popup.motion .music-equalizer.active .eq-bar-2 {
+  animation: eq-bounce-2 650ms ease-in-out infinite alternate;
+}
+.popup.music-popup.motion .music-equalizer.active .eq-bar-3 {
+  animation: eq-bounce-3 900ms ease-in-out infinite alternate;
+}
+.popup.music-popup.motion .music-equalizer.active .eq-bar-4 {
+  animation: eq-bounce-4 750ms ease-in-out infinite alternate;
+}
+
+@keyframes art-glow {
+  0% { box-shadow: 0 0 4px rgba($primary, 0.20); -gtk-icon-transform: scale(1); }
+  100% { box-shadow: 0 0 14px rgba($primary, 0.60); -gtk-icon-transform: scale(1.03); }
+}
+
+@keyframes eq-bounce-1 {
+  0% { min-height: 4px; opacity: 0.5; }
+  100% { min-height: 14px; opacity: 1; }
+}
+@keyframes eq-bounce-2 {
+  0% { min-height: 12px; opacity: 0.85; }
+  100% { min-height: 5px; opacity: 0.45; }
+}
+@keyframes eq-bounce-3 {
+  0% { min-height: 3px; opacity: 0.4; }
+  100% { min-height: 16px; opacity: 1; }
+}
+@keyframes eq-bounce-4 {
+  0% { min-height: 11px; opacity: 0.9; }
+  100% { min-height: 6px; opacity: 0.5; }
+}
 .popup.music-popup.still, .popup.music-popup.still * {
   transition: none; animation: none; -gtk-icon-transform: none;
 }

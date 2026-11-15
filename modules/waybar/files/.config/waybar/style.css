@@ -197,10 +197,6 @@ tooltip label {
 
 /* ---------- Right island: chips ---------- */
 #clock,
-#custom-music-open,
-#custom-music-prev,
-#custom-music-play,
-#custom-music-next,
 #tray,
 #cpu,
 #memory,
@@ -224,10 +220,6 @@ tooltip label {
   transition: none;
 }
 
-#custom-music-open:hover,
-#custom-music-prev:hover,
-#custom-music-play:hover,
-#custom-music-next:hover,
 #cpu:hover,
 #memory:hover,
 #temperature:hover,
@@ -270,20 +262,102 @@ tooltip label {
   background: @primary_container;
 }
 
-/* Compact music buttons; hidden (empty) while the raccon-music card is open. */
+/* Compact music capsule & buttons; hidden (empty) while the raccon-music card is open or stopped. */
 #custom-music-open,
 #custom-music-prev,
 #custom-music-play,
 #custom-music-next {
   font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo", "Inter";
   font-size: 15px;
-  padding: 0 6px;
+  padding: 0 7px;
+  margin: 8px 1.5px;
+  border-radius: 13px;
   color: @on_surface_variant;
+  background: transparent;
 }
 
 #custom-music-open.playing,
+#custom-music-open.paused,
+#custom-music-prev.playing,
+#custom-music-prev.paused,
+#custom-music-play.playing,
+#custom-music-play.paused,
+#custom-music-next.playing,
+#custom-music-next.paused {
+  background: alpha(@surface_container_highest, 0.45);
+  border: 1px solid alpha(@outline_variant, 0.28);
+  color: @on_surface;
+  animation: music-activate 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#custom-music-open.empty,
+#custom-music-prev.empty,
+#custom-music-play.empty,
+#custom-music-next.empty {
+  background: transparent;
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+#custom-music-open.playing {
+  color: @primary;
+  animation: music-note-pulse 1600ms ease-in-out infinite alternate;
+}
+
 #custom-music-play.playing {
   color: @primary;
+  background: alpha(@primary, 0.22);
+  border-color: alpha(@primary, 0.40);
+  animation: music-play-pulse 2000ms ease-in-out infinite alternate;
+}
+
+#custom-music-play.paused {
+  color: @on_surface_variant;
+}
+
+@keyframes music-activate {
+  0% {
+    opacity: 0;
+    -gtk-icon-transform: scale(0.60);
+  }
+  70% {
+    opacity: 1;
+    -gtk-icon-transform: scale(1.10);
+  }
+  100% {
+    opacity: 1;
+    -gtk-icon-transform: scale(1);
+  }
+}
+
+@keyframes music-note-pulse {
+  0% {
+    -gtk-icon-transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    -gtk-icon-transform: scale(1.18);
+    opacity: 1;
+    color: lighter(@primary);
+  }
+  100% {
+    -gtk-icon-transform: scale(1);
+    opacity: 0.85;
+  }
+}
+
+@keyframes music-play-pulse {
+  0% {
+    background: alpha(@primary, 0.16);
+    box-shadow: 0 0 0 alpha(@primary, 0);
+  }
+  100% {
+    background: alpha(@primary, 0.32);
+    box-shadow: 0 0 8px alpha(@primary, 0.45);
+  }
 }
 
 #temperature.critical {

@@ -7,16 +7,35 @@ window#waybar #taskbar {
 
 window#waybar label.module,
 window#waybar #workspaces button,
-window#waybar #taskbar button {
+window#waybar #taskbar button,
+window#waybar #custom-music-open,
+window#waybar #custom-music-prev,
+window#waybar #custom-music-play,
+window#waybar #custom-music-next {
   transition: background-color 160ms ease-out, color 160ms ease-out,
-    opacity 160ms ease-out, -gtk-icon-transform 160ms cubic-bezier(.22, 1, .36, 1);
+    border-color 160ms ease-out, opacity 160ms ease-out,
+    -gtk-icon-transform 160ms cubic-bezier(.22, 1, .36, 1);
 }
 
 window#waybar #custom-launcher:hover,
 window#waybar #custom-power:hover,
-window#waybar #custom-music-play:hover,
 window#waybar #custom-hardware-toggle:hover {
   -gtk-icon-transform: scale(1.10);
+}
+
+window#waybar #custom-music-open:hover,
+window#waybar #custom-music-prev:hover,
+window#waybar #custom-music-play:hover,
+window#waybar #custom-music-next:hover {
+  background-color: alpha(@primary, 0.20);
+  -gtk-icon-transform: scale(1.15);
+}
+
+window#waybar #custom-music-open:active,
+window#waybar #custom-music-prev:active,
+window#waybar #custom-music-play:active,
+window#waybar #custom-music-next:active {
+  -gtk-icon-transform: scale(0.90);
 }
 
 window#waybar #workspaces button:focus,
