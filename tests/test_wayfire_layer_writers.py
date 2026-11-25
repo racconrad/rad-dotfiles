@@ -89,3 +89,43 @@ class LayerWriterTests(unittest.TestCase):
             self.assertEqual(parsed['input']['natural_scroll'], 'false')
             self.assertEqual(parsed['output:eDP-1']['mode'], 'auto')
             self.assertEqual(parsed['output:eDP-1']['scale'], '2')
+
+    def test_theme_updates_canvas_conf_and_refreshes_when_canvas_active(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            root = self.theme_home(home)
+            (root / 'matugen/out/wayfire-colors.sh').write_text('\n'.join([
+                'WF_PRIMARY=aabbcc',
+                'WF_ON_PRIMARY=112233',
+                'WF_SURFACE=101112',
+                'WF_SURFACE_CONTAINER=202122',
+                'WF_ON_SURFACE=eeeeee',
+                'WF_ON_SURFACE_VARIANT=cccccc',
+                'WF_OUTLINE_VARIANT=445566',
+            ]) + '\n')
+            canvas_conf = root / 'wayfire/canvas.conf'
+            canvas_conf.write_text(
+                '# Keep comment\n'
+                'pan_key_step = 400\n'
+                '# hud_background = \\#2B2930E6\n'
+                'hud_accent = \\#000000FF\n'
+            )
+            bin_dir = home / '.local/bin'
+            mode = bin_dir / 'raccon-canvas-mode'
+            mode.write_text(
+                '#!/bin/sh\n'
+                'if [ "$1" = status ]; then echo canvas; exit 0; fi\n'
+                'printf "%s\\n" "$*" >> "$HOME/canvas_refresh.log"\n'
+            )
+            mode.chmod(0o755)
+            subprocess.run(['bash', str(THEME)], env={**os.environ, 'HOME': str(home),
+                'WAYFIRE_CONFIG_FILE': str(root / 'wayfire.ini')}, check=True)
+            updated = canvas_conf.read_text()
+            self.assertIn('# Keep comment', updated)
+            self.assertIn('pan_key_step = 400', updated)
+            self.assertIn('hud_background = \\#202122e6', updated)
+            self.assertIn('hud_foreground = \\#eeeeeeff', updated)
+            self.assertIn('hud_accent = \\#aabbccff', updated)
+            self.assertIn('hud_border_color = \\#44556666', updated)
+            self.assertIn('background_dot_color = \\#aabbcc44', updated)
+            self.assertEqual((home / 'canvas_refresh.log').read_text().strip(), 'refresh')

@@ -35,10 +35,23 @@ static void nav_focus(GtkWidget *w) {
         }
     }
 }
+static void nav_activate_button(GtkWidget *w) {
+#ifndef gtk_button_clicked
+    /* Eww 0.5 binds :onclick to button-press-event, not GtkButton::clicked. */
+    GdkEventButton ev = {0};
+    ev.type = GDK_BUTTON_PRESS;
+    ev.window = gtk_widget_get_window(w);
+    ev.button = 1;
+    ev.send_event = TRUE;
+    gboolean handled = FALSE;
+    g_signal_emit_by_name(w, "button-press-event", &ev, &handled);
+#endif
+    gtk_button_clicked(GTK_BUTTON(w));
+}
 static gboolean nav_nth(GtkWidget *root,const gchar *klass,guint index,gboolean activate) {
     GPtrArray *items=g_ptr_array_new(); nav_collect(root,items,klass);
     gboolean found=index<items->len;
-    if(found) {GtkWidget *w=g_ptr_array_index(items,index);nav_focus(w);if(activate&&GTK_IS_BUTTON(w))gtk_button_clicked(GTK_BUTTON(w));}
+    if(found) {GtkWidget *w=g_ptr_array_index(items,index);nav_focus(w);if(activate&&GTK_IS_BUTTON(w))nav_activate_button(w);}
     g_ptr_array_unref(items);return found;
 }
 static gdouble nav_score(gdouble dx,gdouble dy,guint key) {
@@ -60,7 +73,7 @@ static gboolean nav_key(GtkWidget *window,GdkEventKey *event) {
         if(!focus||(!GTK_IS_BUTTON(focus)&&!GTK_IS_SWITCH(focus)))return FALSE;
         if(!g_object_get_data(G_OBJECT(window),"nav-held")) {
             g_object_set_data(G_OBJECT(window),"nav-held",GUINT_TO_POINTER(key));
-            if(GTK_IS_BUTTON(focus))gtk_button_clicked(GTK_BUTTON(focus));
+            if(GTK_IS_BUTTON(focus))nav_activate_button(focus);
             else gtk_switch_set_active(GTK_SWITCH(focus),!gtk_switch_get_active(GTK_SWITCH(focus)));
         }
         return TRUE;

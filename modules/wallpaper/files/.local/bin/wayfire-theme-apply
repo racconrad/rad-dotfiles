@@ -92,3 +92,67 @@ fi
 if $layered; then
   "$HOME/.local/bin/wayfire-config" sync
 fi
+
+if [[ -z "${WAYFIRE_CONFIG_FILE:-}" || "${WAYFIRE_CONFIG_FILE}" == "$config_root/wayfire.ini" ]]; then
+  canvas_conf="${WF_CANVAS_CONF:-$config_root/wayfire/canvas.conf}"
+  if [[ -f "$canvas_conf" ]]; then
+    canvas_map="$(cat <<CMAP
+hud_background|$(ca "$WF_SURFACE_CONTAINER" e6)
+hud_foreground|$(c "$WF_ON_SURFACE")
+hud_accent|$(c "$WF_PRIMARY")
+hud_border_color|$(ca "$WF_OUTLINE_VARIANT" 66)
+background_dot_color|$(ca "$WF_PRIMARY" 44)
+CMAP
+)"
+    tmp_canvas="$(mktemp)"
+    CMAP="$canvas_map" awk '
+    BEGIN {
+      n = split(ENVIRON["CMAP"], lines, "\n")
+      for (i = 1; i <= n; i++) {
+        if (lines[i] == "") continue
+        split(lines[i], f, "|")
+        order[++m] = f[1]
+        cval[f[1]] = f[2]
+      }
+    }
+    {
+      line = $0
+      stripped = line
+      sub(/^[[:space:]]*#[[:space:]]*/, "", stripped)
+      if (match(stripped, /^[A-Za-z0-9_]+[[:space:]]*=/)) {
+        key = substr(stripped, RSTART, RLENGTH)
+        sub(/=$/, "", key)
+        gsub(/[[:space:]]/, "", key)
+        if (key in cval) {
+          print key " = " cval[key]
+          seen[key] = 1
+          next
+        }
+      }
+      print line
+    }
+    END {
+      for (i = 1; i <= m; i++) {
+        key = order[i]
+        if (!(key in seen)) {
+          print key " = " cval[key]
+        }
+      }
+    }
+    ' "$canvas_conf" > "$tmp_canvas"
+    if ! cmp -s -- "$tmp_canvas" "$canvas_conf"; then
+      cat -- "$tmp_canvas" > "$canvas_conf"
+    fi
+    rm -f -- "$tmp_canvas"
+  fi
+
+  canvas_tool=""
+  if [[ -x "$HOME/.local/bin/raccon-canvas-mode" ]]; then
+    canvas_tool="$HOME/.local/bin/raccon-canvas-mode"
+  elif [[ -x "$HOME/.local/bin/wf-canvas-mode" ]]; then
+    canvas_tool="$HOME/.local/bin/wf-canvas-mode"
+  fi
+  if [[ -n "$canvas_tool" ]] && [[ "$("$canvas_tool" status 2>/dev/null || true)" == "canvas" ]]; then
+    "$canvas_tool" refresh >/dev/null 2>&1 || true
+  fi
+fi

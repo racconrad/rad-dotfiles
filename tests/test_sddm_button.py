@@ -29,12 +29,12 @@ class SddmButtonTests(unittest.TestCase):
             p.start(); self.addCleanup(p.stop)
         self.assets = self.home/'.local/share/raccon/sddm'
         shutil.copytree(FILES/'.local/share/raccon/sddm', self.assets)
-        self.tokens = dict(style='retro', font='Silkscreen', radius=0, border=2, strict=True,
+        self.tokens = dict(style='terminal', font='JetBrainsMono Nerd Font Mono', radius=0, border=2, strict=True,
                            colors={'primary': '#abcdef', 'background': '#123456'})
         # The installed preparer reads the real portable location.
         styles.save(self.home/'.config/desktop-style/current/tokens.json', self.tokens)
         styles.save(styles.CURRENT/'tokens.json', self.tokens)
-        styles.save(styles.STATE/'ui.json', dict(selected='retro', current='retro', busy=False))
+        styles.save(styles.STATE/'ui.json', dict(selected='terminal', current='terminal', busy=False))
         runtime = self.home/'runtime'
         self.surface = runtime/'desktop-style'
         self.surface.mkdir(parents=True)
@@ -110,6 +110,21 @@ class SddmButtonTests(unittest.TestCase):
             styles.apply_sddm()
         self.assertEqual(before, styles.read(styles.STATE/'ui.json'))
         self.hide.assert_not_called()
+
+    def test_prepare_reads_matugen_fallback_without_tokens_json(self):
+        import importlib.util as imp_util
+        prep_spec = imp_util.spec_from_file_location('sddm_prepare', self.assets / 'prepare.py')
+        prep = imp_util.module_from_spec(prep_spec)
+        prep_spec.loader.exec_module(prep)
+        (self.home / '.config/desktop-style/current/tokens.json').unlink()
+        (self.home / '.config/eww').mkdir(parents=True, exist_ok=True)
+        (self.home / '.config/eww/_colors.scss').write_text('$primary: #f6908d;\n$background: #171414;\n')
+        out = self.home / 'out-matugen'
+        prep.prepare(self.home, out, 'solid')
+        config = configparser.ConfigParser()
+        config.read(out / 'theme.conf')
+        self.assertEqual(config['General']['accent'], '#f6908d')
+        self.assertEqual(config['General']['background'], '#171414')
 
 
 if __name__ == '__main__':

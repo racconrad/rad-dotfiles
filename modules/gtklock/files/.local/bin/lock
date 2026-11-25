@@ -1,11 +1,35 @@
 #!/usr/bin/env bash
-# Lock the session with gtklock (powerbar: suspend/reboot/poweroff).
-# Config + matugen-themed CSS live in ~/.config/gtklock/.
+# Lock the session with gtklock (blurred/dimmed wallpaper backdrop + powerbar).
 set -euo pipefail
 
-# Avoid stacking multiple lockers (swayidle + manual + power key).
 if pgrep -x gtklock >/dev/null 2>&1; then
   exit 0
+fi
+
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
+lock_bg="$cache_dir/lock-wallpaper.png"
+cur_file="$cache_dir/current-wallpaper"
+
+if [[ -f "$cur_file" ]]; then
+  wp="$(cat -- "$cur_file")"
+  still="$wp"
+  case "${wp,,}" in
+    *.mp4|*.webm|*.mkv|*.mov|*.gif)
+      still="$cache_dir/wallpaper-frame.png"
+      ;;
+  esac
+  if [[ -f "$still" && ( ! -f "$lock_bg" || "$still" -nt "$lock_bg" ) ]]; then
+    if command -v ffmpeg >/dev/null 2>&1; then
+      ffmpeg -nostdin -loglevel error -y -i "$still" \
+        -vf "scale=1920:-1:flags=bilinear,boxblur=16:2,eq=brightness=-0.16:saturation=0.92" \
+        -frames:v 1 "$lock_bg" 2>/dev/null || true
+    fi
+  fi
+  if [[ -f "$lock_bg" ]]; then
+    exec gtklock -d -b "$lock_bg"
+  elif [[ -f "$still" ]]; then
+    exec gtklock -d -b "$still"
+  fi
 fi
 
 exec gtklock -d

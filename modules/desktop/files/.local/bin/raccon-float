@@ -7,17 +7,43 @@
 set -euo pipefail
 cfg="$HOME/.config/raccon-float"
 lib="$HOME/.local/lib/raccon_menu"
+run_dir="${XDG_RUNTIME_DIR:-/tmp}"
+session_ready="${XDG_RUNTIME_DIR:-$HOME/.cache}/raccon-float-session.ready"
+session_flag="$run_dir/raccon-float-session.open"
+wall_flag="$run_dir/raccon-float-wallpaper.open"
 e() { eww --no-daemonize -c "$cfg" "$@"; }
 
+who_json() {
+  local user host up_sec mins hrs days up=""
+  user="${USER:-user}"
+  host=$(< /etc/hostname) 2>/dev/null || host="${HOSTNAME:-localhost}"
+  read -r up_sec _ < /proc/uptime 2>/dev/null || up_sec=0
+  up_sec=${up_sec%%.*}
+  days=$((up_sec / 86400)); hrs=$(((up_sec % 86400) / 3600)); mins=$(((up_sec % 3600) / 60))
+  (( days > 0 )) && up+="${days}d "
+  (( hrs > 0 )) && up+="${hrs}h "
+  up+="${mins}m"
+  printf '{"user":"%s","host":"%s","uptime":"%s"}' "${user//[\"\\]/}" "${host//[\"\\]/}" "$up"
+}
+
 sync_theme() {
-  if command -v desktop-menu >/dev/null 2>&1; then
-    desktop-menu palette && return 0
+  if [[ -x "$HOME/.local/bin/desktop-menu" ]]; then
+    "$HOME/.local/bin/desktop-menu" palette && return 0
   fi
   python3 "$lib/backend.py" palette
 }
 
+walls_cmd() {
+  if [[ -x "$HOME/.local/bin/desktop-menu" ]]; then
+    "$HOME/.local/bin/desktop-menu" walls "$@"
+  else
+    python3 "$lib/walls.py" "$@"
+  fi
+}
+
 close() {
   local open
+  rm -f "$session_flag" "$wall_flag"
   open=$(e active-windows 2>/dev/null | cut -d: -f1) || true
   [[ -n $open ]] || return 0
   if [[ $open == session && $(e get session_visible 2>/dev/null) != true ]]; then return 0; fi
@@ -25,10 +51,9 @@ close() {
   # centered wallpaper window shrink/jump toward its header on close.
   e update shown=false
   sleep 0.16
-  e update session_visible=false
+  e update session_visible=false body=false armed=""
   for window in $open; do [[ $window == session ]] || e close "$window"; done
-  e update body=false armed=""
-  python3 "$lib/walls.py" preview-stop
+  walls_cmd preview-stop
 }
 
 case ${1:-} in
@@ -45,23 +70,23 @@ case ${1:-} in
     exit ;;
   close) close; exit ;;
   disarm) e update armed=""; exit ;;
-  preview-stop) python3 "$lib/walls.py" preview-stop "${2:-}"; exit ;;
+  preview-stop) walls_cmd preview-stop "${2:-}"; exit ;;
   filter)
     [[ ${2:-} =~ ^(all|images|videos)$ ]] || exit 2
-    python3 "$lib/walls.py" preview-stop
-    python3 "$lib/walls.py" request "$2"
+    walls_cmd preview-stop
+    walls_cmd request "$2"
     exit ;;
   preview|preview-hover)
     [[ ${2:-} =~ ^(all|images|videos)$ && ${3:-} =~ ^[0-9]+$ ]] || exit 2
-    python3 "$lib/walls.py" "$1" "$2" "$3"
+    walls_cmd "$1" "$2" "$3"
     exit ;;
   page)
     [[ ${2:-} =~ ^(all|images|videos)$ && ${3:-} =~ ^[0-9]+$ ]] || exit 2
-    python3 "$lib/walls.py" request "$2" "$3"
+    walls_cmd request "$2" "$3"
     exit ;;
   set)
     [[ ${2:-} =~ ^(all|images|videos)$ && ${3:-} =~ ^[0-9]+$ ]] || { echo "raccon-float: bad wallpaper" >&2; exit 2; }
-    python3 "$lib/walls.py" set "$2" "$3"
+    walls_cmd set "$2" "$3"
     exit ;;
   run)
     action=${2:-}
@@ -83,54 +108,81 @@ case ${1:-} in
 esac
 
 if [[ ${1:-} != prepare ]]; then
+  # Fast path for resident session card: one IPC update instead of 9 sequential calls.
+  if [[ $name == session ]]; then
+    if [[ -f "$session_flag" ]]; then
+      close; exit
+    fi
+    if [[ ! -f "$wall_flag" && -f "$session_ready" && $(<"$session_ready") == 1 ]]; then
+      if e update armed="" who="$(who_json)" session_visible=true shown=true body=true >/dev/null 2>&1; then
+        touch "$session_flag"
+        exit 0
+      fi
+    fi
+  elif [[ $name == wallpaper ]]; then
+    if [[ -f "$wall_flag" ]]; then
+      close; exit
+    fi
+    if [[ ! -f "$session_flag" && -f "$session_ready" && $(<"$session_ready") == 1 ]]; then
+      style=$(grep -oP '^\s*"style"\s*:\s*"\K[\w-]+' "$HOME/.config/desktop-style/current/tokens.json" 2>/dev/null || echo default)
+      walls_cmd preview-stop >/dev/null 2>&1 || true
+      walls_cmd request all >/dev/null 2>&1 || true
+      if e update armed="" shown=true body=true session_visible=false >/dev/null 2>&1 &&
+         e open wallpaper --arg style="$style" >/dev/null 2>&1; then
+        touch "$wall_flag"
+        exit 0
+      fi
+    fi
+  fi
   if [[ $name == session && $(e get session_visible 2>/dev/null) == true ]] ||
      { [[ $name == wallpaper ]] && e active-windows 2>/dev/null | grep -q '^wallpaper:' && [[ $(e get shown) == true ]]; }; then close; exit; fi
   close  # only one card at a time
 fi
-if [[ -f "$lib/keyboard_build.py" ]]; then
+if [[ -x "$HOME/.local/bin/desktop-menu" ]]; then
+  module=$("$HOME/.local/bin/desktop-menu" keyboard-build)
+else
   module=$(python3 "$lib/keyboard_build.py")
-elif command -v desktop-menu >/dev/null 2>&1; then
-  module=$(desktop-menu keyboard-build)
 fi
-revision=$(stat -c '%y:%s' "$module" "$lib/walls.py" "$lib/wall_preview.py" "$lib/backend.py" "$HOME/.local/lib/raccon_events.py")
+revision=$(stat -c '%y:%s' "$module" 2>/dev/null || echo 0)
 key_stamp="$HOME/.cache/raccon-float/keyboard.loaded"
 if [[ $(cat "$key_stamp" 2>/dev/null || true) != "$revision" ]]; then
   e kill >/dev/null 2>&1 || true
 fi
 if ! e ping >/dev/null 2>&1; then
-  rm -f "${XDG_RUNTIME_DIR:-$HOME/.cache}/raccon-float-session.ready"
+  rm -f "$session_ready" "$session_flag" "$wall_flag"
   GTK_MODULES="$module" RACCON_FLOAT_KEYS=1 LANGUAGE=en_US:en LC_MESSAGES=en_US.UTF-8 eww -c "$cfg" daemon 9>&- </dev/null &>/dev/null
   e ping >/dev/null
   printf '%s' "$revision" > "$key_stamp"
 fi  # detached pipes: the daemon must not hold our stdout
 sync_theme
 if [[ ${1:-} == prepare ]] && e active-windows | grep -q '^session:'; then
-  if [[ -f "$lib/card_wait.py" ]]; then
-    exec python3 "$lib/card_wait.py" raccon-float-session.ready
-  elif command -v desktop-menu >/dev/null 2>&1; then
-    exec desktop-menu card-wait raccon-float-session.ready
+  if [[ -x "$HOME/.local/bin/desktop-menu" ]]; then
+    exec "$HOME/.local/bin/desktop-menu" card-wait raccon-float-session.ready
   fi
+  exec python3 "$lib/card_wait.py" raccon-float-session.ready
 fi
 style=$(grep -oP '^\s*"style"\s*:\s*"\K[\w-]+' "$HOME/.config/desktop-style/current/tokens.json" 2>/dev/null || echo default)
 if [[ $name == wallpaper ]]; then
-  python3 "$lib/walls.py" preview-stop
-  python3 "$lib/walls.py" request all
+  walls_cmd preview-stop
+  walls_cmd request all
+  e update armed="" shown=false body=true session_visible=false
 else
-  e update who="$(printf '{"user":"%s","host":"%s","uptime":"%s"}' \
-    "$(getent passwd "$USER" | cut -d: -f5 | cut -d, -f1 | sed 's/["\\]//g' | grep . || echo "$USER")" \
-    "$(cat /etc/hostname 2>/dev/null || uname -n)" "$(LC_ALL=C uptime -p | sed 's/^up //')")"
+  e update who="$(who_json)" armed="" shown=false body=true session_visible=false
 fi
-e update armed="" shown=false body=true session_visible=false
 if ! e active-windows | grep -q "^$name:"; then
-  if [[ $name == session ]]; then rm -f "${XDG_RUNTIME_DIR:-$HOME/.cache}/raccon-float-session.ready"; fi
+  if [[ $name == session ]]; then rm -f "$session_ready"; fi
   e open "$name" --arg style="$style"
 fi
 if [[ ${1:-} == prepare ]]; then
-  if [[ -f "$lib/card_wait.py" ]]; then
-    exec python3 "$lib/card_wait.py" raccon-float-session.ready
-  elif command -v desktop-menu >/dev/null 2>&1; then
-    exec desktop-menu card-wait raccon-float-session.ready
+  if [[ -x "$HOME/.local/bin/desktop-menu" ]]; then
+    exec "$HOME/.local/bin/desktop-menu" card-wait raccon-float-session.ready
   fi
+  exec python3 "$lib/card_wait.py" raccon-float-session.ready
 fi
-if [[ $name == session ]]; then e update session_visible=true; fi
-e update shown=true body=true
+if [[ $name == session ]]; then
+  touch "$session_flag"
+  e update session_visible=true shown=true body=true
+else
+  touch "$wall_flag"
+  e update shown=true body=true
+fi

@@ -25,7 +25,7 @@ RUNTIME = Path(os.environ.get('XDG_RUNTIME_DIR', HOME / '.cache')) / 'raccon-men
 HERE = Path(__file__).resolve().parent
 BIN = HOME / '.local/bin'
 MODES = ('auto', 'performance', 'balanced', 'complete', 'working')
-PAGES = ('home', 'apps', 'modes', 'session', 'audio', 'connections', 'bluetooth', 'calendar', 'shortcuts')
+PAGES = ('home', 'apps', 'modes', 'session', 'audio', 'connections', 'bluetooth', 'calendar', 'shortcuts', 'timer', 'layout')
 WINDOW = 'raccon-menu'
 SIMPLE_PAGES = False
 BACKEND = HERE / 'backend.py'
@@ -423,7 +423,7 @@ def snapshot(previous=None):
     preference = read(POWER / 'preference.json').get('mode', 'auto')
     now = dt.datetime.now()
     errors = status.get('errors', {})
-    return dict(clock=now.strftime('%H:%M'), date=now.strftime('%A, %B %d').capitalize(),
+    return dict(clock=now.strftime('%I:%M %p'), date=now.strftime('%A, %B %d').capitalize(),
         mode=status.get('mode', ''), source=status.get('source', ''), preference=preference,
         mode_name=NAMES.get(status.get('mode'), 'Loading mode'), applying=status.get('transition', False),
         has_errors=bool(errors), errors=' · '.join(f'{key}: {value}' for key, value in errors.items()),
@@ -482,12 +482,12 @@ def geometry():
             seat = display.get_default_seat()
             _, x, y = seat.get_pointer().get_position()
             monitor = display.get_monitor_at_point(x, y) or display.get_monitor(0)
-            geo = monitor.get_geometry()
+            geo = monitor.get_workarea() if hasattr(monitor, 'get_workarea') else monitor.get_geometry()
             index = next(i for i in range(display.get_n_monitors()) if display.get_monitor(i) == monitor)
-            return index, max(280, min(360, geo.width - 260)), max(150, min(250, geo.height - 280))
+            return index, max(280, min(318, geo.width - 340)), max(150, min(228, geo.height - 320))
     except (ImportError, AttributeError, RuntimeError, StopIteration):
         pass
-    return 0, 360, 250
+    return 0, 316, 224
 
 
 def close(super_key=False):
@@ -648,6 +648,7 @@ def shortcut(name):
         'audio': [str(BIN / 'desktop-panel'), 'audio'],
         'connections': [str(BIN / 'desktop-panel'), 'connections'],
         'calendar': [str(BIN / 'desktop-panel'), 'calendar'],
+        'wallpaper': [str(BIN / 'raccon-float'), 'wallpaper'],
         'notifications': ['swaync-client', '-t', '-sw'], 'lock': [str(BIN / 'lock')]}
     if name not in commands:
         raise ValueError('Invalid shortcut.')
@@ -766,9 +767,29 @@ def main(args):
         if not cache.exists() or cache.read_text() != rows:
             values['modes'] = json.loads(rows)
             write(cache, rows)
+        canvas_tool = BIN / 'raccon-canvas-mode'
+        if canvas_tool.is_file():
+            try:
+                status = subprocess.run([str(canvas_tool), 'status'], capture_output=True, text=True, timeout=2).stdout.strip()
+                if status:
+                    values['layout_status'] = status
+                    values['layout_error'] = ''
+            except (OSError, subprocess.SubprocessError):
+                pass
         update(**values)
     elif command == 'prepare':
         prepare_resident()
+        positioning.refresh(RUNTIME, force=True)
+        palette()
+        rows = json.dumps(mode_rows(), ensure_ascii=False)
+        cache = RUNTIME / 'modes.json'
+        if not cache.exists() or cache.read_text() != rows:
+            update(modes=json.loads(rows))
+            write(cache, rows)
+        subprocess.run(
+            ['sh', '-c', '"$1" "$2" preload </dev/null >/dev/null 2>&1 &', 'sh', sys.executable, str(HERE / 'panels.py')],
+            check=False,
+        )
     elif command == 'tab':
         if args[1] not in PAGES: raise ValueError('Invalid section.')
         if not native_send('tab ' + str(PAGES.index(args[1])), str(RUNTIME)):

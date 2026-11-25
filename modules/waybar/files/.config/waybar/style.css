@@ -70,32 +70,32 @@ tooltip label {
 #taskbar button {
   padding: 4px 8px;
   margin: 2px 2px;
-  border-radius: 14px;
+  border-radius: 8px;
   background-color: transparent;
   background-image: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: 1px solid transparent;
   -gtk-icon-transform: scale(1);
   transition: all 180ms cubic-bezier(0.25, 1, 0.4, 1);
 }
 
 /* Paint-only feedback preserves the pointer target. */
 #taskbar button:hover {
-  background-color: alpha(@primary, 0.15);
-  -gtk-icon-transform: scale(1.26);
-  border-bottom: 2px solid alpha(@primary, 0.6);
+  background-color: alpha(@primary, 0.10);
+  -gtk-icon-transform: scale(1.18);
+  border-bottom: 1px solid alpha(@primary, 0.5);
 }
 
-/* Active window: highlighted and slightly enlarged */
+/* Active window: understated underline indicator */
 #taskbar button.active {
-  background-color: alpha(@primary, 0.18);
+  background-color: transparent;
   border-bottom: 2px solid @primary;
-  -gtk-icon-transform: scale(1.10);
+  -gtk-icon-transform: scale(1.06);
 }
 
 #taskbar button.active:hover {
-  background-color: alpha(@primary, 0.28);
+  background-color: alpha(@primary, 0.10);
   border-bottom: 2px solid @primary;
-  -gtk-icon-transform: scale(1.32);
+  -gtk-icon-transform: scale(1.22);
 }
 
 #taskbar button.minimized {
@@ -112,10 +112,10 @@ tooltip label {
 /* ---------- Left island ---------- */
 #custom-launcher {
   font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo";
-  font-size: 19px;
+  font-size: 17px;
   min-width: 26px;
   color: @primary;
-  padding: 0 12px 0 10px;
+  padding: 0 10px 0 8px;
   margin: 7px 2px;
   border-radius: 14px;
   transition: none;
@@ -126,10 +126,11 @@ tooltip label {
 }
 
 #workspaces {
-  margin: 8px 2px;
-  padding: 0 3px;
-  background: alpha(@surface_container_highest, 0.55);
-  border-radius: 13px;
+  margin: 6px 2px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 #workspaces button {
@@ -139,43 +140,45 @@ tooltip label {
   color: @outline;
   padding: 0 8px;
   margin: 3px 1px;
-  border-radius: 10px;
+  border-radius: 8px;
+  border-bottom: 1px solid transparent;
   background: transparent;
   transition: none;
 }
 
 #workspaces button:hover {
   color: @on_surface;
-  background: alpha(@primary, 0.15);
+  background: alpha(@primary, 0.10);
 }
 
 #workspaces button.focused,
 #workspaces button.active {
-  color: @on_primary;
-  background: @primary;
+  color: @primary;
+  background: transparent;
+  border-bottom: 2px solid @primary;
   padding: 0 8px;
 }
 
 #workspaces button.urgent {
-  color: @on_error;
-  background: @error;
+  color: @error;
+  background: transparent;
 }
 
 #custom-workspace-base {
   font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo";
-  font-size: 16px;
+  font-size: 17px;
   color: @primary;
-  padding: 0 8px 0 10px;
+  padding: 0 8px 0 9px;
   margin: 3px 1px;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 #hardware {
-  background: alpha(@surface_container_highest, 0.42);
-  border: 1px solid alpha(@outline_variant, 0.32);
-  border-radius: 17px;
-  margin: 8px 3px;
-  padding: 0 3px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  margin: 6px 2px;
+  padding: 0 2px;
 }
 
 #custom-hardware-toggle {
@@ -184,11 +187,11 @@ tooltip label {
   color: @primary;
   padding: 0 8px;
   margin: 8px 1px;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 #custom-hardware-toggle:hover {
-  background: alpha(@primary, 0.14);
+  background: alpha(@primary, 0.10);
 }
 
 .hw-child {
@@ -214,12 +217,13 @@ tooltip label {
 #custom-power {
   padding: 0 9px;
   margin: 8px 1px;
-  border-radius: 13px;
+  border-radius: 8px;
   color: @on_surface;
   background: transparent;
   transition: none;
 }
 
+#clock:hover,
 #cpu:hover,
 #memory:hover,
 #temperature:hover,
@@ -233,7 +237,7 @@ tooltip label {
 #network:hover,
 #battery:hover,
 #custom-notification:hover {
-  background: alpha(@primary, 0.14);
+  background: alpha(@primary, 0.10);
 }
 
 #idle_inhibitor,
@@ -251,113 +255,41 @@ tooltip label {
 
 #idle_inhibitor,
 #power-profiles-daemon,
-#custom-notification {
-  font-size: 15px;
+#custom-notification,
+#bluetooth {
+  font-size: 16px;
+}
+
+#wireplumber,
+#network,
+#backlight,
+#custom-updates,
+#cpu,
+#memory,
+#temperature,
+#disk {
+  font-size: 13.5px;
 }
 
 #clock {
   font-weight: 700;
-  padding: 0 13px;
-  color: @on_primary_container;
-  background: @primary_container;
+  padding: 0 11px;
+  color: @primary;
+  background: alpha(@surface_container_high, 0.55);
+  border-bottom: 2px solid alpha(@primary, 0.75);
 }
 
-/* Compact music capsule & buttons; hidden (empty) while the raccon-music card is open or stopped. */
-#custom-music-open,
+#custom-music-viz,
 #custom-music-prev,
 #custom-music-play,
 #custom-music-next {
   font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo", "Inter";
-  font-size: 15px;
-  padding: 0 7px;
-  margin: 8px 1.5px;
-  border-radius: 13px;
-  color: @on_surface_variant;
-  background: transparent;
+  font-size: 14.5px;
 }
 
-#custom-music-open.playing,
-#custom-music-open.paused,
-#custom-music-prev.playing,
-#custom-music-prev.paused,
-#custom-music-play.playing,
-#custom-music-play.paused,
-#custom-music-next.playing,
-#custom-music-next.paused {
-  background: alpha(@surface_container_highest, 0.45);
-  border: 1px solid alpha(@outline_variant, 0.28);
-  color: @on_surface;
-  animation: music-activate 320ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-#custom-music-open.empty,
-#custom-music-prev.empty,
-#custom-music-play.empty,
-#custom-music-next.empty {
-  background: transparent;
-  border: none;
-  margin: 0;
-  padding: 0;
-  min-width: 0;
-  min-height: 0;
-}
-
-#custom-music-open.playing {
-  color: @primary;
-  animation: music-note-pulse 1600ms ease-in-out infinite alternate;
-}
-
-#custom-music-play.playing {
-  color: @primary;
-  background: alpha(@primary, 0.22);
-  border-color: alpha(@primary, 0.40);
-  animation: music-play-pulse 2000ms ease-in-out infinite alternate;
-}
-
-#custom-music-play.paused {
-  color: @on_surface_variant;
-}
-
-@keyframes music-activate {
-  0% {
-    opacity: 0;
-    -gtk-icon-transform: scale(0.60);
-  }
-  70% {
-    opacity: 1;
-    -gtk-icon-transform: scale(1.10);
-  }
-  100% {
-    opacity: 1;
-    -gtk-icon-transform: scale(1);
-  }
-}
-
-@keyframes music-note-pulse {
-  0% {
-    -gtk-icon-transform: scale(1);
-    opacity: 0.85;
-  }
-  50% {
-    -gtk-icon-transform: scale(1.18);
-    opacity: 1;
-    color: lighter(@primary);
-  }
-  100% {
-    -gtk-icon-transform: scale(1);
-    opacity: 0.85;
-  }
-}
-
-@keyframes music-play-pulse {
-  0% {
-    background: alpha(@primary, 0.16);
-    box-shadow: 0 0 0 alpha(@primary, 0);
-  }
-  100% {
-    background: alpha(@primary, 0.32);
-    box-shadow: 0 0 8px alpha(@primary, 0.45);
-  }
+#custom-music-viz {
+  font-family: "JetBrainsMono Nerd Font Mono", monospace;
+  font-size: 12px;
 }
 
 #temperature.critical {
@@ -369,8 +301,8 @@ tooltip label {
 }
 
 #idle_inhibitor.activated {
-  color: @on_tertiary_container;
-  background: alpha(@tertiary_container, 0.8);
+  color: @tertiary;
+  background: transparent;
 }
 
 #power-profiles-daemon.performance {
@@ -397,25 +329,25 @@ tooltip label {
 }
 
 #battery.warning:not(.charging) {
-  color: @on_tertiary_container;
-  background: alpha(@tertiary_container, 0.7);
+  color: @tertiary;
+  background: transparent;
 }
 
 #battery.critical:not(.charging) {
-  color: @on_error;
-  background: @error;
+  color: @error;
+  background: transparent;
   animation: soft-blink 1.6s ease-in-out infinite alternate;
 }
 
 #custom-power {
-  font-size: 14px;
-  color: @on_error_container;
-  background: alpha(@error_container, 0.6);
+  font-size: 16px;
+  color: @error;
+  background: transparent;
   margin-right: 2px;
 }
 
 #custom-power:hover {
-  background: @error_container;
+  background: alpha(@error, 0.12);
 }
 
 #tray > .passive {
@@ -437,7 +369,7 @@ tooltip label {
   to   { opacity: 0.6; }
 }
 
-/* Custom workspace buttons (custom/ws1..ws10, see wf-ws-watch): same look as #workspaces button */
+/* Custom workspace buttons (custom/ws1..ws10, see wf-ws-watch): flat understated look */
 #custom-ws1, #custom-ws2, #custom-ws3, #custom-ws4, #custom-ws5, #custom-ws6, #custom-ws7, #custom-ws8, #custom-ws9, #custom-ws10 {
   font-family: "Eva-Icons", "JetBrainsMono Nerd Font Propo";
   font-size: 12px;
@@ -445,20 +377,22 @@ tooltip label {
   color: @outline;
   padding: 0 8px;
   margin: 3px 1px;
-  border-radius: 10px;
+  border-radius: 8px;
+  border-bottom: 1px solid transparent;
   background: transparent;
   transition: none;
 }
 #custom-ws1:hover, #custom-ws2:hover, #custom-ws3:hover, #custom-ws4:hover, #custom-ws5:hover, #custom-ws6:hover, #custom-ws7:hover, #custom-ws8:hover, #custom-ws9:hover, #custom-ws10:hover {
   color: @on_surface;
-  background: alpha(@primary, 0.15);
+  background: alpha(@primary, 0.10);
 }
 #custom-ws1.occupied, #custom-ws2.occupied, #custom-ws3.occupied, #custom-ws4.occupied, #custom-ws5.occupied, #custom-ws6.occupied, #custom-ws7.occupied, #custom-ws8.occupied, #custom-ws9.occupied, #custom-ws10.occupied {
   color: @on_surface;
 }
 #custom-ws1.active, #custom-ws2.active, #custom-ws3.active, #custom-ws4.active, #custom-ws5.active, #custom-ws6.active, #custom-ws7.active, #custom-ws8.active, #custom-ws9.active, #custom-ws10.active {
-  color: @on_primary;
-  background: @primary;
+  color: @primary;
+  background: transparent;
+  border-bottom: 2px solid @primary;
   padding: 0 8px;
 }
 
@@ -476,7 +410,7 @@ tooltip label {
   padding: 0 10px;
   margin: 8px 3px;
   border-radius: 13px;
-  font-size: 15px;
+  font-size: 16px;
 }
 #custom-tiling.tiled {
   color: @primary;
@@ -488,8 +422,11 @@ tooltip label {
   background: alpha(@primary, 0.14);
 }
 
-#custom-desktop-mode { padding: 0 11px; margin: 8px 1px; border-radius: 13px; font-weight: 600; }
-#custom-desktop-mode:hover { background: alpha(@primary, 0.14); }
+#custom-desktop-mode,
+#custom-canvas-mode { padding: 0 11px; margin: 8px 1px; border-radius: 13px; font-size: 14px; font-weight: 600; }
+#custom-desktop-mode:hover,
+#custom-canvas-mode:hover,
+#custom-workspace-base:hover { background: alpha(@primary, 0.14); }
 
 /* Runtime mode overrides follow the base rules to preserve motion policy. */
 @import "desktop-state.css";

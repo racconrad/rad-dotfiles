@@ -3,7 +3,7 @@ import os
 import stat
 import time
 
-PAGES = {'home': '0', 'apps': '1', 'modes': '2', 'session': '3', 'audio': '4', 'connections': '5', 'bluetooth': '6', 'calendar': '7', 'shortcuts': '8'}
+PAGES = {'home': '0', 'apps': '1', 'modes': '2', 'session': '3', 'audio': '4', 'connections': '5', 'bluetooth': '6', 'calendar': '7', 'shortcuts': '8', 'timer': '9', 'layout': '10'}
 
 
 def source_revision(source):

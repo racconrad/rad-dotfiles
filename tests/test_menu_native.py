@@ -23,8 +23,12 @@ class NativeSearchTests(unittest.TestCase):
         cls.addClassCleanup(cls.temp.cleanup)
         harness = Path(cls.temp.name) / 'native.c'
         harness.write_text('#include "' + str(SOURCE) + '"\n' + r'''
-static guint launches;
+static guint launches, button_presses;
 static void launched(GtkButton *button, gpointer data) { launches++; }
+static gboolean pressed(GtkWidget *button, GdkEventButton *event, gpointer data) {
+    if (event->type == GDK_BUTTON_PRESS && event->button == 1) button_presses++;
+    return FALSE;
+}
 static GtkWidget *row(const gchar *text) {
     GtkWidget *button = gtk_button_new();
     gtk_style_context_add_class(gtk_widget_get_style_context(button), "app-launch");
@@ -32,6 +36,7 @@ static GtkWidget *row(const gchar *text) {
     gtk_style_context_add_class(gtk_widget_get_style_context(label), "search-key");
     gtk_container_add(GTK_CONTAINER(button), label);
     g_signal_connect(button, "clicked", G_CALLBACK(launched), NULL);
+    g_signal_connect(button, "button-press-event", G_CALLBACK(pressed), NULL);
     return button;
 }
 int main(int argc, char **argv) {
@@ -71,10 +76,12 @@ int main(int argc, char **argv) {
         g_assert(gtk_stack_get_visible_child(GTK_STACK(pages)) == list);
         entry_accept(GTK_ENTRY(entry), GTK_WINDOW(menu_window));
         g_assert_cmpuint(launches, ==, 1);
+        g_assert_cmpuint(button_presses, ==, 1);
         gtk_entry_set_text(GTK_ENTRY(entry), "'; $(touch never) #");
         g_assert_cmpuint(result_count, ==, 0);
         entry_accept(GTK_ENTRY(entry), GTK_WINDOW(menu_window));
         g_assert_cmpuint(launches, ==, 1);
+        g_assert_cmpuint(button_presses, ==, 1);
         gtk_entry_set_text(GTK_ENTRY(entry), "");
         g_assert(gtk_widget_get_visible(brave_row));
         g_assert(gtk_widget_get_visible(pin));

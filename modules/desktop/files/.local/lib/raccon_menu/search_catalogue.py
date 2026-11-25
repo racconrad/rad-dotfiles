@@ -6,6 +6,8 @@ TARGETS = {
     'calendar': ('Calendar', 'x-office-calendar-symbolic', 'Setting', 'tab', 'calendar', 'date calendario fecha'),
     'modes': ('Power modes', 'preferences-system-symbolic', 'Setting', 'tab', 'modes', 'battery performance energia bateria rendimiento'),
     'shortcuts': ('Keyboard shortcuts', 'input-keyboard-symbolic', 'Setting', 'tab', 'shortcuts', 'keys hotkeys teclado atajos'),
+    'layout': ('Desktop layout', 'preferences-system-windows-symbolic', 'Setting', 'tab', 'layout', 'canvas tiling layout modo escritorio'),
+    'wallpaper': ('Wallpapers', 'preferences-desktop-wallpaper-symbolic', 'Action', 'shortcut', 'wallpaper', 'wallpaper background fondos pantalla imagen'),
     'notifications': ('Notifications', 'preferences-system-notifications-symbolic', 'Action', 'shortcut', 'notifications', 'notificaciones avisos'),
     'lock': ('Lock screen', 'system-lock-screen-symbolic', 'Action', 'shortcut', 'lock', 'bloquear pantalla'),
 }

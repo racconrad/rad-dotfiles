@@ -33,11 +33,11 @@
 (defwidget menu-home []
   (box :class "home-content" :orientation "v" :space-evenly false :spacing 8
     (box :class "daily-apps" :orientation "v" :space-evenly true :spacing 6
-      (for row in {jq(catalogue.favorites, 'map(map(. + {editing: ' + (editing ? 'true' : 'false') + '}))')}
+      (for row in {jq(catalogue.favorites, 'map(. + [range(3 - length) | {ghost: true, available: false, name: "", action: "", value: "", icon: "", has_file: false, file: "", ref: "", can_move_previous: false, can_move_next: false}] | map(. + {editing: ' + (editing ? '(.ghost | not)' : 'false') + '}))')}
         (box :space-evenly true :spacing 6
           (for app in row
             (box :class "home-tile" :orientation "v" :space-evenly false :spacing 2
-              (button :class "daily-app" :active {app.available}
+              (button :class "daily-app" :visible {!(app.ghost ?: false)} :active {app.available}
                 :tooltip {app.available ? app.name : app.name + ' · Not installed'}
                 :onclick "~/.local/bin/desktop-menu ${app.action} ${app.value}" :timeout "5s"
                 (box :orientation "v" :space-evenly false :spacing 4

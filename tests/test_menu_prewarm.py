@@ -54,13 +54,15 @@ static void state(const char *key, const char *value) {
 #define FALSE 0
 static gboolean prewarm_frame(CALLBACK
 int main(void) {
-    for (guint frame = 1; frame <= 12; frame++) {
+    for (guint frame = 1; frame <= 30; frame++) {
         gboolean result = prewarm_frame(&window, 0, 0);
-        assert(result == (frame < 12 ? G_SOURCE_CONTINUE : G_SOURCE_REMOVE));
-        assert(parked == (frame == 12));
+        assert(result == (frame < 30 ? G_SOURCE_CONTINUE : G_SOURCE_REMOVE));
+        assert(parked == (frame == 30));
         if (frame == 3) assert(pages.index == 1);
-        if (frame == 6) assert(pages.index == 0 && side.revealed && side_pages.index == 2);
-        if (frame == 9) assert(side.revealed && side_pages.index == 3);
+        if (frame == 6) assert(pages.index == 0 && side.revealed && side_pages.index == 1);
+        if (frame >= 9 && frame <= 24 && frame % 3 == 0)
+            assert(pages.index == 0 && side.revealed && side_pages.index == (frame - 3) / 3);
+        if (frame == 27) assert(pages.index == 0 && side.revealed && side_pages.index == 0);
     }
     assert(ready == 1 && pages.index == 0 && side_pages.index == 0 && !side.revealed);
     /* Opening a service during the Apps warm stage must restore Home. */

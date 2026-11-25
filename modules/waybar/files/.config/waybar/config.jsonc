@@ -1,7 +1,7 @@
 {
   "layer": "top",
   "position": "bottom",
-  "height": 58,
+  "height": 64,
   "margin-top": 0,
   "margin-left": 14,
   "margin-right": 14,
@@ -26,6 +26,7 @@
     "bluetooth",
     "network",
     "custom/desktop-mode",
+    "custom/canvas-mode",
     "clock",
     "custom/power"
   ],
@@ -46,12 +47,12 @@
     ]
   },
   "custom/tiling": {
+    "exec-if": "~/.local/bin/raccon-canvas-mode normal",
     "format": "{}",
     "return-type": "json",
     "exec": "~/.local/bin/wf-tile-mode status",
-    "on-click": "~/.local/bin/wf-tile-mode toggle",
+    "on-click": "~/.local/bin/raccon-canvas-mode normal && ~/.local/bin/wf-tile-mode toggle",
     "signal": 10,
-    "interval": 2,
     "tooltip": true
   },
   "group/hardware": {
@@ -79,89 +80,87 @@
     "tooltip-format": "Hardware \u00b7 click to show or hide"
   },
   "custom/ws1": {
+    "exec-if": "~/.local/bin/raccon-canvas-mode normal",
     "exec": "~/.local/bin/wf-ws-label 1",
     "return-type": "json",
-    "interval": "once",
     "signal": 8,
     "on-click": "~/.local/bin/wf-ws goto 1"
   },
   "custom/workspace-base": {
     "exec": "printf '\ueb31'",
-    "interval": "once",
+    "signal": 12,
     "format": "{}",
     "tooltip": true,
-    "tooltip-format": "Workspaces"
+    "tooltip-format": "Desktop · click: menu · right-click: layout",
+    "on-click": "~/.local/bin/desktop-menu",
+    "on-click-right": "~/.local/bin/raccon-canvas-mode menu"
   },
   "custom/ws2": {
+    "exec-if": "~/.local/bin/raccon-canvas-mode normal",
     "exec": "~/.local/bin/wf-ws-label 2",
     "return-type": "json",
-    "interval": "once",
     "signal": 8,
     "on-click": "~/.local/bin/wf-ws goto 2"
   },
   "custom/ws3": {
+    "exec-if": "~/.local/bin/raccon-canvas-mode normal",
     "exec": "~/.local/bin/wf-ws-label 3",
     "return-type": "json",
-    "interval": "once",
     "signal": 8,
     "on-click": "~/.local/bin/wf-ws goto 3"
   },
   "custom/ws4": {
+    "exec-if": "~/.local/bin/raccon-canvas-mode normal",
     "exec": "~/.local/bin/wf-ws-label 4",
     "return-type": "json",
-    "interval": "once",
     "signal": 8,
     "on-click": "~/.local/bin/wf-ws goto 4"
   },
   "custom/ws5": {
+    "exec-if": "~/.local/bin/raccon-canvas-mode normal",
     "exec": "~/.local/bin/wf-ws-label 5",
     "return-type": "json",
-    "interval": "once",
     "signal": 8,
     "on-click": "~/.local/bin/wf-ws goto 5"
   },
   "custom/ws6": {
+    "exec-if": "~/.local/bin/raccon-canvas-mode normal",
     "exec": "~/.local/bin/wf-ws-label 6",
     "return-type": "json",
-    "interval": "once",
     "signal": 8,
     "on-click": "~/.local/bin/wf-ws goto 6"
   },
   "custom/ws7": {
+    "exec-if": "~/.local/bin/raccon-canvas-mode normal",
     "exec": "~/.local/bin/wf-ws-label 7",
     "return-type": "json",
-    "interval": "once",
     "signal": 8,
     "on-click": "~/.local/bin/wf-ws goto 7"
   },
   "custom/ws8": {
+    "exec-if": "~/.local/bin/raccon-canvas-mode normal",
     "exec": "~/.local/bin/wf-ws-label 8",
     "return-type": "json",
-    "interval": "once",
     "signal": 8,
     "on-click": "~/.local/bin/wf-ws goto 8"
   },
   "custom/ws9": {
+    "exec-if": "~/.local/bin/raccon-canvas-mode normal",
     "exec": "~/.local/bin/wf-ws-label 9",
     "return-type": "json",
-    "interval": "once",
     "signal": 8,
     "on-click": "~/.local/bin/wf-ws goto 9"
   },
   "custom/ws10": {
+    "exec-if": "~/.local/bin/raccon-canvas-mode normal",
     "exec": "~/.local/bin/wf-ws-label 10",
     "return-type": "json",
-    "interval": "once",
     "signal": 8,
     "on-click": "~/.local/bin/wf-ws goto 10"
   },
-  "wayfire/workspaces": {
-    "format": "{index}",
-    "disable-markup": true
-  },
   "clock": {
-    "format": "{:%H:%M}",
-    "format-alt": "{:%a %d %b  %H:%M}",
+    "format": "{:%I:%M %p}",
+    "format-alt": "{:%a %d %b  %I:%M %p}",
     "tooltip-format": "<tt><small>{calendar}</small></tt>",
     "calendar": {
       "mode": "month",
@@ -183,17 +182,20 @@
   "group/music": {
     "orientation": "horizontal",
     "modules": [
-      "custom/music-open",
+      "custom/music-viz",
       "custom/music-prev",
       "custom/music-play",
       "custom/music-next"
     ]
   },
-  "custom/music-open": {
-    "exec": "~/.local/bin/waybar-music open",
+  "custom/music-viz": {
+    "exec": "~/.local/bin/waybar-music viz",
     "return-type": "json",
     "on-click": "~/.local/bin/raccon-music",
-    "on-click-right": "~/.local/bin/waybar-player"
+    "on-click-middle": "playerctl play-pause",
+    "on-click-right": "~/.local/bin/waybar-player",
+    "on-scroll-up": "swayosd-client --output-volume raise",
+    "on-scroll-down": "swayosd-client --output-volume lower"
   },
   "custom/music-prev": {
     "exec": "~/.local/bin/waybar-music prev",
@@ -212,7 +214,7 @@
   },
   "tray": {
     "icon-size": 16,
-    "spacing": 10
+    "spacing": 9
   },
   "wireplumber": {
     "format": "{icon}  {volume}%",
@@ -272,13 +274,13 @@
   },
   "disk#root": {
     "format": "\ueaf1 / {percentage_used}%",
-    "path": "/",
+    "paths": ["/"],
     "interval": 60,
     "tooltip-format": "/ \u00b7 {used} used / {total}"
   },
   "disk#home": {
     "format": "\ueaf9 {percentage_used}%",
-    "path": "@RDOT_HOME@",
+    "paths": ["@RDOT_HOME@"],
     "interval": 60,
     "tooltip-format": "Home \u00b7 {used} used / {total}"
   },
@@ -328,13 +330,24 @@
   "wlr/taskbar": {
     "ignore-list": [],
     "format": "{icon}",
-    "icon-size": 30,
+    "icon-size": 28,
     "icon-theme": "Papirus-Dark",
     "tooltip-format": "{title}",
     "on-click": "activate",
     "on-click-middle": "close",
     "on-click-right": "minimize-raise",
     "sort-by-app-id": true
+  },
+  "custom/canvas-mode": {
+    "exec-if": "test -x ~/.local/bin/wf-canvas-mode && test -x ~/.local/bin/canvas-session",
+    "exec": "~/.local/bin/raccon-canvas-mode label",
+    "format": "\ueb0e  {}",
+    "tooltip-format": "Desktop layout (Tiling / Canvas)\nClick: switch · Right-click: jump window · Middle-click: fit all",
+    "signal": 12,
+    "exec-on-event": false,
+    "on-click": "~/.local/bin/raccon-canvas-mode menu",
+    "on-click-right": "~/.local/bin/canvasctl select",
+    "on-click-middle": "~/.local/bin/canvasctl fit"
   },
   "custom/desktop-mode": {
     "exec": "~/.local/bin/desktop-power watch",

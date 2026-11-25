@@ -13,7 +13,7 @@ static gboolean super_down, super_used, visible, seen_window;
 static guint hide_timer, focus_timer, current_page, result_count;
 static gint64 filter_us, open_us, map_us;
 static gboolean browsing_apps, simple_pages;
-static gint64 shown_at, motion_started;
+static gint64 shown_at, motion_started, last_hide_super_us;
 static guint motion_tick, motion_ms;
 static gdouble motion_from, motion_target, motion_progress = 1;
 static GtkWidget *animated_window;
@@ -29,8 +29,13 @@ static void keyboard_mode(gint mode) {
         gtk_layer_set_keyboard_mode(GTK_WINDOW(menu_window), mode);
 }
 
+static gboolean is_python_backend(const gchar *path) {
+    return path && g_str_has_suffix(path, ".py");
+}
 static void dispatch(const gchar *action, const gchar *value) {
-    gchar *argv[] = {"python3", backend, (gchar *)action, (gchar *)value, NULL};
+    gchar *py_argv[] = {"python3", backend, (gchar *)action, (gchar *)value, NULL};
+    gchar *native_argv[] = {backend, (gchar *)action, (gchar *)value, NULL};
+    gchar **argv = is_python_backend(backend) ? py_argv : native_argv;
     GError *error = NULL;
     if (!g_spawn_async(NULL, argv, NULL, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, &error)) {
         g_warning("Raccon input: %s", error->message);
@@ -60,7 +65,13 @@ extern void gtk_layer_set_exclusive_zone(GtkWindow *, gint) __attribute__((weak)
 extern void gtk_layer_set_anchor(GtkWindow *, gint, gboolean) __attribute__((weak));
 extern void gtk_layer_set_margin(GtkWindow *, gint, gint) __attribute__((weak));
 extern void gtk_layer_set_monitor(GtkWindow *, GdkMonitor *) __attribute__((weak));
-static gint dock_edge = 3, dock_body = 460;
+static gint dock_edge = 3, dock_body = 580, dock_side_max_w = 400;
+static void clamp_side_panel(void) {
+    if (!menu_window) return;
+    GtkWidget *keys_scroll = find(menu_window, "keys-scroll");
+    if (keys_scroll)
+        gtk_widget_set_size_request(keys_scroll, -1, MIN(420, MAX(200, dock_body - 86)));
+}
 static gint config_number(const gchar *text, const gchar *name, gint fallback) {
     gchar *pattern = g_strdup_printf("\"%s\"[[:space:]]*:[[:space:]]*([0-9]+)", name);
     GRegex *regex = g_regex_new(pattern, 0, 0, NULL); GMatchInfo *match = NULL;
@@ -131,7 +142,13 @@ static void dock_window(void) {
         gtk_layer_set_anchor(GTK_WINDOW(menu_window), i, i == dock_edge || i == other);
         gtk_layer_set_margin(GTK_WINDOW(menu_window), i, i == dock_edge ? MAX(4, inset) : i == other ? MAX(4, along) : 0);
     }
-    dock_body = MAX(140, MIN(460, oh - (dock_edge >= 2 ? inset : 4) - 120));
+    dock_body = MAX(220, MIN(580, oh - (dock_edge >= 2 ? inset : 4) - 64));
+    GtkWidget *main_panel = find(menu_window, "panel");
+    if (main_panel) gtk_widget_set_valign(main_panel, dock_edge == 2 ? GTK_ALIGN_START : GTK_ALIGN_END);
+    gint main_w = main_panel ? gtk_widget_get_allocated_width(main_panel) : 0;
+    if (main_w < 200) main_w = 318;
+    dock_side_max_w = MAX(240, MIN(400, ow - main_w - 48));
+    clamp_side_panel();
     GtkWidget *popup = find(menu_window, "popup");
     if (popup) {
         const gchar *names[] = {"dock-left", "dock-right", "dock-top", "dock-bottom"};
@@ -243,12 +260,11 @@ static void animate_open(void) {
     if (side && GTK_IS_REVEALER(side)) gtk_revealer_set_transition_duration(GTK_REVEALER(side), ms);
     GtkWidget *side_pages = find(menu_window, "side-pages");
     if (side_pages && GTK_IS_STACK(side_pages)) gtk_stack_set_transition_duration(GTK_STACK(side_pages), ms);
-    /* Reveal layout immediately; the Transform only changes drawing coordinates. */
+    /* Reveal layout immediately without toggling FALSE->TRUE (avoids full child re-layout). */
     GtkWidget *reveal = find(menu_window, "shell-revealer");
-    if (GTK_IS_REVEALER(reveal)) {
+    if (GTK_IS_REVEALER(reveal) && !gtk_revealer_get_reveal_child(GTK_REVEALER(reveal))) {
         gtk_revealer_set_transition_type(GTK_REVEALER(reveal), GTK_REVEALER_TRANSITION_TYPE_NONE);
         gtk_revealer_set_transition_duration(GTK_REVEALER(reveal), 0);
-        gtk_revealer_set_reveal_child(GTK_REVEALER(reveal), FALSE);
         gtk_revealer_set_reveal_child(GTK_REVEALER(reveal), TRUE);
     }
     gboolean interrupted = motion_tick != 0;
@@ -262,7 +278,7 @@ static void stack_index(GtkWidget *widget, guint index);
 static gboolean prewarm_frame(GtkWidget *window, GdkFrameClock *clock, gpointer data) {
     if (window != menu_window) return G_SOURCE_REMOVE;
     if (visible) {
-        stack_index(find(window, "pages"), current_page == 1 || browsing_apps ? 1 : 0);
+        stack_index(find(window, "pages"), (current_page == 1 || browsing_apps) ? 1 : 0);
         state("ready", "1");
         return G_SOURCE_REMOVE;
     }
@@ -276,16 +292,16 @@ static gboolean prewarm_frame(GtkWidget *window, GdkFrameClock *clock, gpointer 
     if (GTK_IS_STACK(side_pages)) gtk_stack_set_transition_duration(GTK_STACK(side_pages), 0);
     if (GTK_IS_REVEALER(side)) gtk_revealer_set_transition_duration(GTK_REVEALER(side), 0);
     if (frames == 3) stack_index(pages, 1);
-    else if (frames == 6 || frames == 9) {
+    else if (frames >= 6 && frames <= 27) {
         stack_index(pages, 0);
-        stack_index(side_pages, frames == 6 ? 2 : 3);
+        stack_index(side_pages, frames == 27 ? 0 : (frames - 3) / 3);
         if (GTK_IS_REVEALER(side)) gtk_revealer_set_reveal_child(GTK_REVEALER(side), TRUE);
     } else {
         stack_index(pages, 0);
         stack_index(side_pages, 0);
         if (GTK_IS_REVEALER(side)) gtk_revealer_set_reveal_child(GTK_REVEALER(side), FALSE);
     }
-    if (frames < 12) return G_SOURCE_CONTINUE;
+    if (frames < 30) return G_SOURCE_CONTINUE;
     resident_surface_park(window);
     state("ready", "1");
     return G_SOURCE_REMOVE;
@@ -297,7 +313,8 @@ static void hide_menu(gboolean stamp) {
     resident_surface_input(menu_window, FALSE);
     keyboard_mode(0);
     if (stamp) {
-        gchar *now = g_strdup_printf("%.6f", g_get_monotonic_time() / 1000000.0);
+        last_hide_super_us = g_get_monotonic_time();
+        gchar *now = g_strdup_printf("%.6f", last_hide_super_us / 1000000.0);
         state("closed", now); g_free(now);
     }
     if (hide_timer) g_source_remove(hide_timer);
@@ -363,14 +380,17 @@ static void select_page(guint page) {
     state("page", page_text); g_free(page_text);
     GtkWidget *pages = find(menu_window, "pages");
     if (simple_pages && find(menu_window, "unified-controls")) control_details(page);
-    else if (simple_pages || page <= 1) stack_index(pages, page);
+    else if (simple_pages || page == 1) stack_index(pages, page == 1 ? 1 : 0);
+    else stack_index(pages, 0);
     GtkWidget *side_pages = find(menu_window, "side-pages");
     stack_index(side_pages, page >= 2 ? page - 2 : 0);
     GtkWidget *side_panel = find(menu_window, "side-panel");
     if (side_panel) {
-        gint side_w = (page == 2 || page == 3) ? 170 : (page == 7) ? 210 : 240;
+        gint desired_w = (page == 2 || page == 3 || page == 10) ? 248 : (page == 7) ? 296 : (page == 9) ? 320 : 368;
+        gint side_w = MIN(desired_w, dock_side_max_w);
         gtk_widget_set_size_request(side_panel, side_w, -1);
     }
+    clamp_side_panel();
     GtkWidget *side = find(menu_window, "side-revealer");
     if (side && GTK_IS_REVEALER(side)) {
         gtk_widget_set_valign(side, dock_edge == 2 ? GTK_ALIGN_START : GTK_ALIGN_END);
@@ -380,16 +400,16 @@ static void select_page(guint page) {
     if (utilities) gtk_widget_set_visible(utilities, page != 1);
     GtkWidget *home_edit = find(menu_window, "home-edit");
     if (home_edit) gtk_widget_set_visible(home_edit, page == 0);
-    const gchar *classes[] = {"tab-home", "tab-apps", "tab-modes", "tab-session", "tab-audio", "tab-connections", "tab-bluetooth", "tab-calendar", "tab-shortcuts", "tab-timer"};
+    const gchar *classes[] = {"tab-home", "tab-apps", "tab-modes", "tab-session", "tab-audio", "tab-connections", "tab-bluetooth", "tab-calendar", "tab-shortcuts", "tab-timer", "tab-layout"};
     const gchar *panel_classes[] = {"tab-audio", "tab-connections", "tab-bluetooth", "tab-unused"};
-    for (guint i = 0; i < (simple_pages ? 4u : 10u); i++) {
+    for (guint i = 0; i < (simple_pages ? 4u : 11u); i++) {
         GtkWidget *tab = find(menu_window, simple_pages ? panel_classes[i] : classes[i]);
         if (!tab) continue;
         GtkStyleContext *context = gtk_widget_get_style_context(tab);
         if (i == page) gtk_style_context_add_class(context, "current");
         else gtk_style_context_remove_class(context, "current");
     }
-    if (page == 1 || page == 8) focus_search(menu_window);
+    if (page == 1 || page == 8 || page == 9) focus_search(menu_window);
 }
 static void show_menu(guint page) {
     if (!menu_window) return;
@@ -403,18 +423,23 @@ static void show_menu(guint page) {
     super_down = super_used = FALSE;
     state("visible", "1");
     GtkWidget *entry = find(menu_window, "app-search");
-    if (entry && GTK_IS_ENTRY(entry)) gtk_entry_set_text(GTK_ENTRY(entry), "");
+    gboolean had_query = entry && GTK_IS_ENTRY(entry) && *gtk_entry_get_text(GTK_ENTRY(entry)) != '\0';
+    if (had_query) gtk_entry_set_text(GTK_ENTRY(entry), "");
     GtkWidget *confirmation = find(menu_window, "confirmation-reveal");
     if (confirmation && GTK_IS_REVEALER(confirmation))
         gtk_revealer_set_reveal_child(GTK_REVEALER(confirmation), FALSE);
     browsing_apps = page == 1;
-    if (opening && !simple_pages) stack_index(find(menu_window, "pages"), browsing_apps ? 1 : 0);
+    if (opening && !simple_pages) stack_index(find(menu_window, "pages"), page == 1 ? 1 : 0);
     select_page(page);
-    filter_current();
+    if (had_query || result_count == 0) filter_current();
+    else {
+        GtkWidget *navigation = find(menu_window, "navigation");
+        if (navigation) gtk_widget_set_visible(navigation, TRUE);
+    }
     GtkWidget *clock = find(menu_window, "clock");
     if (clock && GTK_IS_LABEL(clock)) {
         GDateTime *now = g_date_time_new_now_local();
-        gchar *text = g_date_time_format(now, "%H:%M");
+        gchar *text = g_date_time_format(now, "%I:%M %p");
         gtk_label_set_text(GTK_LABEL(clock), text);
         g_free(text); g_date_time_unref(now);
     }
@@ -435,11 +460,15 @@ static gboolean control(GIOChannel *channel, GIOCondition condition, gpointer da
     while (g_io_channel_read_line(channel, &line, NULL, NULL, NULL) == G_IO_STATUS_NORMAL) {
         g_strstrip(line);
         if (g_str_equal(line, "toggle")) {
-            if (visible) hide_menu(TRUE); else show_menu(0);
+            if (visible) hide_menu(TRUE);
+            else if (!last_hide_super_us || g_get_monotonic_time() - last_hide_super_us >= 450000) show_menu(0);
         } else if (g_str_equal(line, "hide")) hide_menu(FALSE);
         else if (g_str_equal(line, "hide-super")) hide_menu(TRUE);
-        else if (g_str_has_prefix(line, "show ") && strlen(line) == 6 && line[5] >= '0' && line[5] <= '8')
-            show_menu(line[5] - '0');
+        else if (g_str_has_prefix(line, "show ")) {
+            gchar *end = NULL;
+            guint64 page = g_ascii_strtoull(line + 5, &end, 10);
+            if (end != line + 5 && *end == '\0' && page <= 10) show_menu((guint)page);
+        }
         else if (g_str_equal(line, "inspect")) inspect_menu();
         else if (g_str_equal(line, "dock")) dock_window();
         else if (!simple_pages && g_str_has_prefix(line, "service ") && strlen(line) == 9 && line[8] >= '4' && line[8] <= '7') {
@@ -456,14 +485,18 @@ static gboolean control(GIOChannel *channel, GIOCondition condition, gpointer da
             if (visible && current_page == page) hide_menu(FALSE);
             else show_menu(page);
         }
-        else if (g_str_has_prefix(line, "tab ") && strlen(line) == 5 && line[4] >= '0' && line[4] <= '8') {
-            guint page = line[4] - '0';
-            if (current_page == page) page = 0;
-            browsing_apps = page == 1;
-            select_page(page);
-            if (page == 0) {
-                GtkWidget *entry = find(menu_window, "app-search");
-                if (GTK_IS_ENTRY(entry)) gtk_entry_set_text(GTK_ENTRY(entry), "");
+        else if (g_str_has_prefix(line, "tab ")) {
+            gchar *end = NULL;
+            guint64 parsed = g_ascii_strtoull(line + 4, &end, 10);
+            if (end != line + 4 && *end == '\0' && parsed <= 10) {
+                guint page = (guint)parsed;
+                if (current_page == page) page = 0;
+                browsing_apps = page == 1;
+                select_page(page);
+                if (page == 0) {
+                    GtkWidget *entry = find(menu_window, "app-search");
+                    if (GTK_IS_ENTRY(entry)) gtk_entry_set_text(GTK_ENTRY(entry), "");
+                }
             }
         }
         g_free(line); line = NULL;
@@ -559,7 +592,8 @@ static void entry_changed(GtkEditable *entry, gpointer data) {
         gtk_adjustment_set_value(gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scroll)), 0);
 }
 static void focus_search(GtkWidget *window) {
-    GtkWidget *entry = find(window, current_page == 8 ? "keys-search" : "app-search");
+    const gchar *name = current_page == 8 ? "keys-search" : current_page == 9 ? "timer-input" : "app-search";
+    GtkWidget *entry = find(window, name);
     if (entry) gtk_widget_grab_focus(entry);
 }
 static GtkWidget *first_result(GtkWidget *widget) {
@@ -576,7 +610,7 @@ static void entry_accept(GtkEntry *entry, GtkWindow *window) {
     filter_current();
     GtkWidget *list = find(menu_window, "apps-list");
     GtkWidget *first = list ? first_result(list) : NULL;
-    if (first) gtk_button_clicked(GTK_BUTTON(first));
+    if (first) nav_activate_button(first);
 }
 static gboolean keyboard_page_focus(gpointer data) {
     guint requested=GPOINTER_TO_UINT(data);
@@ -729,7 +763,7 @@ static gboolean volume_change(GtkRange *range, GtkScrollType scroll, gdouble val
 }
 static void volume_changed(GtkRange *range, gpointer data) {
     Volume *volume = data;
-    if (!volume->restoring && g_get_monotonic_time() - volume->changed < 350000 &&
+    if (!volume->restoring && g_get_monotonic_time() - volume->changed < 1200000 &&
         ABS(gtk_range_get_value(range) - volume->value) > .5) {
         volume->restoring = TRUE;
         gtk_range_set_value(range, volume->value);
@@ -750,9 +784,13 @@ static void password_connect(GtkWidget *widget, gpointer data) {
     if (!GTK_IS_ENTRY(entry)) return;
     gchar *secret = g_strdup(gtk_entry_get_text(GTK_ENTRY(entry)));
     gtk_entry_set_text(GTK_ENTRY(entry), "");
-    GSubprocess *child = g_subprocess_new(G_SUBPROCESS_FLAGS_STDIN_PIPE | G_SUBPROCESS_FLAGS_STDOUT_SILENCE |
-        G_SUBPROCESS_FLAGS_STDERR_SILENCE, NULL, "python3", backend,
-        simple_pages ? "wifi-connect" : "control-action", simple_pages ? NULL : "wifi-connect", NULL);
+    GSubprocess *child = is_python_backend(backend)
+        ? g_subprocess_new(G_SUBPROCESS_FLAGS_STDIN_PIPE | G_SUBPROCESS_FLAGS_STDOUT_SILENCE |
+            G_SUBPROCESS_FLAGS_STDERR_SILENCE, NULL, "python3", backend,
+            simple_pages ? "wifi-connect" : "control-action", simple_pages ? NULL : "wifi-connect", NULL)
+        : g_subprocess_new(G_SUBPROCESS_FLAGS_STDIN_PIPE | G_SUBPROCESS_FLAGS_STDOUT_SILENCE |
+            G_SUBPROCESS_FLAGS_STDERR_SILENCE, NULL, backend,
+            simple_pages ? "wifi-connect" : "control-action", simple_pages ? NULL : "wifi-connect", NULL);
     if (child) g_subprocess_communicate_utf8_async(child, secret, NULL, password_done, secret);
     else { memset(secret, 0, strlen(secret)); g_free(secret); }
 }
@@ -776,12 +814,12 @@ static void calendar_add(GtkWidget *widget,gpointer unused) {
     GtkWidget *entry=menu_window?find(menu_window,"calendar-entry"):NULL;
     if(!GTK_IS_ENTRY(entry)||!*gtk_entry_get_text(GTK_ENTRY(entry)))return;
     if(g_object_get_data(G_OBJECT(entry),"calendar-pending"))return;
-    gchar *helper=g_build_filename(g_get_home_dir(),".local","lib","raccon_menu","calendar_data.py",NULL);
+    gchar *helper=g_build_filename(g_get_home_dir(),".local","bin","desktop-menu",NULL);
     GtkWidget *date=menu_window?find(menu_window,"calendar-date"):NULL;
     const gchar *iso=GTK_IS_LABEL(date)?gtk_label_get_text(GTK_LABEL(date)):NULL;
     if (!iso || !*iso) { g_free(helper); return; }
     GSubprocess *child=g_subprocess_new(G_SUBPROCESS_FLAGS_STDIN_PIPE|G_SUBPROCESS_FLAGS_STDOUT_SILENCE|
-        G_SUBPROCESS_FLAGS_STDERR_SILENCE,NULL,"python3",helper,"add",iso,NULL);
+        G_SUBPROCESS_FLAGS_STDERR_SILENCE,NULL,helper,"calendar","add",iso,NULL);
     if(child) {
         CalendarAdd *pending=g_new0(CalendarAdd,1);
         pending->entry=g_object_ref(entry);pending->text=g_strdup(gtk_entry_get_text(GTK_ENTRY(entry)));
@@ -789,6 +827,28 @@ static void calendar_add(GtkWidget *widget,gpointer unused) {
         g_subprocess_communicate_utf8_async(child,pending->text,NULL,calendar_added,pending);
     }
     g_free(helper);
+}
+
+static void timer_start_activate(GtkWidget *widget, gpointer data) {
+    if (!menu_window) return;
+    GtkWidget *entry = find(menu_window, "timer-input");
+    const gchar *raw = GTK_IS_ENTRY(entry) ? gtk_entry_get_text(GTK_ENTRY(entry)) : "";
+    gchar *spec = g_strdup(raw ? raw : "");
+    g_strstrip(spec);
+    if (!*spec) { g_free(spec); spec = g_strdup("25m"); }
+    gboolean all_digits = TRUE;
+    for (const gchar *p = spec; *p; p++) if (!g_ascii_isdigit(*p)) { all_digits = FALSE; break; }
+    if (all_digits) {
+        gchar *with_m = g_strdup_printf("%sm", spec);
+        g_free(spec); spec = with_m;
+    }
+    gchar *bin = g_build_filename(g_get_home_dir(), ".local", "bin", "countdown", NULL);
+    gchar *argv[] = {bin, "start", spec, NULL};
+    if (g_spawn_async(NULL, argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL)) {
+        if (GTK_IS_ENTRY(entry)) gtk_entry_set_text(GTK_ENTRY(entry), "");
+        hide_menu(FALSE);
+    }
+    g_free(bin); g_free(spec);
 }
 
 static gboolean mapped(GSignalInvocationHint *hint, guint n, const GValue *values, gpointer data) {
@@ -827,6 +887,14 @@ static gboolean mapped(GSignalInvocationHint *hint, guint n, const GValue *value
         }
         if (GTK_IS_BUTTON(widget) && has_class(widget,"calendar-add"))
             g_signal_connect(widget,"clicked",G_CALLBACK(calendar_add),NULL);
+        if (GTK_IS_ENTRY(widget) && has_class(widget, "timer-input")) {
+            gtk_entry_set_placeholder_text(GTK_ENTRY(widget), "10 (min), 45s, 1h30m…");
+            gtk_entry_set_max_length(GTK_ENTRY(widget), 32);
+            gtk_entry_set_width_chars(GTK_ENTRY(widget), 10);
+            g_signal_connect(widget, "activate", G_CALLBACK(timer_start_activate), NULL);
+        }
+        if (GTK_IS_BUTTON(widget) && has_class(widget, "timer-go"))
+            g_signal_connect(widget, "clicked", G_CALLBACK(timer_start_activate), NULL);
         g_object_set_data(G_OBJECT(widget), "panel-input", GINT_TO_POINTER(1));
     }
     if (GTK_IS_IMAGE(widget) && (has_class(widget, "app-icon") || has_class(widget, "daily-icon")) &&
@@ -852,7 +920,7 @@ static gboolean mapped(GSignalInvocationHint *hint, guint n, const GValue *value
         pending_filter = g_idle_add(filter_idle, NULL);
     }
     if (GTK_IS_WINDOW(widget) && gtk_window_get_window_type(GTK_WINDOW(widget)) == GTK_WINDOW_TOPLEVEL &&
-            !g_object_get_data(G_OBJECT(widget), "raccon-keys")) {
+            find(widget, "initial-page") && !g_object_get_data(G_OBJECT(widget), "raccon-keys")) {
         menu_window = widget;
         g_signal_connect(widget, "destroy", G_CALLBACK(window_destroyed), NULL);
         g_object_set_data(G_OBJECT(widget), "raccon-keys", GINT_TO_POINTER(1));
@@ -908,7 +976,7 @@ G_MODULE_EXPORT void gtk_module_init(gint *argc, gchar ***argv) {
     g_free(executable); g_free(program);
     if (!owner) return;
     backend = g_getenv("RACCON_MENU_BACKEND") ? g_strdup(g_getenv("RACCON_MENU_BACKEND")) :
-        g_build_filename(g_get_home_dir(), ".local", "lib", "raccon_menu", "backend.py", NULL);
+        g_build_filename(g_get_home_dir(), ".local", "bin", "desktop-menu", NULL);
     simple_pages = g_strcmp0(g_getenv("RACCON_MENU_SIMPLE_PAGES"), "1") == 0;
     const gchar *base = g_getenv("XDG_RUNTIME_DIR");
     gchar *fallback = g_build_filename(g_get_home_dir(), ".cache", NULL);

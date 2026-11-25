@@ -28,6 +28,30 @@ structured layout; opening an application does not rearrange other windows.
 | Waybar launcher button | Hidden; use the shortcuts above |
 | Super+L / Super+Ctrl+Q | Open Raccon session actions |
 | Super+Shift+L | Lock the screen directly |
+| Super+W | Open Wallpaper picker |
+
+## Canvas
+
+| Shortcut | Action |
+|---|---|
+| Super+Arrows | Look / pan camera continuously |
+| Super+Alt+Arrows | Focus nearest window in direction |
+| Super+Shift+Arrows | Move focused window on canvas |
+| Super+Ctrl+Arrows | Resize focused window |
+| Super+Tab / Super+Shift+Tab | Cycle focused window (MRU) |
+| Super+Space | Quick window jump selector |
+| Super+M | Toggle workarea fill on focused window |
+| Super+Z | Zoom camera to frame focused window (without Super+M) |
+| Super+C / Super+Shift+D | Center focused window |
+| Super+R | Return camera to origin (0, 0) |
+| Super+0 | Fit all windows in view |
+| Super+Equal / Super+Minus | Zoom in / out |
+| Super+Backspace | Previous camera position |
+| Super+Ctrl+Z | Pin / unpin window to viewport |
+| Super+Alt+A | Align focused window |
+| Super+Slash | Show Canvas shortcuts overlay |
+| Super+2-finger scroll | Pan canvas with touchpad |
+| Super+Ctrl+2-finger scroll | Zoom canvas with touchpad |
 
 ## Focus, move, resize (wf-tile)
 
@@ -108,7 +132,7 @@ Tiled windows are positioned by simple-tile; press Super+T to float first.
 | Super+Shift+D | Show desktop |
 | Super+Q | Close window |
 
-## Workspaces and overview
+## Workspaces
 
 | Shortcut | Action |
 |---|---|
@@ -118,12 +142,17 @@ Tiled windows are positioned by simple-tile; press Super+T to float first.
 | Super+Ctrl+Shift+Arrows | Switch workspace carrying the window |
 | Super+Backspace | Last workspace |
 | Super+S | Expo (workspace overview) |
-| Super+` | Scale (windows on workspace) |
 | Super+Ctrl+Tab | Scale (all workspaces) |
-| Alt+Tab / Alt+Shift+Tab | Switcher next / previous |
-| Super+Ctrl+LeftDrag, Super+MiddleDrag | Cube |
-| 3-finger drag | Move a window using native touchpad dragging |
+| Super+MiddleDrag | Cube |
 | 4-finger horizontal swipe | Switch workspace |
+
+## Window switching and gestures
+
+| Shortcut | Action |
+|---|---|
+| Super+` | Scale (visible windows) |
+| Alt+Tab / Alt+Shift+Tab | Switcher next / previous |
+| 3-finger drag | Move a window using native touchpad dragging |
 
 ## Power button
 

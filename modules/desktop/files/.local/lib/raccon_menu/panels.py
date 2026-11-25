@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -25,7 +26,7 @@ _bus = None
 PAGE_SIZE = 4
 
 
-def command(argv, timeout=3, stdin=None):
+def command(argv, timeout=5, stdin=None):
     result = subprocess.run([str(x) for x in argv], input=stdin, capture_output=True, text=True,
                             timeout=timeout, env={**os.environ, 'LC_ALL': 'C'})
     if result.returncode:
@@ -71,9 +72,10 @@ def audio_snapshot():
         for device in devices:
             percentages = [int(re.search(r'\d+', channel.get('value_percent', '0')).group())
                            for channel in device.get('volume', {}).values()]
+            volume_avg = round(sum(percentages) / len(percentages)) if percentages else 0
             rows.append(dict(name=device['name'], token=token(device['name']),
                              title=device.get('description') or device['name'], mute=device.get('mute', False),
-                             volume=round(sum(percentages) / len(percentages)) if percentages else 0,
+                             volume=max(0, min(100, volume_avg)),
                              active=device['name'] == info.get(default_key, info.get(default_key.replace('_name', '')))))
         result[key+'s'] = rows
         result[key] = next((x for x in rows if x['active']), rows[0] if rows else result[key])
@@ -178,21 +180,32 @@ def presentation(kind, data):
     elif data.get('error') or not data.get('available'):
         status, message = 'error', data.get('error') or 'Service unavailable. Retry to check again.'
     elif kind == 'audio':
-        status = 'ready' if data.get('outputs') and data.get('inputs') else 'empty'
-        message = '' if status == 'ready' else ('No audio devices found.' if not data.get('outputs') and not data.get('inputs')
-                                                else 'No output device found.' if not data.get('outputs') else 'No microphone found.')
+        status = 'ready' if data.get('outputs') or data.get('inputs') else 'empty'
+        message = '' if status == 'ready' else 'No audio devices found.'
     elif not data.get('enabled'):
         status, message = 'off', 'Turn on Wi-Fi to see networks.' if kind == 'connections' else 'Turn on Bluetooth to connect.'
     elif kind == 'bluetooth' and data.get('scanning'):
-        status, message = 'loading', 'Scanning for Bluetooth devices…'
+        found = len(data.get('devices', []))
+        status = 'loading'
+        message = f'Scanning for Bluetooth devices… ({found} found)' if found else 'Scanning nearby Bluetooth devices (20s)…'
     else:
         rows = data.get('networks' if kind == 'connections' else 'devices', [])
         if not rows:
             status, message = 'empty', 'No networks found. Scan again.' if kind == 'connections' else 'No devices found. Scan to discover.'
         elif not any(row.get('active' if kind == 'connections' else 'connected') for row in rows):
-            status, message = 'disconnected', 'Disconnected. Choose a network.' if kind == 'connections' else 'Disconnected. Choose a device.'
+            if kind == 'connections':
+                status, message = 'disconnected', f'Disconnected · {len(rows)} networks nearby'
+            else:
+                status, message = 'disconnected', f'Disconnected · {len(rows)} devices known'
         else:
-            status, message = 'ready', ''
+            status = 'ready'
+            if kind == 'connections':
+                active_row = next((r for r in rows if r.get('active')), None)
+                message = f"Connected · {active_row.get('title', '')} ({active_row.get('signal', 0)}%)" if active_row and active_row.get('title') else 'Connected'
+            else:
+                conn = next((r for r in rows if r.get('connected')), None)
+                bat = f" ({conn['battery']})" if conn and conn.get('battery') else ''
+                message = f"Connected · {conn.get('title', '')}{bat}" if conn and conn.get('title') else 'Connected'
     data.update(status=status, message=message)
     if kind == 'audio': return data
     group = 'networks' if kind == 'connections' else 'devices'
@@ -220,12 +233,12 @@ def listen(kind):
         was_active=False
         while True:
             current=active(kind)
-            if current:
-                try: marker = (ROOT / ('refresh-'+kind)).read_text()
-                except OSError: marker = ''
+            try: marker = (ROOT / ('refresh-'+kind)).read_text()
+            except OSError: marker = ''
+            if current or marker != previous:
                 now = time.monotonic()
-                if not was_active or now >= deadline or marker != previous:
-                    if kind == 'bluetooth':
+                if (current and (not was_active or now >= deadline)) or marker != previous:
+                    if current and kind == 'bluetooth':
                         try: scanning = float((ROOT/'scan-until').read_text()) > time.time()
                         except (OSError, ValueError): scanning = False
                         for path in discovery.copy():
@@ -239,7 +252,9 @@ def listen(kind):
                                     try:
                                         bluez(adapter['path'], 'org.bluez.Adapter1', 'StartDiscovery')
                                         discovery.add(adapter['path'])
-                                    except Exception: pass
+                                    except Exception as exc:
+                                        if 'InProgress' in str(exc):
+                                            discovery.add(adapter['path'])
                     fresh = refresh(kind)
                     frame = presentation(kind, fresh)
                     if frame != shown:
@@ -248,11 +263,12 @@ def listen(kind):
                     data = fresh
                     previous = marker
                     deadline = now + (1 if kind == 'audio' else 2)
-                # UI navigation uses the current snapshot; it must never trigger a radio query.
-                frame = presentation(kind, data)
-                if frame != shown:
-                    print(json.dumps(frame, ensure_ascii=False), flush=True)
-                    shown = frame
+                if current:
+                    # UI navigation uses the current snapshot; it must never trigger a radio query.
+                    frame = presentation(kind, data)
+                    if frame != shown:
+                        print(json.dumps(frame, ensure_ascii=False), flush=True)
+                        shown = frame
             elif discovery:
                 for path in discovery:
                     try: bluez(path, 'org.bluez.Adapter1', 'StopDiscovery')
@@ -339,8 +355,10 @@ def action(args):
     elif operation == 'bt-select':
         row = selected('bluetooth', args[1], 'devices')
         shell.write(ROOT/'bt-selected', row['token'])
+        wake('bluetooth')
     elif operation == 'bt-back':
         shell.write(ROOT/'bt-selected', '')
+        wake('bluetooth')
     elif operation == 'wifi-select':
         row = selected('connections', args[1], 'networks')
         shell.update(wifi_selected=dict(token=row['token'], title=row['title'], secured=row['secured'], active=row['active'],
@@ -350,63 +368,177 @@ def action(args):
         row = selected('connections', json.loads(value)['token'], 'networks')
         secret = sys.stdin.read(1025)
         if len(secret) > 1024 or '\n' in secret or '\r' in secret: raise ValueError('Invalid password.')
-        shell.update(wifi_busy=True, error='')
+        shell.update(wifi_busy=True, wifi_action=f"Connecting to {row['title']}…", error='')
         try:
-            argv = ['nmcli', '--wait', '20'] + (['--ask'] if secret else [])
-            argv += ['device', 'wifi', 'connect', row['bssid'], 'ifname', row['device']]
-            command(argv, timeout=25, stdin=secret+'\n' if secret else None)
+            connected = False
+            if not secret:
+                try:
+                    saved = command(['nmcli', '-t', '-f', 'NAME', 'connection', 'show'], timeout=5).splitlines()
+                    if row['title'] in saved:
+                        command(['nmcli', '--wait', '20', 'connection', 'up', 'id', row['title']], timeout=25)
+                        connected = True
+                except Exception:
+                    connected = False
+            if not connected:
+                argv = ['nmcli', '--wait', '20'] + (['--ask'] if secret else [])
+                argv += ['device', 'wifi', 'connect', row['bssid'], 'ifname', row['device']]
+                command(argv, timeout=25, stdin=secret+'\n' if secret else None)
             shell.update(wifi_selected=empty_wifi())
-        finally: shell.update(wifi_busy=False)
+        finally:
+            try: shell.update(wifi_action='')
+            except Exception: pass
+            shell.update(wifi_busy=False)
         wake('connections')
     elif operation == 'wifi-disconnect':
         row = selected('connections', args[1], 'networks')
         if not row['active']: raise ValueError('Network is already disconnected.')
-        command(['nmcli', '--wait', '8', 'device', 'disconnect', row['device']], timeout=10)
-        shell.update(wifi_selected=empty_wifi());wake('connections')
+        shell.update(wifi_busy=True, wifi_action=f"Disconnecting {row['title']}…", error='')
+        try:
+            command(['nmcli', '--wait', '8', 'device', 'disconnect', row['device']], timeout=10)
+            shell.update(wifi_selected=empty_wifi())
+        finally:
+            try: shell.update(wifi_action='')
+            except Exception: pass
+            shell.update(wifi_busy=False)
+            wake('connections')
     elif operation == 'wifi-power':
         if args[1] not in ('on','off'): raise ValueError('Invalid Wi-Fi state.')
-        command(['nmcli', 'radio', 'wifi', args[1]]);wake('connections')
+        shell.update(wifi_busy=True, wifi_action=f"Turning Wi-Fi {args[1]}…", error='')
+        try:
+            command(['nmcli', 'radio', 'wifi', args[1]], timeout=8)
+            if args[1] == 'off': shell.update(wifi_selected=empty_wifi())
+        finally:
+            try: shell.update(wifi_action='')
+            except Exception: pass
+            shell.update(wifi_busy=False)
+            wake('connections')
     elif operation == 'wifi-scan':
-        shell.update(wifi_busy=True, error='')
-        try: command(['nmcli', '--wait', '8', 'device', 'wifi', 'rescan'], timeout=10)
-        finally: shell.update(wifi_busy=False);wake('connections')
+        shell.update(wifi_busy=True, wifi_action='Scanning nearby Wi-Fi networks…', error='')
+        try:
+            try:
+                command(['nmcli', '--wait', '10', 'device', 'wifi', 'rescan'], timeout=12)
+            except RuntimeError as exc:
+                msg = str(exc).casefold()
+                if 'not allowed' not in msg and 'in progress' not in msg:
+                    raise
+        finally:
+            try: shell.update(wifi_action='')
+            except Exception: pass
+            shell.update(wifi_busy=False);wake('connections')
     elif operation in ('audio-device', 'audio-mute'):
         kind = args[1]
         if kind not in ('output','input'): raise ValueError('Invalid audio device.')
         row = selected('audio', args[2], kind+'s')
         target = 'sink' if kind == 'output' else 'source'
         argv = ['pactl', 'set-default-'+target, row['name']] if operation == 'audio-device' else ['pactl', 'set-'+target+'-mute', row['name'], 'toggle']
-        command(argv);wake('audio')
+        command(argv)
+        if operation == 'audio-device':
+            try: shell.update(**{('outputs_open' if kind == 'output' else 'inputs_open'): False})
+            except Exception: pass
+        wake('audio')
     elif operation == 'bt-power':
         if args[1] not in ('on','off'): raise ValueError('Invalid Bluetooth state.')
-        for adapter in shell.read(STATE/'bluetooth.json', {}).get('adapters', []):
-            if not re.fullmatch(r'/org/bluez/hci\d+', adapter['path']): continue
-            bluez(adapter['path'], 'org.freedesktop.DBus.Properties', 'Set',
-                  GLib.Variant('(ssv)', ('org.bluez.Adapter1','Powered',GLib.Variant('b',args[1]=='on'))))
-        wake('bluetooth')
+        shell.update(bt_busy=True, bt_action=f"Turning Bluetooth {args[1]}…", error='')
+        try:
+            try:
+                objects = bluez('/', 'org.freedesktop.DBus.ObjectManager', 'GetManagedObjects')[0]
+                adapter_paths = [p for p, ifaces in objects.items() if 'org.bluez.Adapter1' in ifaces]
+            except Exception:
+                adapter_paths = [a['path'] for a in shell.read(STATE/'bluetooth.json', {}).get('adapters', [])]
+            for path in adapter_paths:
+                if not re.fullmatch(r'/org/bluez/hci\d+', path): continue
+                bluez(path, 'org.freedesktop.DBus.Properties', 'Set',
+                      GLib.Variant('(ssv)', ('org.bluez.Adapter1','Powered',GLib.Variant('b',args[1]=='on'))))
+            if args[1] == 'off':
+                shell.write(ROOT/'scan-until', '0')
+                shell.write(ROOT/'bt-selected', '')
+        finally:
+            try: shell.update(bt_action='')
+            except Exception: pass
+            shell.update(bt_busy=False)
+            wake('bluetooth')
     elif operation == 'bt-scan':
-        shell.write(ROOT/'scan-until', str(time.time()+20));wake('bluetooth')
+        shell.update(bt_busy=True, bt_action='Starting Bluetooth scan…', error='')
+        try:
+            try:
+                objects = bluez('/', 'org.freedesktop.DBus.ObjectManager', 'GetManagedObjects')[0]
+                powered = any(ifaces.get('org.bluez.Adapter1', {}).get('Powered', False) for ifaces in objects.values())
+            except Exception:
+                powered = any(a.get('enabled') for a in shell.read(STATE/'bluetooth.json', {}).get('adapters', []))
+            if not powered:
+                raise RuntimeError('Turn on Bluetooth first.')
+            shell.write(ROOT/'scan-until', str(time.time()+20))
+        finally:
+            try: shell.update(bt_action='')
+            except Exception: pass
+            shell.update(bt_busy=False)
+            wake('bluetooth')
     elif operation == 'bt-device':
         row = selected('bluetooth', args[1], 'devices')
         if not re.fullmatch(r'/org/bluez/hci\d+/dev_[0-9A-Fa-f_]+', row['path']): raise ValueError('Invalid device.')
-        shell.update(bt_busy=True, error='')
+        shell.update(bt_busy=True, bt_action=f"Checking {row['title']}…", error='')
         try:
-            if not row['paired']:
+            try:
+                props = bluez(row['path'], 'org.freedesktop.DBus.Properties', 'GetAll', GLib.Variant('(s)', ('org.bluez.Device1',)))[0]
+            except Exception:
+                props = {}
+            paired = bool(props.get('Paired', row.get('paired', False)))
+            trusted = bool(props.get('Trusted', row.get('trusted', False)))
+            connected = bool(props.get('Connected', row.get('connected', False)))
+            just_paired = False
+            if not paired:
+                shell.update(bt_action=f"Pairing {row['title']}…")
                 pair_device(row['path'])
-            bluez(row['path'], 'org.bluez.Device1', 'Disconnect' if row['connected'] else 'Connect', timeout=20000)
-        finally: shell.update(bt_busy=False);wake('bluetooth')
+                just_paired = True
+            if not trusted:
+                try:
+                    bluez(row['path'], 'org.freedesktop.DBus.Properties', 'Set',
+                          GLib.Variant('(ssv)', ('org.bluez.Device1', 'Trusted', GLib.Variant('b', True))))
+                except Exception:
+                    pass
+            method = 'Disconnect' if connected else 'Connect'
+            shell.update(bt_action=f"{'Disconnecting' if connected else 'Connecting to'} {row['title']}…")
+            try:
+                bluez(row['path'], 'org.bluez.Device1', method, timeout=20000)
+            except Exception as exc:
+                if method == 'Connect' and just_paired and any(k in str(exc) for k in ('Failed', 'abort', 'temporarily')):
+                    shell.update(bt_action=f"Retrying connection to {row['title']}…")
+                    time.sleep(0.4)
+                    bluez(row['path'], 'org.bluez.Device1', 'Connect', timeout=20000)
+                else:
+                    raise
+        finally:
+            try: shell.update(bt_action='')
+            except Exception: pass
+            shell.update(bt_busy=False);wake('bluetooth')
     elif operation == 'advanced':
         if args[1] != 'audio': raise ValueError('Invalid panel.')
+        mixer = next((m for m in ('pavucontrol', 'pwvucontrol', 'pavucontrol-qt') if shutil.which(m)), None)
+        if not mixer:
+            raise RuntimeError('No audio mixer application found.')
         shell.close()
-        subprocess.Popen(['pavucontrol'],start_new_session=True,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        subprocess.Popen([mixer],start_new_session=True,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     elif operation == 'cancel-wifi': shell.update(wifi_selected=empty_wifi())
     else: raise ValueError('Invalid action.')
+
+
+def preload():
+    """Warm panel snapshots concurrently and wake listeners before menus open."""
+    kinds = ('audio', 'connections', 'bluetooth')
+    with ThreadPoolExecutor(max_workers=len(kinds)) as pool:
+        futures = [pool.submit(refresh, kind) for kind in kinds]
+        for future in futures:
+            try: future.result()
+            except Exception: pass
+    for kind in kinds:
+        wake(kind)
 
 
 def main(args):
     configure()
     operation = args[0] if args else 'audio'
     if operation == 'listen': listen(args[1]);return
+    if operation == 'preload': preload(); return
     if operation == 'retry':
         if len(args) != 2 or args[1] not in SERVICE_PAGES or args[1] == 'calendar':
             raise ValueError('Invalid service.')
@@ -446,8 +578,12 @@ if __name__ == '__main__':
             message = 'Could not connect. Check the password and try again.'
         try:
             resets = dict(error=message)
-            if sys.argv[1:2] and sys.argv[1].startswith('wifi-'): resets['wifi_busy'] = False
-            if sys.argv[1:2] and sys.argv[1].startswith('bt-'): resets['bt_busy'] = False
+            if sys.argv[1:2] and sys.argv[1].startswith('wifi-'):
+                resets['wifi_busy'] = False
+                resets['wifi_action'] = ''
+            if sys.argv[1:2] and sys.argv[1].startswith('bt-'):
+                resets['bt_busy'] = False
+                resets['bt_action'] = ''
             shell.update(**resets)
         except Exception: pass
         print('Panel:',message,file=sys.stderr)

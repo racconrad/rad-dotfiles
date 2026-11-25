@@ -3,15 +3,15 @@
   (image :icon name :icon-size {(size ?: 20) >= 28 ? "dnd" : (size ?: 20) >= 24 ? "large-toolbar" : "button"}))
 
 (deflisten walls :initial '{"rows":[],"section":"all","page":0,"pages":1,"counts":{"all":0,"images":0,"videos":0},"loading":true,"error":""}'
-  "python3 $HOME/.local/lib/raccon_menu/walls.py watch")
+  "$HOME/.local/bin/desktop-menu walls watch")
 (deflisten desktop :initial '{"motion":true,"duration":"220ms"}'
-  "desktop-menu listen-appearance")
+  "$HOME/.local/bin/desktop-menu listen-appearance")
 ; Controls and body map together; missing previews arrive from the listener.
 (defvar shown false)
 (defvar session_visible false)
 (defvar body false)
 (deflisten video_preview :initial '{"active":false,"selection":"","clip":"","playback":"","message":""}'
-  "python3 $HOME/.local/lib/raccon_menu/wall_preview.py watch")
+  "$HOME/.local/bin/desktop-menu wall-preview-watch")
 (defvar armed "")
 
 (defvar who '{"user":"","host":"","uptime":""}')
@@ -70,7 +70,13 @@
         (kind-tab :id "all" :title "All" :icon "view-grid-symbolic")
         (kind-tab :id "images" :title "Images" :icon "image-x-generic-symbolic")
         (kind-tab :id "videos" :title "Videos" :icon "video-x-generic-symbolic")
-        (label :class "muted" :hexpand true :halign "end" :text {walls.loading ? "Loading previews…" : ""}))
+        (box :hexpand true)
+        (button :class "wall-folder-btn" :tooltip "Folder: ${walls.dir_path ?: 'Choose folder'} · Click to change"
+          :onclick "$HOME/.local/bin/wallpaper-set-dir" :timeout "5s"
+          (box :space-evenly false :spacing 6 :valign "center"
+            (menu-icon :name "folder-open-symbolic" :size 16)
+            (label :class "folder-label muted" :limit-width 18 :text {walls.dir_name ?: "Folder"})))
+        (label :class "muted" :halign "end" :text {walls.loading ? "Loading previews…" : ""}))
     (revealer :reveal body :transition "none" :duration "0ms"
       (wall-grid))
     (label :class "muted" :visible {video_preview.active && video_preview.clip == ""} :xalign 0 :text {video_preview.message})))
@@ -88,7 +94,7 @@
         (image :style {armed == action ? "opacity: 1;" : "opacity: 0;"} :icon "emblem-ok-symbolic" :icon-size "button")))))
 
 (defwidget session-card []
-  (box :class "panel float-card" :orientation "v" :space-evenly false :spacing 20
+  (box :class "panel float-card" :orientation "v" :space-evenly false :spacing 14
     (label :class "resident-visible" :visible false :text {session_visible ? "true" : "false"})
     (float-head :title {who.user} :subtitle "${who.host} · up ${who.uptime}" :icon "avatar-default-symbolic"
       :close "$HOME/.local/bin/raccon-float close")

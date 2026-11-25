@@ -21,14 +21,16 @@ class CatalogTests(unittest.TestCase):
 
     def test_merge_migrates_selection_and_keeps_custom_frame_choices(self):
         styles.save(styles.STATE/'selection.json',dict(style='windows',name='Windows',warnings=['Keep']))
-        styles.save(styles.STATE/'widget-frame.json',dict(version=2,styles=dict(windows='retro',gnome='glass',ascii='none')))
+        styles.save(styles.STATE/'widget-frame.json',dict(version=2,styles=dict(windows='retro',gnome='glass',terminal='none')))
         styles.migrate_theme_state()
         self.assertEqual(styles.read(styles.STATE/'selection.json'),dict(style='modern',name='Default',warnings=['Keep']))
         choices=styles.read(styles.STATE/'widget-frame.json')['styles']
-        self.assertEqual(choices['modern'],'retro');self.assertEqual(choices['ascii'],'none')
+        self.assertEqual(choices['modern'],'retro');self.assertEqual(choices['terminal'],'none')
         self.assertEqual(choices['gnome'],'glass')
         styles.migrate_theme_state()
         self.assertEqual(styles.read(styles.STATE/'widget-frame.json')['styles'],choices)
+        for old, target in (('glass', 'modern'), ('ascii', 'terminal'), ('retro', 'terminal'), ('monochrome', 'terminal'), ('vintage', 'macxp')):
+            self.assertEqual(styles.normalize_style(old), target)
 
     def test_explicit_default_frame_wins_over_an_older_merged_theme(self):
         styles.save(styles.STATE/'selection.json',dict(style='gnome'))
@@ -56,20 +58,20 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(published.call_count,2)
 
     def test_small_raster_is_prepared_once_and_reused_on_next_open(self):
-        colors,_=styles.palette('ascii',{})
+        colors,_=styles.palette('terminal',styles.read(ROOT/'modules/desktop-styles/files/.config/desktop-style/source-colors.json'))
         def convert(argv):styles.write(Path(argv[-1]),'cached PNG')
         with patch.object(styles,'run',side_effect=convert) as run:
-            first=styles.preview('ascii',colors)
-            self.assertEqual(styles.preview('ascii',colors),first)
+            first=styles.preview('terminal',colors)
+            self.assertEqual(styles.preview('terminal',colors),first)
             self.assertEqual(run.call_count,1)
         self.assertTrue(first['preview'].endswith('.png'))
-        self.assertEqual(styles.initial_catalog()['ascii']['preview'],first['preview'])
+        self.assertEqual(styles.initial_catalog()['terminal']['preview'],first['preview'])
 
     def test_state_updates_use_listener_without_starting_eww_clients(self):
         with patch.object(styles,'selector_send',side_effect=AssertionError('redundant resident IPC')),\
              patch.object(styles.subprocess,'run',side_effect=AssertionError('redundant Eww process')):
-            styles.update(selected='night')
-        self.assertEqual(styles.read(styles.STATE/'ui.json')['selected'],'ascii')
+            styles.update(selected='classic')
+        self.assertEqual(styles.read(styles.STATE/'ui.json')['selected'],'terminal')
 
     def test_extra_panels_toggle_exclusively_and_keep_exit_content(self):
         styles.extra_action('bar')

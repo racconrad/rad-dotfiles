@@ -9,7 +9,25 @@ export EDITOR=nvim VISUAL=nvim
 # ── Oh My Zsh with the native Raccon prompt ─────────────────────────────────
 export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="raccon"
-plugins=(git copyfile copybuffer copypath fastfile sudo)
+
+# Plugin settings before loading
+fastfile_var_prefix="${fastfile_var_prefix:-?}"
+
+# Plugins to load (add more plugins here or via plugins+=(...) in ~/.zshrc.plugins)
+plugins=(
+  git
+  copyfile
+  copybuffer
+  copypath
+  fastfile
+  sudo
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+)
+
+# Optional user plugins hook before Oh My Zsh loads (allows plugins+=(...) and custom settings)
+[[ -r "$HOME/.zshrc.plugins" ]] && source "$HOME/.zshrc.plugins"
+
 if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
   source "$ZSH/oh-my-zsh.sh"
 else
@@ -17,23 +35,29 @@ else
   bindkey -e
 fi
 
-# ── System plugins (pacman packages, optional) ───────────────────────────────
-_zp=/usr/share/zsh/plugins
-if [[ -r $_zp/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+# ── Plugin configuration (applied AFTER plugins are loaded) ─────────────────
+# Fallback to system packages if not loaded by Oh My Zsh:
+if ! (( $+functions[_zsh_autosuggest_suggest] )) && [[ -r /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
+  source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+fi
+if (( $+functions[_zsh_autosuggest_suggest] )); then
   ZSH_AUTOSUGGEST_STRATEGY=(history completion)
   ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=8'
-  source $_zp/zsh-autosuggestions/zsh-autosuggestions.zsh
 fi
-[[ -r $_zp/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] &&
-  source $_zp/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-if [[ -r $_zp/zsh-history-substring-search/zsh-history-substring-search.zsh ]]; then
-  source $_zp/zsh-history-substring-search/zsh-history-substring-search.zsh
+
+if ! (( $+functions[_zsh_highlight] )) && [[ -r /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
+  source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+fi
+
+if [[ -r /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh ]] && ! (( $+functions[history-substring-search-up] )); then
+  source /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
+fi
+if (( $+functions[history-substring-search-up] )); then
   bindkey '^[[A' history-substring-search-up
   bindkey '^[[B' history-substring-search-down
   [[ -n ${terminfo[kcuu1]} ]] && bindkey "${terminfo[kcuu1]}" history-substring-search-up
   [[ -n ${terminfo[kcud1]} ]] && bindkey "${terminfo[kcud1]}" history-substring-search-down
 fi
-unset _zp
 
 # ── Greeting in Kitty only ───────────────────────────────────────────────────
 if [[ $TERM == xterm-kitty && -o interactive && -z $NVIM && -z $VSCODE_PID && $TERM_PROGRAM != "vscode" && -z $RACCON_NO_FETCH ]]; then
@@ -75,5 +99,21 @@ if [[ -x ~/.local/bin/explore ]]; then
   alias explore='~/.local/bin/explore' open='~/.local/bin/explore'
   alias files='~/.local/bin/explore' fm='~/.local/bin/explore'
 fi
+
+# Helper function to load additional plugins dynamically from the personal section:
+load_plugins() {
+  local p dir
+  for p in "$@"; do
+    for dir in "$ZSH_CUSTOM/plugins/$p" "$ZSH/plugins/$p" "/usr/share/zsh/plugins/$p"; do
+      if [[ -f "$dir/$p.plugin.zsh" ]]; then
+        source "$dir/$p.plugin.zsh"
+        break
+      elif [[ -f "$dir/$p.zsh" ]]; then
+        source "$dir/$p.zsh"
+        break
+      fi
+    done
+  done
+}
 
 # >>> personal (kept on reinstall, never captured)

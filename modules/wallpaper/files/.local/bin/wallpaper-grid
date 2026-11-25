@@ -3,10 +3,28 @@
 # Picking one hands it to wallpaper-set (awww for stills, mpvpaper for videos).
 set -euo pipefail
 
-dir="${WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}"
+if [[ -n "${1:-}" && "$1" == "--set-dir" && -n "${2:-}" ]]; then
+  mkdir -p "$HOME/.config/raccon"
+  echo "$2" > "$HOME/.config/raccon/wallpaper-dir"
+  echo "Wallpaper directory set to: $2"
+  shift 2
+fi
+
+custom_dir=""
+if [[ -f "$HOME/.config/raccon/wallpaper-dir" ]]; then
+  custom_dir="$(cat "$HOME/.config/raccon/wallpaper-dir" 2>/dev/null | tr -d '\r\n')"
+fi
+
+dir="${1:-${custom_dir:-${WALLPAPER_DIR:-$HOME/Pictures/Wallpapers}}}"
 thumbs="${XDG_CACHE_HOME:-$HOME/.cache}/wallpaper-thumbs"
 theme="$HOME/.config/rofi/wallpaper.rasi"
 mkdir -p -- "$thumbs"
+
+if [[ ! -d "$dir" ]]; then
+  echo "wallpaper-grid: Directory '$dir' does not exist." >&2
+  echo "Hint: Run 'wallpaper-set-dir <PATH>' to set your wallpapers folder." >&2
+  exit 1
+fi
 
 if ! command -v rofi >/dev/null 2>&1; then
   exec "$HOME/.local/bin/wallpaper-pick"

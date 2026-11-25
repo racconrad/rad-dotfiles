@@ -178,5 +178,89 @@ class PanelTests(unittest.TestCase):
             with self.assertRaises(subprocess.TimeoutExpired):panels.action(['wifi-connect'])
         self.assertEqual(update.call_args.kwargs,{'wifi_busy':False})
 
+    def test_wifi_scan_ignores_rate_limit_and_bt_power_queries_live_adapters(self):
+        with patch.object(panels.shell,'update'), \
+             patch.object(panels,'command',side_effect=RuntimeError('Error: Scanning not allowed immediately following previous scan.')), \
+             patch.object(panels,'wake') as wake:
+            panels.action(['wifi-scan'])
+            wake.assert_called_once_with('connections')
+
+        objects={'/org/bluez/hci0':{'org.bluez.Adapter1':{'Powered':False}}}
+        with patch.object(panels,'bluez',return_value=(objects,)) as bz, patch.object(panels,'wake') as wake:
+            panels.action(['bt-power','on'])
+            self.assertEqual(bz.call_args_list[-1].args[:3],('/org/bluez/hci0','org.freedesktop.DBus.Properties','Set'))
+            wake.assert_called_once_with('bluetooth')
+            with self.assertRaisesRegex(RuntimeError,'Turn on Bluetooth'):
+                panels.action(['bt-scan'])
+
+    def test_audio_ready_without_inputs_and_device_switch_closes_dropdown(self):
+        frame=panels.presentation('audio',{**panels.defaults('audio'), 'ready':True, 'available':True, 'outputs':[dict(token='a')]})
+        self.assertEqual(frame['status'],'ready')
+        row=dict(token='d'*24, name='sink1', title='Speakers')
+        (panels.STATE/'audio.json').write_text(json.dumps(dict(outputs=[row], inputs=[])))
+        with patch.object(panels,'command') as cmd, patch.object(panels.shell,'update') as update, patch.object(panels,'wake'):
+            panels.action(['audio-device','output',row['token']])
+            cmd.assert_called_once_with(['pactl','set-default-sink','sink1'])
+            update.assert_called_with(outputs_open=False)
+
+    def test_desktop_panel_wrapper_handles_service_actions_instead_of_raccon_menu(self):
+        wrapper=(Path(__file__).resolve().parents[1]/'modules/desktop/files/.local/bin/desktop-panel').read_text()
+        self.assertIn('panel_cli.py', wrapper)
+        self.assertNotIn('raccon menu', wrapper)
+
+    def test_wifi_and_bluetooth_informative_status_and_busy_animations(self):
+        wifi_ready = panels.presentation('connections', {
+            **panels.defaults('connections'), 'ready': True, 'available': True, 'enabled': True,
+            'networks': [dict(title='Studio', active=True, signal=82)],
+        })
+        self.assertIn('Studio', wifi_ready['message'])
+        self.assertIn('82%', wifi_ready['message'])
+
+        bt_scanning = panels.presentation('bluetooth', {
+            **panels.defaults('bluetooth'), 'ready': True, 'available': True, 'enabled': True,
+            'scanning': True, 'devices': [dict(token='a', title='Earbuds')],
+        })
+        self.assertEqual(bt_scanning['status'], 'loading')
+        self.assertIn('1 found', bt_scanning['message'])
+
+        scss = (Path(__file__).resolve().parents[1]/'modules/desktop/files/.config/raccon-menu/_controls.scss').read_text()
+        self.assertIn('@keyframes service-spin', scss)
+        self.assertIn('.service-banner.is-busy', scss)
+        yuck = (Path(__file__).resolve().parents[1]/'modules/desktop/files/.config/raccon-menu/controls.yuck').read_text()
+        self.assertIn('wifi_action', yuck)
+        self.assertIn('bt_action', yuck)
+
+    def test_preload_refreshes_all_services_and_wake_refreshes_while_hidden(self):
+        with patch.object(panels, 'refresh', side_effect=lambda k: panels.defaults(k)) as refreshed, \
+             patch.object(panels, 'wake') as woken:
+            panels.preload()
+        self.assertEqual({call.args[0] for call in refreshed.call_args_list}, {'audio', 'connections', 'bluetooth'})
+        self.assertEqual([call.args[0] for call in woken.call_args_list], ['audio', 'connections', 'bluetooth'])
+
+        class Waiter:
+            def __init__(self, *args, **kwargs):
+                self.calls = 0
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def wait(self, timeout):
+                self.calls += 1
+                if self.calls == 1:
+                    panels.wake('connections')
+                    return
+                raise KeyboardInterrupt
+            def close(self): pass
+
+        stdout = io.StringIO()
+        ready_wifi = {**panels.defaults('connections'), 'ready': True, 'available': True, 'enabled': True}
+        with patch.object(panels, 'active', return_value=False), \
+             patch.object(panels, 'FileWatch', Waiter, create=True), \
+             patch.object(panels, 'refresh', return_value=ready_wifi) as refresh, \
+             patch('sys.stdout', stdout):
+            with self.assertRaises(KeyboardInterrupt):
+                panels.listen('connections')
+        self.assertEqual(refresh.call_count, 1)
+        lines = [json.loads(line) for line in stdout.getvalue().splitlines() if line.strip()]
+        self.assertEqual(lines[-1]['status'], 'empty')
+
 
 if __name__=='__main__':unittest.main()

@@ -16,20 +16,20 @@ button:disabled { opacity: .5; }
 .title { font-size: 18px; font-weight: 600; letter-spacing: -.3px; }
 .avatar { border-radius: 10px; }
 .close { padding: 6px; color: $on_surface_variant; }
-.search-bar { padding: 8px 10px; border-radius: 10px; background: rgba($on_surface, .07); color: $on_surface_variant; }
+.search-bar { padding: 8px 10px; border-radius: 10px; background: rgba($on_surface, .07); color: $on_surface_variant; border: 1px solid transparent; transition: background-color 160ms ease-out, border-color 160ms ease-out, box-shadow 180ms ease-out; }
 .app-search:focus { color: $on_surface; }
 .app-search { color: $on_surface; caret-color: $primary; min-height: 20px; }
 .app-search selection { background: $primary; color: $on_primary; }
 .daily-apps { padding: 2px 0; }
-.daily-app { min-height: 48px; padding: 8px 4px; background: rgba($primary, .08); border-radius: 10px; }
-.daily-app image { color: $primary; transition: -gtk-icon-transform 140ms ease-out; }
-.daily-app:hover image { -gtk-icon-transform: scale(1.08); }
+.daily-app { min-height: 48px; padding: 8px 4px; background: rgba($primary, .08); border-radius: 10px; border: 1px solid transparent; transition: background-color 160ms ease-out, border-color 160ms ease-out, box-shadow 180ms ease-out; }
+.daily-app image { color: $primary; transition: -gtk-icon-transform 160ms cubic-bezier(.34, 1.56, .64, 1); }
+.daily-app:hover image { -gtk-icon-transform: scale(1.12); }
 .daily-app label { font-size: 11px; font-weight: 500; }
-.app-launch { min-height: 26px; padding: 5px 8px; border-radius: 8px; }
+.app-launch { min-height: 26px; padding: 5px 8px; border-radius: 8px; border-left: 2px solid transparent; transition: background-color 140ms ease-out, border-color 160ms ease-out, color 140ms ease-out; }
 .app-icon-slot, .app-icon { min-width: 20px; min-height: 20px; }
 .app-name { font-size: 13px; font-weight: 500; }
-.app-launch.first-match { background: rgba($primary, .12); }
-.app-launch image { color: $primary; }
+.app-launch.first-match { background: rgba($primary, .14); border-left-color: $primary; }
+.app-launch image { color: $primary; transition: -gtk-icon-transform 160ms cubic-bezier(.34, 1.56, .64, 1); }
 .no-results { padding: 14px 4px; }
 .quick { color: $on_surface_variant; padding: 6px; }
 .popup .quick, .popup .nav-tab { min-width: 22px; min-height: 22px; }
@@ -37,12 +37,13 @@ button:disabled { opacity: .5; }
 .quick label, .nav-tab label { font-size: 11px; }
 .utilities { padding-top: 1px; }
 .navigation { padding-top: 6px; border-top: 1px solid rgba($outline_variant, .35); }
-.nav-tab { padding: 7px; color: $on_surface_variant; border-radius: 8px; }
-.nav-tab.current { color: $primary; background: rgba($primary, .13); }
-.side-title { font-size: 13px; font-weight: 600; padding: 2px 4px 4px; }
-.mode-row, .session-choice { padding: 5px 6px; border-radius: 6px; }
-.mode-row.selected, .session-choice.selected { color: $primary; background: rgba($primary, .14); }
+.nav-tab { padding: 7px; color: $on_surface_variant; border-radius: 8px; border: 1px solid transparent; transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out, box-shadow 180ms ease-out; }
+.nav-tab.current { color: $primary; background: rgba($primary, .14); border-color: rgba($primary, .45); box-shadow: 0 2px 8px rgba($primary, .18); }
+.side-title { font-size: 13px; font-weight: 600; padding: 2px 4px 6px; }
+.mode-row, .session-choice { padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; }
+.mode-row.selected, .session-choice.selected { color: $primary; background: rgba($primary, .15); border-color: rgba($primary, .50); font-weight: 600; }
 .mode-name, .session-choice-text { font-size: 12px; font-weight: 500; }
+.mode-icon-slot, .session-icon-slot { min-width: 20px; min-height: 20px; }
 .apply, .apply:hover { background: $primary; color: $on_primary; font-weight: 600; padding: 5px 8px; margin-top: 2px; border-radius: 6px; }
 .apply:focus { box-shadow: inset 0 0 0 2px $on_primary; }
 .confirmation { padding: 6px 4px 2px; border-top: 1px solid rgba($outline_variant, .4); margin-top: 4px; }
@@ -51,67 +52,114 @@ button:disabled { opacity: .5; }
 .muted { color: $on_surface_variant; }
 .error { color: $error; font-size: 12px; }
 scrollbar { background: transparent; }
-scrollbar slider { min-width: 4px; border-radius: 8px; background: rgba($secondary, .35); }
+scrollbar slider { min-width: 2px; border-radius: 8px; background: rgba($secondary, .22); }
 .still, .still * { transition: none; animation: none; }
 
 @import "controls";
 @import "desktop-style";
 
 .dock-left .panel { margin-left: 4px; }
-.dock-left .side-panel { margin-left: 6px; }
+.dock-left .side-panel { margin-left: 8px; }
 .dock-right .panel { margin-right: 4px; }
-.dock-right .side-panel { margin-left: 0; margin-right: 6px; }
+.dock-right .side-panel { margin-left: 0; margin-right: 8px; }
 .dock-top .panel { margin-top: 4px; }
 .dock-bottom .panel { margin-bottom: 4px; }
+.dock-left .popup, .dock-right .popup { padding: 4px; }
 
 /* ---------- Timer Panel ---------- */
-.timer-panel {
-  padding: 10px 12px;
-  min-width: 170px;
+.timer-panel { padding: 2px; }
+.timer-progress trough { min-height: 4px; border-radius: 4px; background: rgba($on_surface, 0.16); }
+.timer-progress progress { min-height: 4px; border-radius: 4px; background: $primary; }
+.timer-source {
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba($surface_container_highest, 0.72);
+  border: 1px solid rgba($outline_variant, 0.38);
 }
+.timer-dot { min-width: 6px; min-height: 6px; border-radius: 99px; background: $on_surface_variant; }
+.timer-dot.running { background: $primary; }
+.timer-dot.paused { background: $tertiary; }
+.timer-dot.ended { background: $error; }
+.timer-kind { font-size: 10px; font-weight: 700; color: $on_surface; }
+.timer-badge-state { font-size: 10px; font-family: "JetBrainsMono Nerd Font Mono", monospace; }
+.timer-mini { padding: 4px; border-radius: 8px; color: $on_surface_variant; }
 .timer-display {
-  background: rgba($surface_container_highest, 0.6);
-  border-radius: 12px;
+  background: rgba($surface_container_highest, 0.62);
+  border-radius: 14px;
   padding: 10px 8px;
-  border: 1px solid rgba($outline_variant, 0.4);
+  border: 1px solid rgba($outline_variant, 0.42);
   transition: border-color 200ms ease, background-color 200ms ease;
 }
 .timer-display.state-running {
-  border-color: rgba($primary, 0.6);
-  background: rgba($primary, 0.08);
+  border-color: rgba($primary, 0.65);
+  background: rgba($primary, 0.10);
 }
 .timer-display.state-paused {
-  border-color: rgba($tertiary, 0.6);
-  background: rgba($tertiary, 0.08);
+  border-color: rgba($tertiary, 0.65);
+  background: rgba($tertiary, 0.10);
 }
 .timer-display.state-ended {
   border-color: $error;
-  background: rgba($error, 0.15);
+  background: rgba($error, 0.16);
 }
 .timer-big-time {
   font-family: "JetBrainsMono Nerd Font Mono", monospace;
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   color: $on_surface;
 }
 .timer-state-label {
   font-size: 11px;
   font-weight: 500;
 }
-.section-subtitle {
-  font-size: 11px;
-  font-weight: 600;
-  margin-top: 4px;
+.timer-input-row {
+  padding-top: 2px;
 }
+.timer-input {
+  background: $surface_container_highest;
+  color: $on_surface;
+  border-radius: 8px;
+  border: 1px solid rgba($outline_variant, 0.55);
+  padding: 7px 10px;
+  font-family: "JetBrainsMono Nerd Font Mono", monospace;
+  font-size: 13px;
+  caret-color: $primary;
+  transition: border-color 150ms ease;
+}
+.timer-input:focus { border-color: $primary; }
+.timer-go {
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-weight: 700;
+  font-size: 12px;
+  background: $primary;
+  color: $on_primary;
+}
+.timer-go label, .timer-go image { color: $on_primary; }
+.timer-live-readout {
+  font-family: "JetBrainsMono Nerd Font Mono", monospace;
+  font-size: 14px;
+  font-weight: 800;
+  color: $primary;
+}
+.timer-dot {
+  min-width: 7px;
+  min-height: 7px;
+  border-radius: 99px;
+  background: $on_surface_variant;
+}
+.timer-dot.running { background: $primary; }
+.timer-dot.paused { background: $tertiary; }
+.timer-dot.ended { background: $error; }
 .timer-preset {
   background: rgba($surface_container_high, 0.7);
   border-radius: 8px;
-  padding: 6px 2px;
+  padding: 7px 4px;
   color: $on_surface;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 12px;
-  border: 1px solid rgba($outline_variant, 0.25);
+  border: 1px solid rgba($outline_variant, 0.3);
   transition: background-color 140ms ease-out, border-color 140ms ease-out, -gtk-icon-transform 180ms cubic-bezier(.34, 1.56, .64, 1);
 }
 .timer-preset:hover {
@@ -161,57 +209,133 @@ scrollbar slider { min-width: 4px; border-radius: 8px; background: rgba($seconda
 
 /* Theme overrides must not suppress interaction feedback. */
 $ease: cubic-bezier(.22, 1, .36, 1);
-$spring: cubic-bezier(.22, 1, .36, 1);
-.popup.motion button { transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; }
+$spring: cubic-bezier(.34, 1.56, .64, 1);
+.popup.motion button { transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out, box-shadow 160ms ease-out; }
 .popup.motion .daily-app { transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out,
-  opacity 260ms ease-out; }
+  opacity 260ms ease-out, box-shadow 180ms ease-out; }
 .popup.motion .daily-app image { transition: -gtk-icon-transform 160ms $spring; }
-.popup.motion .daily-app:hover image { -gtk-icon-transform: scale(1.08); }
-.popup.motion .daily-app:active image { -gtk-icon-transform: scale(.88); transition-duration: 90ms; }
+.popup.motion .daily-app:hover image { -gtk-icon-transform: scale(1.14); }
+.popup.motion .daily-app:active image { -gtk-icon-transform: scale(.88); transition-duration: 80ms; }
+.popup.motion .daily-app:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, .15); border-color: rgba($primary, .35); }
 .popup.motion .nav-tab image, .popup.motion .quick image, .popup.motion .close image { transition: -gtk-icon-transform 160ms $spring; }
-.popup.motion .nav-tab:hover image, .popup.motion .quick:hover image { -gtk-icon-transform: scale(1.06); }
-.popup.motion .close:hover image { -gtk-icon-transform: scale(1.06); }
+.popup.motion .nav-tab:hover image, .popup.motion .quick:hover image { -gtk-icon-transform: scale(1.12); }
+.popup.motion .close:hover image { -gtk-icon-transform: scale(1.15) rotate(90deg); }
+.popup.motion .close:active image { -gtk-icon-transform: scale(0.90); }
 .popup.motion .app-launch image { transition: -gtk-icon-transform 160ms $spring; }
-.popup.motion .app-launch:hover image, .popup.motion .app-launch.first-match image { -gtk-icon-transform: scale(1.03); }
+.popup.motion .app-launch:hover image, .popup.motion .app-launch.first-match image { -gtk-icon-transform: scale(1.10); }
+.popup.motion .app-launch:active image { -gtk-icon-transform: scale(0.92); transition-duration: 80ms; }
 .popup.motion .header, .popup.motion .search-bar, .popup.motion .utilities, .popup.motion .navigation {
   transition: opacity 240ms ease-out; }
 /* Shared interaction rhythm with the floating wallpaper/session cards. */
 .popup.motion .session-choice image, .popup.motion .mode-row image {
   transition: -gtk-icon-transform 220ms $ease;
 }
-.popup.motion .session-choice:hover image, .popup.motion .mode-row:hover image { -gtk-icon-transform: scale(1.12); }
-.popup.motion button:active image { -gtk-icon-transform: scale(.92); transition-duration: 90ms; }
+.popup.motion .session-choice:hover image, .popup.motion .mode-row:hover image { -gtk-icon-transform: scale(1.15) rotate(-5deg); }
+.popup.motion button:active image { -gtk-icon-transform: scale(.90); transition-duration: 80ms; }
 .popup.motion .search-bar image { transition: -gtk-icon-transform 160ms $spring; }
-.popup.motion .search-bar:hover image { -gtk-icon-transform: scale(1.06); }
+.popup.motion .search-bar:hover image { -gtk-icon-transform: scale(1.08); }
 @keyframes menu-select {
   0% { -gtk-icon-transform: scale(.82) rotate(-8deg); }
-  65% { -gtk-icon-transform: scale(1.2) rotate(3deg); }
+  65% { -gtk-icon-transform: scale(1.22) rotate(4deg); }
   100% { -gtk-icon-transform: scale(1); }
 }
-.popup.motion .nav-tab.current image { animation: menu-select 240ms ease-out 1; }
+.popup.motion .nav-tab.current image { animation: menu-select 260ms ease-out 1; }
+
+/* Dynamic states for lateral menu panels */
+@keyframes timer-running-breathe {
+  0% {
+    box-shadow: 0 0 0 0 rgba($primary, 0.35);
+    border-color: rgba($primary, 0.40);
+  }
+  50% {
+    box-shadow: 0 0 10px 2px rgba($primary, 0.28);
+    border-color: rgba($primary, 0.85);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba($primary, 0.35);
+    border-color: rgba($primary, 0.40);
+  }
+}
+@keyframes timer-paused-breathe {
+  0% { border-color: rgba($tertiary, 0.35); }
+  50% { border-color: rgba($tertiary, 0.80); }
+  100% { border-color: rgba($tertiary, 0.35); }
+}
+@keyframes timer-ended-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba($error, 0.5);
+    background: rgba($error, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 12px 3px rgba($error, 0.55);
+    background: rgba($error, 0.26);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba($error, 0.5);
+    background: rgba($error, 0.12);
+  }
+}
+.popup.motion .timer-display.state-running {
+  border-color: rgba($primary, 0.65);
+  background: rgba($primary, 0.08);
+  animation: timer-running-breathe 2600ms ease-in-out infinite;
+}
+.popup.motion .timer-display.state-paused {
+  border-color: rgba($tertiary, 0.65);
+  background: rgba($tertiary, 0.08);
+  animation: timer-paused-breathe 2200ms ease-in-out infinite;
+}
+.popup.motion .timer-display.state-ended {
+  border-color: $error;
+  background: rgba($error, 0.16);
+  animation: timer-ended-pulse 1000ms ease-in-out infinite;
+}
+.popup.motion .timer-preset:hover {
+  background: rgba($primary, 0.22);
+  border-color: rgba($primary, 0.55);
+  color: $primary;
+  -gtk-icon-transform: scale(1.05);
+}
+.popup.motion .timer-preset:active {
+  background: rgba($primary, 0.35);
+  -gtk-icon-transform: scale(0.92);
+  transition-duration: 70ms;
+}
 .popup.still, .popup.still * { transition: none; animation: none; -gtk-icon-transform: none; }
 
 .popup button:focus { box-shadow: inset 0 0 0 2px $outline_variant; }
 
 /* Shortcut viewer: colours come from the active theme via currentColor, so every desktop style adapts. */
-.popup .keys-scroll { min-height: 260px; }
-.popup .key-section-title { font-size: 11px; font-weight: 600; letter-spacing: .6px; opacity: .7; padding: 6px 8px 2px; }
-.popup .key-row { padding: 6px 8px; }
+.popup .keys-scroll { min-height: 120px; }
+.popup .key-section-title { font-size: 11px; font-weight: 600; letter-spacing: .6px; opacity: .7; padding: 4px 6px 2px; }
+.popup button.key-row { padding: 4px 6px; }
 .popup .key-cap { font-family: "JetBrainsMono Nerd Font Mono", monospace; font-size: 12px; font-weight: 600; padding: 1px 6px;
   border: 1px solid; border-color: unquote("alpha(currentColor, .35)"); border-radius: 6px; }
 .popup .key-action { font-size: 12px; }
 .popup .shortcuts-panel.ascii .key-cap { border-style: dashed; border-radius: 0; }
 
-/* Raccon's compact launcher rhythm; colour and geometry still follow the theme. */
-.popup .panel.panel { padding: 12px; }
-.popup .side-panel.side-panel { padding: 10px; }
-.popup .title { font-size: 17px; }
-.popup .search-bar { padding: 7px 9px; }
-.popup .search-bar entry { background: transparent; border: none; padding: 0; min-height: 20px; }
-.popup .nav-tab, .popup .quick { padding: 6px; }
+/* Raccon's compact launcher rhythm; specificity beats .popup button without breaking desktop themes. */
+.popup .panel.panel { padding: 10px; }
+.popup .side-panel.side-panel { padding: 14px; }
+.popup .title { font-size: 16px; }
+.popup .search-bar { padding: 5px 8px; }
+.popup .search-bar entry { background: transparent; border: none; padding: 0; min-height: 18px; }
+.popup button.close, .popup button.home-edit { padding: 4px 5px; min-width: 22px; min-height: 22px; }
+.popup button.daily-app { min-height: 34px; padding: 5px 4px; }
+.popup button.app-launch { min-height: 24px; padding: 4px 7px; }
+.popup button.app-pin { padding: 4px; min-width: 20px; min-height: 20px; }
+.popup button.mode-row, .popup button.session-choice { padding: 5px 7px; min-height: 22px; }
+.popup button.apply, .popup button.destructive, .popup button.service-back { padding: 5px 8px; }
+.popup button.nav-tab, .popup button.quick { padding: 5px 6px; }
+.popup button.recent-toggle, .popup button.recent-clear { padding: 3px 6px; }
+.popup button.recent-launch { padding: 4px; }
+.popup button.shortcut-add { padding: 4px 6px; }
+.popup button.edit-apps, .popup button.home-reset { padding: 5px 8px; }
+.popup button.timer-preset { padding: 5px 2px; }
+.popup button.timer-action-btn { padding: 6px 8px; }
 .popup .side-title { padding: 2px 0 4px; }
 .popup .service-content button { padding: 5px; }
-.popup .service-content .network-row, .popup .service-content .device-row { padding: 6px 5px; min-height: 24px; }
+.popup .service-content button.network-row, .popup .service-content button.device-row { padding: 5px 6px; min-height: 24px; }
 .popup .service-content .network-row.selected, .popup .service-content .device-row.selected {
   background: rgba($primary, .12); color: $on_surface;
 }

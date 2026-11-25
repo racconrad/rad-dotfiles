@@ -9,89 +9,108 @@ button:hover { background: rgba($primary, .16); }
 button:active { background: rgba($primary, .28); }
 .muted { color: $on_surface_variant; }
 
-/* Floating music card: a .panel, so _desktop-style themes surface, border and radius. */
-.music-popup .music-card { padding: 10px 10px 9px; }
-.music-art { border-radius: 8px; background-color: rgba($on_surface, .07); background-size: cover;
-  background-position: center; background-repeat: no-repeat; }
-.music-art image { opacity: 0; }
-.music-art.empty image { opacity: 1; color: $on_surface_variant; }
-.music-title { font-size: 12px; font-weight: 600; }
-.music-artist, .music-time { font-size: 10px; }
-.music-progress trough { min-height: 2px; border-radius: 2px; background: rgba($on_surface, .12); transition: min-height 160ms ease-out; }
-.music-progress:hover trough { min-height: 4px; }
-.music-progress progress { min-height: 2px; border-radius: 2px; background: $primary; transition: min-height 160ms ease-out; }
-.music-progress:hover progress { min-height: 4px; }
-.music-button, .music-hide { padding: 5px; }
-.music-hide { color: $on_surface_variant; opacity: .55; }
-.music-hide:hover { opacity: 1; }
-.music-extra { padding-top: 2px; }
+/* Compact draggable music card with album backdrop and top progress bar. */
+.music-popup .panel.music-card { padding: 0; }
+.music-backdrop {
+  border-radius: 19px;
+  background-color: rgba($surface_container, .95);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.music-scrim {
+  border-radius: 19px;
+  background: linear-gradient(180deg, rgba($surface_container, 0.72), rgba($surface_container, 0.90));
+}
+.music-content { padding: 8px 11px 9px; }
 
-/* Dynamic equalizer soundwave */
-.music-equalizer {
-  margin-right: 6px;
-  opacity: .30;
-  transition: opacity 200ms ease;
-}
-.music-equalizer.active { opacity: 1; }
-.eq-bar {
-  min-width: 3px;
-  background: $primary;
-  border-radius: 2px;
+.music-progress trough {
   min-height: 4px;
+  border-radius: 4px;
+  background: rgba($on_surface, .18);
 }
+.music-progress progress {
+  min-height: 4px;
+  border-radius: 4px;
+  background: $primary;
+}
+
+.music-mid { padding: 2px 0; }
+.music-title { font-size: 14px; font-weight: 700; color: $on_surface; }
+.music-artist { font-size: 11px; font-weight: 500; }
+
+/* Live 12-band Cava spectrum */
+.music-spectrum { opacity: .45; }
+.music-spectrum.active { opacity: 1; }
+.spec-bar {
+  min-width: 4px;
+  min-height: 4px;
+  border-radius: 2px;
+  background: $primary;
+}
+.spec-bar-0, .spec-bar-1, .spec-bar-2, .spec-bar-3 { background: $primary; }
+.spec-bar-4, .spec-bar-5, .spec-bar-6, .spec-bar-7 { background: $secondary; }
+.spec-bar-8, .spec-bar-9, .spec-bar-10, .spec-bar-11 { background: $tertiary; }
+
+/* Pause and close stay faint so the card reads as artwork, not a control panel. */
+.music-play-btn, .music-hide { padding: 4px; border-radius: 99px; color: $on_surface; opacity: .38; }
+.music-hide { margin: 6px; opacity: 0; }
+.music-card:hover .music-play-btn, .music-card:hover .music-hide { opacity: .78; }
+.music-play-btn:hover, .music-hide:hover { opacity: 1; }
 
 @import "desktop-style";
 
+.popup.music-popup .panel.panel.music-card { padding: 0; }
 .popup.music-popup button:focus { box-shadow: inset 0 0 0 2px $primary; }
+.popup.music-popup button.music-play-btn,
+.popup.music-popup button.music-hide { padding: 4px; min-width: 22px; min-height: 22px; border-radius: 99px; border: none; }
 
 .popup.music-popup.motion button {
-  transition: background-color 160ms ease-out, opacity 160ms ease-out;
+  transition: background-color 160ms ease-out, border-color 160ms ease-out, box-shadow 160ms ease-out, opacity 160ms ease-out;
 }
-.popup.music-popup.motion .music-button image {
+.popup.music-popup.motion .music-play-btn image,
+.popup.music-popup.motion .music-hide image {
   transition: -gtk-icon-transform 160ms cubic-bezier(.22, 1, .36, 1);
 }
-.popup.music-popup.motion .music-button:hover image { -gtk-icon-transform: scale(1.15); }
-.popup.music-popup.motion .music-button:active image { -gtk-icon-transform: scale(.88); }
+.popup.music-popup.motion .music-play-btn:hover image,
+.popup.music-popup.motion .music-hide:hover image { -gtk-icon-transform: scale(1.14); }
+.popup.music-popup.motion .music-play-btn:active image,
+.popup.music-popup.motion .music-hide:active image { -gtk-icon-transform: scale(.88); }
 
-.popup.music-popup.motion .music-card.playing .music-art:not(.empty) {
-  box-shadow: 0 0 10px rgba($primary, 0.45);
-  animation: art-glow 2400ms ease-in-out infinite alternate;
+.popup.music-popup.motion .music-progress trough,
+.popup.music-popup.motion .music-progress progress {
+  transition: min-height 160ms ease-out;
 }
-
-.popup.music-popup.motion .music-equalizer.active .eq-bar-1 {
-  animation: eq-bounce-1 800ms ease-in-out infinite alternate;
-}
-.popup.music-popup.motion .music-equalizer.active .eq-bar-2 {
-  animation: eq-bounce-2 650ms ease-in-out infinite alternate;
-}
-.popup.music-popup.motion .music-equalizer.active .eq-bar-3 {
-  animation: eq-bounce-3 900ms ease-in-out infinite alternate;
-}
-.popup.music-popup.motion .music-equalizer.active .eq-bar-4 {
-  animation: eq-bounce-4 750ms ease-in-out infinite alternate;
+.popup.music-popup.motion .music-progress:hover trough,
+.popup.music-popup.motion .music-progress:hover progress {
+  min-height: 6px;
 }
 
-@keyframes art-glow {
-  0% { box-shadow: 0 0 4px rgba($primary, 0.20); -gtk-icon-transform: scale(1); }
-  100% { box-shadow: 0 0 14px rgba($primary, 0.60); -gtk-icon-transform: scale(1.03); }
+.popup.music-popup.motion .music-spectrum {
+  transition: opacity 200ms ease-out;
+}
+.popup.music-popup.motion .spec-bar {
+  transition: min-height 65ms linear, opacity 120ms ease-out;
 }
 
-@keyframes eq-bounce-1 {
-  0% { min-height: 4px; opacity: 0.5; }
-  100% { min-height: 14px; opacity: 1; }
+.popup.music-popup.motion .music-card {
+  transition: box-shadow 180ms ease-out, border-color 180ms ease-out;
 }
-@keyframes eq-bounce-2 {
-  0% { min-height: 12px; opacity: 0.85; }
-  100% { min-height: 5px; opacity: 0.45; }
+.popup.music-popup.motion .music-card.playing.level-2 {
+  box-shadow: 0 0 14px rgba($primary, 0.35);
+  border-color: rgba($primary, 0.65);
 }
-@keyframes eq-bounce-3 {
-  0% { min-height: 3px; opacity: 0.4; }
-  100% { min-height: 16px; opacity: 1; }
+.popup.music-popup.motion .music-card.playing.level-3 {
+  box-shadow: 0 0 20px rgba($primary, 0.55);
+  border-color: $primary;
 }
-@keyframes eq-bounce-4 {
-  0% { min-height: 11px; opacity: 0.9; }
-  100% { min-height: 6px; opacity: 0.5; }
-}
+
 .popup.music-popup.still, .popup.music-popup.still * {
   transition: none; animation: none; -gtk-icon-transform: none;
+}
+
+/* Blurred shadows repaint the whole surface every frame; drop them while the card moves. */
+window.card-dragging .music-card,
+window.card-dragging .music-card * {
+  transition: none; animation: none; box-shadow: none;
 }

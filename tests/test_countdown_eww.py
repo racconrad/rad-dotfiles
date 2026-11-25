@@ -29,6 +29,18 @@ class TestCountdownEww(unittest.TestCase):
         # Actions
         self.assertIn("countdown toggle", yuck_text)
         self.assertIn("countdown stop", yuck_text)
+        self.assertIn("countdown-chip-btn", yuck_text)
+        self.assertIn("Continue", yuck_text)
+        self.assertIn("Close", yuck_text)
+
+        timer_yuck = (DESKTOP_MODULE / ".config/raccon-menu/timer.yuck").read_text(encoding="utf-8")
+        self.assertIn("timer-input", timer_yuck)
+        for preset in ("5m", "10m", "15m", "25m"):
+            self.assertIn(preset, timer_yuck)
+
+        ctrl_rs = (ROOT / "crates/raccon/src/countdown/controller.rs").read_text(encoding="utf-8")
+        self.assertIn("raccon-confetti", ctrl_rs)
+        self.assertIn("raccon-countdown-ctl", ctrl_rs)
 
     def test_eww_scss_imports_and_animation(self):
         scss_text = (EWW_DIR / "eww.scss").read_text(encoding="utf-8")

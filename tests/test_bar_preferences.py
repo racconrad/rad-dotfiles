@@ -67,14 +67,14 @@ class BarPreferencesTests(unittest.TestCase):
                     bar = Document(self.bar.read_text()).data
                     self.assertEqual((bar['position'], bar['width'], bar['height']), (edge, 64, 0))
                     self.assertEqual(bar['group/workspaces']['orientation'], 'vertical')
-                    self.assertEqual(bar['clock']['format'], '{:%H\n%M}')
+                    self.assertEqual(bar['clock']['format'], '{:%I\n%M}')
                     self.assertEqual(bar['clock']['on-click'], 'calendar')
                     self.assertEqual(bar['wireplumber']['on-scroll-up'], 'volume-up')
                     for side in ('left', 'right', 'top', 'bottom'):
                         self.assertEqual(bar['margin-'+side], 0 if layout == 'continuous' else
                                          14 if side in ('top','bottom') else 10 if side == edge else 0)
         styles.save(styles.CONFIG/'waybar.json', dict(position='top', layout='islands'))
-        styles.configure_bar('retro')
+        styles.configure_bar('terminal')
         restored = Document(self.bar.read_text()).data
         self.assertEqual(restored['height'], 58)
         self.assertNotIn('width', restored)

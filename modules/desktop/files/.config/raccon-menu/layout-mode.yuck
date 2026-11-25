@@ -1,0 +1,32 @@
+(defvar layout_status "unavailable")
+(defvar layout_error "")
+
+(defwidget menu-layout []
+  (box :class "layout-panel modes-panel" :orientation "v" :space-evenly false :spacing 4
+    (label :class "side-title" :xalign 0 :text "Desktop layout")
+    (box :orientation "v" :space-evenly false :spacing 2
+      (button :class "mode-row ${layout_status == 'normal' ? 'selected' : ''}"
+        :active {layout_status == "canvas"} :timeout "180s"
+        :onclick "~/.local/bin/raccon-canvas-mode off"
+        (box :space-evenly false :spacing 8 :valign "center"
+          (box :class "mode-icon-slot" :valign "center" (menu-icon :name "view-grid-symbolic" :size 18))
+          (label :class "mode-name" :hexpand true :xalign 0 :valign "center"
+            :text {layout_status == "normal" ? "Tiling (active)" : "Tiling"})
+          (image :visible {layout_status == "normal"} :valign "center" :icon "emblem-ok-symbolic" :icon-size "menu")))
+      (button :class "mode-row ${layout_status == 'canvas' ? 'selected' : ''}"
+        :active {layout_status == "normal"} :timeout "180s"
+        :onclick "~/.local/bin/raccon-canvas-mode on"
+        (box :space-evenly false :spacing 8 :valign "center"
+          (box :class "mode-icon-slot" :valign "center" (menu-icon :name "preferences-system-windows-symbolic" :size 18))
+          (label :class "mode-name" :hexpand true :xalign 0 :valign "center"
+            :text {layout_status == "canvas" ? "Canvas (active)" : "Canvas"})
+          (image :visible {layout_status == "canvas"} :valign "center" :icon "emblem-ok-symbolic" :icon-size "menu")))
+      (button :class "mode-row" :visible {layout_status == "recover"} :timeout "180s"
+        :onclick "~/.local/bin/raccon-canvas-mode off"
+        (box :space-evenly false :spacing 8 :valign "center"
+          (box :class "mode-icon-slot" :valign "center" (menu-icon :name "edit-undo-symbolic" :size 18))
+          (label :class "mode-name" :xalign 0 :valign "center" :text "Recover Tiling"))))
+    (label :class "muted" :xalign 0 :visible {layout_status == "changing"} :text "Switching layout…")
+    (label :class "muted" :xalign 0 :visible {layout_status == "unavailable"} :text "Layout status unavailable")
+    (label :class "error" :xalign 0 :wrap true :limit-width 28
+      :visible {layout_error != ""} :text "Could not switch layouts." :tooltip layout_error)))

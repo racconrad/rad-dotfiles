@@ -36,7 +36,7 @@ def style(status, config):
     factor = status['policy']['animation_factor']
     mode_accent = '@' + {'performance': 'tertiary', 'balanced': 'secondary', 'complete': 'primary'}.get(status['mode'], 'secondary')
     duration = max(90, round(150 * factor)) if factor else 0
-    scope = ', '.join(f'window#waybar .modules-{side} #{key}' for side in ('left','center','right') for key in ('clock','hardware','workspaces','custom-workspace-base','cpu','memory','temperature','disk','network','bluetooth','wireplumber','backlight','idle_inhibitor','custom-desktop-mode','custom-notification','custom-power','custom-updates','custom-hardware-toggle','tray','custom-music-open','custom-music-prev','custom-music-play','custom-music-next','taskbar button',*[f'custom-ws{i}' for i in range(1,11)]))
+    scope = ', '.join(f'window#waybar .modules-{side} #{key}' for side in ('left','center','right') for key in ('clock','hardware','workspaces','custom-workspace-base','cpu','memory','temperature','disk','network','bluetooth','wireplumber','backlight','idle_inhibitor','custom-desktop-mode','custom-notification','custom-power','custom-updates','custom-hardware-toggle','tray','custom-music-viz','custom-music-prev','custom-music-play','custom-music-next','taskbar button',*[f'custom-ws{i}' for i in range(1,11)]))
     motion = f'''{scope} {{ transition-duration: {duration}ms; }}''' if factor != 1 else ''
     if factor == 0:
         motion += '\n' + scope + ' { animation: none; transition: none; -gtk-icon-transform: none; }'

@@ -1,7 +1,2 @@
-#!/usr/bin/env python3
-"""Subscribe to the shared Waybar music status provider."""
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path.home()/'.local/lib'))
-from raccon_music_status import main
-main()
+#!/bin/sh
+exec "$HOME/.local/bin/desktop-menu" waybar-music "$@"

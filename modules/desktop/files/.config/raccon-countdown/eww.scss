@@ -1,162 +1,112 @@
-// Floating countdown pill. Reuses active tokens, palette, and desktop styles.
+// Minimal floating chip timer with expandable Pause / Continue / Close drawer.
 @import "palette";
 @import "tokens";
-$pill: if($control_radius == 0px, 0px, 99px);
 
-* { all: unset; font-family: $font, "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 13px; }
+* { all: unset; font-family: $font, "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 12px; }
 window { background: transparent; color: $on_surface; }
 .muted { color: $on_surface_variant; }
 
 .countdown-popup .panel.countdown-card {
   background: rgba($surface_container, $opacity);
-  border: $border solid $outline_variant;
-  border-radius: $pill;
-  padding: 6px 14px 8px 14px;
-  min-height: 34px;
-  transition: background-color 220ms ease, border-color 220ms ease, box-shadow 260ms ease;
+  border: max(1px, $border) solid rgba($outline_variant, 0.72);
+  border-radius: $radius;
+  padding: 0;
+  min-width: 152px;
+  transition: background-color 180ms ease, border-color 180ms ease;
 }
 
-.countdown-badge {
-  color: $primary;
-  padding: 2px 4px;
+.countdown-progress trough {
+  min-height: 2px;
+  border-radius: 0;
+  background: rgba($on_surface, 0.12);
 }
+.countdown-progress progress {
+  min-height: 2px;
+  border-radius: 0;
+  background: $primary;
+  transition: background-color 200ms ease;
+}
+.state-paused .countdown-progress progress { background: $tertiary; }
+.state-ended .countdown-progress progress { background: $error; }
 
-.countdown-badge-btn, .countdown-info-btn {
-  border-radius: $pill;
-  padding: 0 4px;
-  transition: opacity 160ms ease-out;
+.countdown-chip-btn {
+  padding: 8px 13px;
+  border-radius: 0;
+  background: transparent;
 }
-.countdown-badge-btn:hover, .countdown-info-btn:hover {
-  opacity: 0.82;
+.countdown-chip-row { background: transparent; }
+
+.countdown-dot {
+  min-width: 7px;
+  min-height: 7px;
+  border-radius: 99px;
+  background: $on_surface_variant;
 }
+.countdown-dot.running { background: $primary; }
+.countdown-dot.paused { background: $tertiary; }
+.countdown-dot.ended { background: $error; }
 
 .countdown-time {
   font-family: "JetBrainsMono Nerd Font Mono", monospace;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: $on_surface;
 }
+.countdown-state-tag { font-size: 10px; font-weight: 600; }
+.countdown-chevron { opacity: 0.7; }
 
-.countdown-label {
-  font-size: 10px;
+.countdown-drawer {
+  padding: 0 8px 8px;
+  border-top: 1px solid rgba($outline_variant, 0.28);
+  padding-top: 7px;
 }
 
 .countdown-btn {
-  border-radius: $pill;
-  padding: 4px 6px;
+  border-radius: $control_radius;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba($surface_container_highest, 0.85);
   color: $on_surface;
-  transition: background-color 140ms ease-out, color 140ms ease-out, -gtk-icon-transform 180ms cubic-bezier(.34, 1.56, .64, 1);
+  border: 1px solid rgba($outline_variant, 0.4);
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
-
-.countdown-btn:hover {
-  background: rgba($primary, 0.16);
-  -gtk-icon-transform: scale(1.12);
+.countdown-btn.action-toggle {
+  background: $primary;
+  color: $on_primary;
+  border-color: $primary;
 }
-.countdown-btn:active {
-  background: rgba($primary, 0.28);
-  -gtk-icon-transform: scale(0.92);
-}
-
+.countdown-btn.action-toggle label,
+.countdown-btn.action-toggle image { color: $on_primary; }
+.countdown-btn.action-toggle:hover { background: rgba($primary, 0.86); }
+.countdown-btn.action-toggle.paused { background: $tertiary; border-color: $tertiary; color: $on_tertiary; }
+.countdown-btn.action-toggle.paused label,
+.countdown-btn.action-toggle.paused image { color: $on_tertiary; }
 .countdown-btn.action-close:hover {
-  background: rgba($error, 0.2);
+  background: rgba($error, 0.18);
+  border-color: $error;
   color: $error;
 }
-
-/* Progress bar along the pill bottom */
-.countdown-progress-track {
-  height: 3px;
-  background: rgba($outline_variant, 0.3);
-  border-radius: 99px;
-  overflow: hidden;
-  margin-top: 2px;
-}
-.countdown-progress-bar {
-  height: 100%;
-  background: $primary;
-  border-radius: 99px;
-  transition: width 900ms linear, background-color 300ms ease;
-}
-.state-paused .countdown-progress-bar {
-  background: $tertiary;
-}
+.countdown-btn.action-close:hover label,
+.countdown-btn.action-close:hover image { color: $error; }
 
 @import "desktop-style";
 
-/* Fluid breathing glow on active running state */
-@keyframes countdown-breathe {
-  0% {
-    box-shadow: 0 0 0 0 rgba($primary, 0);
-    border-color: rgba($primary, 0.4);
-  }
-  50% {
-    box-shadow: 0 0 14px 2px rgba($primary, 0.25);
-    border-color: rgba($primary, 0.8);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba($primary, 0);
-    border-color: rgba($primary, 0.4);
-  }
-}
+.popup.countdown-popup .panel.panel.countdown-card { padding: 0; }
+.popup.countdown-popup button.countdown-chip-btn { padding: 8px 13px; border: none; background: transparent; }
+.popup.countdown-popup button.countdown-chip-btn:hover { background: rgba($primary, 0.10); }
+.popup.countdown-popup button.countdown-btn { border-radius: $control_radius; padding: 5px 10px; min-height: 24px; }
 
-.state-running .countdown-card {
-  animation: countdown-breathe 2800ms ease-in-out infinite;
-}
-
-/* Fluid paused warning glow */
-@keyframes countdown-paused-glow {
-  0% {
-    border-color: rgba($tertiary, 0.35);
-    box-shadow: 0 0 4px rgba($tertiary, 0.1);
-  }
-  50% {
-    border-color: $tertiary;
-    box-shadow: 0 0 14px rgba($tertiary, 0.35);
-  }
-  100% {
-    border-color: rgba($tertiary, 0.35);
-    box-shadow: 0 0 4px rgba($tertiary, 0.1);
-  }
-}
-
-.state-paused .countdown-card {
-  animation: countdown-paused-glow 2200ms ease-in-out infinite;
-}
-
-/* Attention-grabbing pulse animation upon countdown expiration */
 @keyframes countdown-pulse {
-  0% {
-    background-color: rgba($error_container, 0.88);
-    border-color: $error;
-    box-shadow: 0 0 0 0 rgba($error, 0.7);
-    -gtk-icon-transform: scale(1);
-  }
-  50% {
-    background-color: $error;
-    border-color: $error;
-    color: $on_error;
-    box-shadow: 0 0 20px 4px rgba($error, 0.6);
-    -gtk-icon-transform: scale(1.04);
-  }
-  100% {
-    background-color: rgba($error_container, 0.88);
-    border-color: $error;
-    box-shadow: 0 0 0 0 rgba($error, 0.7);
-    -gtk-icon-transform: scale(1);
-  }
+  0% { border-color: $error; box-shadow: 0 0 0 0 rgba($error, 0.55); }
+  50% { border-color: $primary; box-shadow: 0 0 14px 2px rgba($error, 0.45); }
+  100% { border-color: $error; box-shadow: 0 0 0 0 rgba($error, 0.55); }
 }
 
-.state-ended .countdown-card {
+.popup.countdown-popup.motion.state-ended .countdown-card {
   border-color: $error;
-  animation: countdown-pulse 1000ms ease-in-out infinite alternate;
+  animation: countdown-pulse 900ms ease-in-out infinite alternate;
 }
-
-.state-ended .countdown-badge image,
-.state-ended .countdown-time {
-  color: $error;
-}
-
-.popup.countdown-popup.still, .popup.countdown-popup.still * {
-  transition: none;
-  animation: none;
-  -gtk-icon-transform: none;
-}
+.state-ended .countdown-time { color: $error; }
+.popup.countdown-popup.still, .popup.countdown-popup.still * { transition: none; animation: none; -gtk-icon-transform: none; }

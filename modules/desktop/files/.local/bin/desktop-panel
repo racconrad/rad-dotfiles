@@ -1,5 +1,2 @@
 #!/bin/sh
-if command -v raccon >/dev/null 2>&1; then
-    exec raccon menu "$@"
-fi
-exec python3 "$HOME/.local/lib/raccon_menu/panel_cli.py" "$@"
+exec "$HOME/.local/bin/desktop-menu" panel "$@"

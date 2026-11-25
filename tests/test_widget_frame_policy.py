@@ -27,20 +27,19 @@ class FramePolicyTests(unittest.TestCase):
         self.tokens.write_text(json.dumps({'style':'modern','colors':{},'widgets':{'frame':'modern'}}))
 
     def test_defaults_follow_style(self):
-        for name in ('monochrome','glass','modern'):
+        for name in ('modern','dynamic','collage','macxp'):
             self.assertEqual(resolve(name,styles.PROFILES[name],{})['widgets']['frame'],'none')
-        for name in ('terminal','retro','ascii'):
-            self.assertEqual(resolve(name,styles.PROFILES[name],{})['widgets']['frame'],name)
+        self.assertEqual(resolve('terminal',styles.PROFILES['terminal'],{})['widgets']['frame'],'terminal')
 
     def test_inactive_theme_edit_is_saved_without_changing_live_widgets(self):
         before=self.tokens.read_text()
-        styles.set_widget_frame('none','retro')
+        styles.set_widget_frame('none','collage')
         self.assertEqual(self.tokens.read_text(),before)
-        self.assertEqual(styles.widget_frame('retro'),'none')
+        self.assertEqual(styles.widget_frame('collage'),'none')
         self.assertEqual(styles.widget_frame('modern'),'auto')
         styles.set_widget_frame('terminal','modern')
         self.assertEqual(json.loads(self.tokens.read_text())['widgets']['frame'],'terminal')
-        self.assertEqual(styles.widget_frame('retro'),'none')
+        self.assertEqual(styles.widget_frame('collage'),'none')
 
     def test_auto_restores_active_theme_default(self):
         styles.set_widget_frame('retro','modern')
@@ -51,13 +50,13 @@ class FramePolicyTests(unittest.TestCase):
         (self.state/'widget-frame.json').write_text('{"frame":"glass"}')
         styles.set_widget_frame('none','modern')
         self.assertEqual(styles.widget_frame('modern'),'none')
-        self.assertEqual(styles.widget_frame('retro'),'glass')
+        self.assertEqual(styles.widget_frame('collage'),'glass')
         data=json.loads((self.state/'widget-frame.json').read_text())
         self.assertEqual(data['version'],2)
 
     def test_apply_uses_target_theme_not_current_theme(self):
-        styles.set_widget_frame('future','retro')
-        data={'style':'retro','widgets':{'frame':'retro'}}
+        styles.set_widget_frame('future','collage')
+        data={'style':'collage','widgets':{'frame':'none'}}
         self.assertEqual(json.loads(styles.with_widget_frame(json.dumps(data)))['widgets']['frame'],'future')
         self.assertEqual(styles.widget_frame('modern'),'auto')
 

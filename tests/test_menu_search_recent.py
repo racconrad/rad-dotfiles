@@ -40,8 +40,12 @@ class SearchRecentTests(unittest.TestCase):
         with patch.object(menu, 'native_send', return_value=True) as send, patch.object(menu, 'shortcut') as shortcut:
             menu.main(['search-action', 'audio'])
             send.assert_called_once_with('tab 4', str(menu.RUNTIME))
+            menu.main(['search-action', 'layout'])
+            send.assert_called_with('tab 10', str(menu.RUNTIME))
+            menu.main(['search-action', 'wallpaper'])
+            shortcut.assert_called_with('wallpaper')
             menu.main(['search-action', 'lock'])
-            shortcut.assert_called_once_with('lock')
+            shortcut.assert_called_with('lock')
             for value in ('; touch nope', 'poweroff', 'launch', '$(id)'):
                 with self.assertRaises(ValueError):
                     menu.main(['search-action', value])

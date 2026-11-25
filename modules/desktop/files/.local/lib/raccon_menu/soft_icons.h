@@ -40,7 +40,12 @@ static const gchar *soft_icon_name(const gchar *name) {
         {"view-reveal-symbolic", "raccon-eye-symbolic"}, {"utilities-terminal-symbolic", "raccon-prompt-symbolic"},
         {"format-text-code-symbolic", "raccon-code-symbolic"}, {"applications-games-symbolic", "raccon-gamepad-symbolic"},
         {"insert-link-symbolic", "raccon-link-symbolic"}, {"window-minimize-symbolic", "raccon-minus-symbolic"},
-        {"applications-engineering-symbolic", "raccon-sparkle-symbolic"}, {"preferences-desktop-symbolic", "raccon-monitor-symbolic"}
+        {"applications-engineering-symbolic", "raccon-sparkle-symbolic"}, {"preferences-desktop-symbolic", "raccon-monitor-symbolic"},
+        {"folder-open-symbolic", "raccon-folder-symbolic"}, {"edit-clear-symbolic", "raccon-close-symbolic"},
+        {"media-playback-stop-symbolic", "raccon-close-symbolic"}, {"media-seek-backward-symbolic", "raccon-left-symbolic"},
+        {"media-seek-forward-symbolic", "raccon-right-symbolic"}, {"view-fullscreen-symbolic", "raccon-windows-symbolic"},
+        {"network-connect-symbolic", "raccon-link-symbolic"}, {"alarm-symbolic", "raccon-bell-symbolic"},
+        {"applications-multimedia-symbolic", "raccon-music-symbolic"}
     };
     if (!name) return NULL;
     for (guint i = 0; i < G_N_ELEMENTS(icons); i++)

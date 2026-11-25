@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+dir="${XDG_RUNTIME_DIR:-/tmp}"
+seq_file="$dir/swaync-hide.seq"
+seq="$$.${SWAYNC_ID:-0}"
+printf '%s' "$seq" > "$seq_file"
+(
+  sleep 1.05
+  [ "$(cat "$seq_file" 2>/dev/null || true)" = "$seq" ] && exec swaync-client -sw --hide-all >/dev/null 2>&1
+  exit 0
+) >/dev/null 2>&1 &

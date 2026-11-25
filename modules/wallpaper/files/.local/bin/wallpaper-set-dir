@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Assign custom wallpaper search path for wallpaper-grid and raccon-float
+set -euo pipefail
+
+target="${1:-}"
+
+if [[ -z "$target" ]]; then
+  if command -v zenity >/dev/null 2>&1; then
+    target="$(zenity --file-selection --directory --title="Choose Wallpaper Folder" 2>/dev/null || true)"
+  elif command -v kdialog >/dev/null 2>&1; then
+    target="$(kdialog --getexistingdirectory "$HOME" 2>/dev/null || true)"
+  fi
+fi
+
+if [[ -z "$target" ]]; then
+  echo "Usage: wallpaper-set-dir <DIRECTORY_PATH>" >&2
+  exit 1
+fi
+
+target="$(realpath -q "$target" || echo "$target")"
+if [[ ! -d "$target" ]]; then
+  echo "Error: Directory '$target' does not exist." >&2
+  exit 1
+fi
+
+mkdir -p "$HOME/.config/raccon"
+echo "$target" > "$HOME/.config/raccon/wallpaper-dir"
+echo "Wallpaper directory configured: $target"
+
+# Refresh waypaper config folder if file exists
+if [[ -f "$HOME/.config/waypaper/config.ini" ]]; then
+  sed -i "s|^folder =.*|folder = $target|" "$HOME/.config/waypaper/config.ini" 2>/dev/null || true
+fi
+
+# Refresh floating card in Eww if active
+if command -v raccon-float >/dev/null 2>&1; then
+  raccon-float refresh >/dev/null 2>&1 || true
+fi

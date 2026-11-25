@@ -92,7 +92,7 @@ def watch():
             try:active=(ROOT/'page').read_text().strip()=='7' and (ROOT/'visible').read_text().strip()=='1'
             except OSError:active=False
             if active or previous is None:
-                if active and time.monotonic()>=refresh:
+                if (active or previous is None) and time.monotonic()>=refresh:
                     try:task_rows=tasks();task_error=''
                     except Exception:task_rows=[];task_error='Could not load tasks. Reopen the calendar to retry.'
                     refresh=time.monotonic()+15

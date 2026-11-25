@@ -12,11 +12,11 @@ import urllib.request
 from pathlib import Path
 
 CACHE = Path.home() / '.cache/raccon-menu/art'
-FIELDS = ('player', 'status', 'title', 'artist', 'art', 'position', 'length')
+FIELDS = ('player', 'status', 'title', 'artist', 'album', 'art', 'position', 'length')
 FORMAT = '\x1f'.join('{{%s}}' % key for key in
-                     ('playerName', 'status', 'title', 'artist', 'mpris:artUrl', 'position', 'mpris:length'))
-EMPTY = {'visible': False, 'playing': False, 'title': '', 'artist': '', 'art': '', 'has_art': False,
-         'time': '', 'percent': 0}
+                     ('playerName', 'status', 'title', 'artist', 'album', 'mpris:artUrl', 'position', 'mpris:length'))
+EMPTY = {'visible': False, 'playing': False, 'title': '', 'artist': '', 'album': '', 'player': '',
+         'art': '', 'has_art': False, 'time': '', 'percent': 0}
 MAX_ART = 8 << 20
 
 
@@ -60,8 +60,11 @@ def state(line, art_cache):
         art_cache[url] = artwork(url) if url else ''
     art = art_cache[url]
     position, length = (int(values[k]) if values[k].isdigit() else 0 for k in ('position', 'length'))
+    player_name = values['player'].split('.')[0].capitalize() if values['player'] else ''
     return {'visible': True, 'playing': values['status'] == 'Playing', 'title': values['title'],
-            'artist': values['artist'] or values['player'].split('.')[0].capitalize(),
+            'artist': values['artist'] or player_name,
+            'album': values['album'],
+            'player': player_name or 'Music',
             'art': art, 'has_art': bool(art),
             'time': f'{clock(position)} / {clock(length)}' if length else clock(position),
             'percent': round(min(100, position * 100 / length), 1) if length else 0}
@@ -138,10 +141,10 @@ def main():
 
 if __name__ == '__main__':
     if sys.argv[1:] == ['--self-test']:
-        line = '\x1f'.join(['spotify', 'Playing', 'Song', '', '', '61000000', '183000000'])
+        line = '\x1f'.join(['spotify', 'Playing', 'Song', '', 'Album', '', '61000000', '183000000'])
         out = state(line, {})
-        assert out['time'] == '1:01 / 3:03' and out['artist'] == 'Spotify' and out['playing'], out
-        assert state('\x1f' * 6, {}) == EMPTY
+        assert out['time'] == '1:01 / 3:03' and out['artist'] == 'Spotify' and out['album'] == 'Album' and out['playing'], out
+        assert state('\x1f' * 7, {}) == EMPTY
         assert clock(3_723_000_000) == '1:02:03'
         print('ok')
     else:

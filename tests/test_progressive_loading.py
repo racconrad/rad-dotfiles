@@ -72,11 +72,11 @@ class StyleTests(unittest.TestCase):
             calls=[]
             def render(key,source):
                 calls.append(key)
-                if len(calls)==1:s.update(_publish=False,selected='retro')
+                if len(calls)==1:s.update(_publish=False,selected='collage')
                 return dict(id=key,preview='preview',swatches='swatches')
             with patch.object(s,'preview',side_effect=render):s.refresh_previews()
             self.assertEqual(calls[0],'modern')
-            self.assertEqual(s.read(s.STATE/'ui.json')['selected'],'retro')
+            self.assertEqual(s.read(s.STATE/'ui.json')['selected'],'collage')
             self.assertEqual(len(calls),len(s.PROFILES))
 
 class MenuProgressiveTests(unittest.TestCase):
@@ -107,7 +107,7 @@ class StyleFastPathTests(unittest.TestCase):
             try:
                 self.assertTrue(cli.send(['open']))
                 self.assertEqual(os.read(fd,1024),b'show\n')
-                self.assertFalse(cli.send(['apply','retro']))
+                self.assertFalse(cli.send(['apply','collage']))
                 (runtime/'revision').write_text('stale')
                 self.assertFalse(cli.send(['toggle']))
             finally:os.close(fd)

@@ -150,8 +150,26 @@ def wayfire(profile, force=False):
                     ipc('wf/alpha/set-view-alpha', {'view-id': view['id'], 'alpha': 1.0})
 
 
+def canvas_mode_active():
+    tool = HOME / '.local/bin/raccon-canvas-mode'
+    if not os.access(tool, os.X_OK):
+        tool = HOME / '.local/bin/wf-canvas-mode'
+    if not os.access(tool, os.X_OK):
+        return False
+    env = dict(os.environ)
+    user_ini = HOME / '.config/wayfire/user.ini'
+    if user_ini.is_file() and 'WF_CANVAS_INI' not in env:
+        env['WF_CANVAS_INI'] = str(user_ini)
+    try:
+        return subprocess.run([str(tool), 'status'], env=env, capture_output=True, text=True, timeout=2).stdout.strip() == 'canvas'
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 def widget_policy():
     """Explicit adapter for tinyWidgets; other profiles keep their own policy."""
+    if canvas_mode_active():
+        return
     ctl=HOME/'.local/bin/widgetctl'
     status=STATE/'status.json'
     if not ctl.is_file() or not status.is_file():return
@@ -170,7 +188,7 @@ def widgets(profile):
     key = hashlib.sha256(config.encode()).hexdigest()[:12]
     editing = Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}')) / 'randly-widgets' / key / 'eww-widgets-editing'
     command = [str(HOME / '.local/bin/widgetctl'), '--config', config]
-    if not profile['widgets'] and not editing.exists():
+    if canvas_mode_active() or (not profile['widgets'] and not editing.exists()):
         run([*command, 'stop'])
     elif profile['widgets']:
         run([*command, 'start'])

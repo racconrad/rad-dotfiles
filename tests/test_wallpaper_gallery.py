@@ -106,6 +106,23 @@ class GalleryTests(unittest.TestCase):
                 self.assertEqual(run.call_count,2)
             self.assertEqual(list(Path(tmp).glob('*.png')),[])
 
+    def test_progressive_gallery_reports_resolved_wallpaper_dir(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            custom = root / 'my-wallpapers'
+            custom.mkdir()
+            (custom / 'bg.png').touch()
+            cfg = root / '.config/raccon/wallpaper-dir'
+            cfg.parent.mkdir(parents=True)
+            cfg.write_text(str(custom) + '\n')
+            with patch.object(walls, 'HOME', root), patch.object(walls, 'THUMBS', root / 'thumbs'), \
+                 patch.object(walls, 'CACHE', root / 'cache'):
+                (root / 'thumbs').mkdir()
+                data, _ = walls.progressive_gallery({'section': 'all', 'page': None})
+                self.assertEqual(data['dir_path'], str(custom))
+                self.assertEqual(data['dir_name'], 'my-wallpapers')
+                self.assertEqual(data['counts']['images'], 1)
+
 class InlinePreviewTests(unittest.TestCase):
     def test_decode_cache_and_stop(self):
         module_spec=importlib.util.spec_from_file_location('inline_preview',LIB/'wall_preview.py')

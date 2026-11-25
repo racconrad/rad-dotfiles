@@ -81,7 +81,9 @@ statefile.write_text(json.dumps(state))
 
     def test_session_toggle_keeps_prepared_tree(self):
         self.run_card('raccon-float', 'prepare')
-        self.run_card('raccon-float', 'session')
+        before = len(self.log.read_text().splitlines())
+        commands = self.run_card('raccon-float', 'session')
+        self.assertEqual(len(commands) - before, 1, 'warm session open should use a single eww update')
         state = json.loads((self.home / 'raccon-float.json').read_text())
         self.assertEqual(state['session_visible'], 'true')
         commands = self.run_card('raccon-float', 'close')
@@ -158,7 +160,9 @@ statefile.write_text(json.dumps(state))
 
     def test_music_toggle_reuses_tree_and_updates_waybar_flag(self):
         self.run_card('raccon-music', 'prepare')
-        self.run_card('raccon-music')
+        before = len(self.log.read_text().splitlines())
+        commands = self.run_card('raccon-music')
+        self.assertEqual(len(commands) - before, 1, 'warm music open should use a single eww update')
         self.assertTrue((self.home / 'run/raccon-music.open').exists())
         state = json.loads((self.home / 'raccon-music.json').read_text())
         self.assertEqual(state['card_visible'], 'true')

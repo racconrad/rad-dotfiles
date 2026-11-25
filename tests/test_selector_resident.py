@@ -64,8 +64,8 @@ class ResidentSelectorTests(unittest.TestCase):
 
     def test_offline_updates_are_persisted_without_dead_ipc(self):
         with patch.object(styles,'eww',side_effect=AssertionError('IPC without daemon')):
-            styles.update(selected='glass')
-        self.assertEqual(styles.read(self.state/'ui.json')['selected'],'glass')
+            styles.update(selected='collage')
+        self.assertEqual(styles.read(self.state/'ui.json')['selected'],'collage')
 
     def test_renderer_edits_do_not_invalidate_the_native_resident(self):
         fd=self.fifo()

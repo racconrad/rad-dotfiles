@@ -16,7 +16,7 @@ spec.loader.exec_module(menu)
 
 class ShellMotionTests(unittest.TestCase):
     def test_visual_style_does_not_disable_interaction_motion(self):
-        for style in ('ascii', 'terminal', 'monochrome', 'retro', 'modern'):
+        for style in ('terminal', 'collage', 'dynamic', 'macxp', 'modern'):
             with self.subTest(style=style), patch.object(menu, 'appearance_tokens',
                     return_value=dict(style=style, strict=True)), patch.object(menu, 'motion', return_value=.6):
                 self.assertTrue(menu.appearance_state({})['motion'])

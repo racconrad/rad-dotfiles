@@ -18,8 +18,19 @@ HOME = Path.home()
 
 
 def _resolve_wallpaper_dir():
+    custom_cfg = HOME / '.config/raccon/wallpaper-dir'
+    if custom_cfg.is_file():
+        try:
+            line = custom_cfg.read_text().strip()
+            p = Path(os.path.expanduser(line))
+            if p.is_dir():
+                return p
+        except Exception:
+            pass
     if 'WALLPAPER_DIR' in os.environ:
-        return Path(os.environ['WALLPAPER_DIR'])
+        p = Path(os.path.expanduser(os.environ['WALLPAPER_DIR']))
+        if p.is_dir():
+            return p
     default_dir = Path('@RDOT_HOME@/Pictures/Wallpapers')
     if default_dir.is_dir() and any(default_dir.iterdir()):
         return default_dir
@@ -34,7 +45,7 @@ def _resolve_wallpaper_dir():
                         return p
         except Exception:
             pass
-    for candidate in (HOME / 'Pictures/Wallpapers', HOME / '.local/share/wallpapers/raccon'):
+    for candidate in (HOME / 'Pictures/Wallpapers', HOME / 'Pictures', HOME / '.local/share/wallpapers/raccon'):
         if candidate.is_dir() and any(candidate.iterdir()):
             return candidate
     return default_dir
@@ -55,7 +66,7 @@ def kind_of(path):
 
 
 def catalogue():
-    target = DIR if DIR.is_dir() else _resolve_wallpaper_dir()
+    target = _resolve_wallpaper_dir()
     files = sorted(p for p in target.iterdir() if p.is_file() and kind_of(p)) if target.is_dir() else []
     return {k: [p for p in files if kind_of(p) == k] for k in ('images', 'videos')}
 
@@ -125,6 +136,7 @@ def current_wallpaper():
 
 
 def progressive_gallery(request):
+    active_dir = _resolve_wallpaper_dir()
     cat=catalogue();cat['all']=sorted(cat['images']+cat['videos'])
     section=request['section'];files=cat[section]
     pages=max(1,(len(files)+PAGE_SIZE-1)//PAGE_SIZE)
@@ -139,7 +151,8 @@ def progressive_gallery(request):
         tiles.append(dict(index=offset+i,name=p.stem,source=source,video=kind_of(p)=='videos',thumb=css_url(cached),has_thumb=bool(cached),current=source==current))
         if not cached:missing.append((p,tiles[-1]))
     data=dict(rows=[dict(i=r,count=len(tiles[i:i+COLUMNS]),tiles=tiles[i:i+COLUMNS]) for r,i in enumerate(range(0,len(tiles),COLUMNS))],
-              section=section,page=page,pages=pages,counts={k:len(v) for k,v in cat.items()},loading=bool(missing),error='')
+              section=section,page=page,pages=pages,dir_path=str(active_dir),dir_name=active_dir.name or str(active_dir),
+              counts={k:len(v) for k,v in cat.items()},loading=bool(missing),error='')
     return data,missing
 
 
@@ -149,15 +162,16 @@ def watch_gallery():
     # One resident listener, two decoders maximum, and no queued stale work.
     # Emit cached images/placeholders BEFORE submitting any decoder work.
     THUMBS.mkdir(parents=True,exist_ok=True)
-    active=None;pending={};missing=[];data=None;last=0;dirty=False
-    with FileEvents([REQUEST,CACHE/'current-wallpaper']) as changes, ThreadPoolExecutor(max_workers=2) as pool:
+    dir_cfg = HOME / '.config/raccon/wallpaper-dir'
+    active=None;active_dir=None;pending={};missing=[];data=None;last=0;dirty=False
+    with FileEvents([REQUEST,CACHE/'current-wallpaper',dir_cfg]) as changes, ThreadPoolExecutor(max_workers=2) as pool:
         while True:
-            request=gallery_request();token=request['token']
-            if token!=active:
-                active=token
+            request=gallery_request();token=request['token'];current_dir=_resolve_wallpaper_dir()
+            if token!=active or current_dir!=active_dir:
+                active=token;active_dir=current_dir
                 try:data,missing=progressive_gallery(request)
                 except OSError:
-                    data=dict(rows=[],section=request['section'],page=0,pages=1,counts=dict(all=0,images=0,videos=0),loading=False,error='Wallpaper folder is unavailable.')
+                    data=dict(rows=[],section=request['section'],page=0,pages=1,dir_path=str(current_dir),dir_name=current_dir.name or str(current_dir),counts=dict(all=0,images=0,videos=0),loading=False,error='Wallpaper folder is unavailable.')
                     missing=[]
                 print(json.dumps(data),flush=True);last=time.monotonic();dirty=False
             current=current_wallpaper()
@@ -206,6 +220,20 @@ def main(args):
         watch_gallery();return
     if args[:1]==['request']:
         request_gallery(args[1] if len(args)>1 else 'all',int(args[2]) if len(args)>2 else None);return
+    if args[:1] == ['dir']:
+        d = _resolve_wallpaper_dir()
+        print(str(d))
+        return
+    if args[:1] == ['set-dir'] and len(args) > 1:
+        target = Path(os.path.expanduser(args[1])).resolve()
+        if not target.is_dir():
+            print(f"Error: {target} is not a valid directory", file=sys.stderr)
+            sys.exit(1)
+        cfg = HOME / '.config/raccon/wallpaper-dir'
+        cfg.parent.mkdir(parents=True, exist_ok=True)
+        cfg.write_text(str(target) + "\n")
+        print(f"Wallpaper directory updated to: {target}")
+        return
     if args[:1] == ['preview-stop']:
         from wall_preview import preview
         preview(selection=args[1] if len(args)>1 else '')
@@ -239,8 +267,10 @@ def main(args):
     if not args or args[0] == 'list':
         offset = 0
         visible = cat[section]
+    active_dir = DIR if DIR.is_dir() else _resolve_wallpaper_dir()
     print(json.dumps(dict(rows=rows(visible, current, offset),
         section=section, page=page, pages=pages,
+        dir_path=str(active_dir), dir_name=active_dir.name,
         counts={k: len(v) for k, v in cat.items()})))
 
 

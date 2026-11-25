@@ -1,6 +1,6 @@
 ; Shortcut viewer. input.c filters rows natively by `search-key`; no process per key.
 (defpoll shortcuts :initial '[]' :interval "600s"
-  "python3 $HOME/.local/lib/raccon_menu/shortcuts.py")
+  "$HOME/.local/bin/desktop-menu shortcuts-data")
 
 (defwidget menu-shortcuts []
   (box :class "shortcuts-panel ${(desktop.ascii ?: false) ? 'ascii' : ''}" :orientation "v" :space-evenly false :spacing 10 :vexpand true
@@ -10,7 +10,7 @@
       (label :class "ascii-prompt" :visible {desktop.ascii ?: false} :text ">_")
       (input :class "keys-search" :hexpand true :tooltip "Filter by key or action"))
     (label :class "keys-empty muted" :visible false :wrap true :xalign 0 :text "No shortcuts match.")
-    (scroll :class "keys-scroll" :vexpand true :hscroll false :vscroll true
+    (scroll :class "keys-scroll" :height 260 :hscroll false :vscroll true
       (box :class "keys-list" :orientation "v" :space-evenly false :spacing 10
         (for section in shortcuts
           (box :class "key-section" :orientation "v" :space-evenly false :spacing 2

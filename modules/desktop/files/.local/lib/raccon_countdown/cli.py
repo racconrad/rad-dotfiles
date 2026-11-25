@@ -84,14 +84,18 @@ class CountdownController:
 
         if start_supervisor:
             script = shutil.which("countdown") or str(Path.home() / ".local/bin/countdown")
-            proc = subprocess.Popen(
-                [sys.executable, script, "--supervisor"],
-                start_new_session=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            initial_state["pid"] = proc.pid
-            self._write_state(initial_state)
+            supervisor_cmd = [script, "--supervisor"] if os.access(script, os.X_OK) else [sys.executable, "-m", "raccon_countdown.cli", "--supervisor"]
+            try:
+                proc = subprocess.Popen(
+                    supervisor_cmd,
+                    start_new_session=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                initial_state["pid"] = proc.pid
+                self._write_state(initial_state)
+            except OSError:
+                pass
             self.open_ui()
 
         return duration
@@ -155,11 +159,36 @@ class CountdownController:
             self.close_ui()
 
     def open_ui(self) -> None:
-        """Open the raccon-countdown floating pill in Eww."""
+        """Open the raccon-countdown floating card in Eww with drag module."""
         if not shutil.which("eww") or not self.eww_dir.exists():
             return
+        if subprocess.run(["eww", "-c", str(self.eww_dir), "ping"], capture_output=True).returncode != 0:
+            env = {**os.environ, "RACCON_FLOAT_KEYS": "1", "RACCON_KEYS_COMMAND": "raccon-countdown"}
+            builder = Path.home() / ".local/lib/raccon_menu/keyboard_build.py"
+            if builder.is_file():
+                res = subprocess.run([sys.executable, str(builder)], capture_output=True, text=True)
+                if res.returncode == 0 and res.stdout.strip():
+                    env["GTK_MODULES"] = res.stdout.strip()
+            subprocess.Popen(
+                ["eww", "-c", str(self.eww_dir), "--no-daemonize", "daemon"],
+                env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            for _ in range(20):
+                if subprocess.run(["eww", "-c", str(self.eww_dir), "ping"], capture_output=True).returncode == 0:
+                    break
+                time.sleep(0.05)
+        waybar_cfg = Path.home() / ".config/waybar/config.jsonc"
+        y_offset = "18px"
+        if waybar_cfg.is_file():
+            try:
+                content = waybar_cfg.read_text(encoding="utf-8")
+                if '"position": "top"' in content or '"position":"top"' in content:
+                    y_offset = "68px"
+            except OSError:
+                pass
         subprocess.Popen(
-            ["eww", "-c", str(self.eww_dir), "open", "raccon-countdown"],
+            ["eww", "-c", str(self.eww_dir), "open", "raccon-countdown", "--arg", "x=0px", "--arg", f"y={y_offset}"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
