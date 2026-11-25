@@ -1307,6 +1307,8 @@ def run_setup(selection, home):
                 command = ['nvim', '--headless', '+Lazy! sync', '+qa']
             elif name == 'plymouth':
                 command = ['sh', str(ROOT / 'extras/install-plymouth.sh')]
+            elif name == 'hypr-canvas':
+                command = ['sh', str(ROOT / 'extras/install-hypr-canvas.sh')]
             elif name == 'ai-skills':
                 command = [sys.executable, str(ROOT / 'scripts/capture_ai.py'), str(ROOT / 'modules/ai/files/.config/raccon-dots/ai-skills.json')]
             else:

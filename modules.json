@@ -1,6 +1,6 @@
 {
   "defaults": [
-    "wayfire",
+    "hyprland",
     "waybar",
     "desktop",
     "power",
@@ -78,6 +78,32 @@
       "label": "Session environment and PATH",
       "requires": [],
       "packages": []
+    },
+    "hyprland": {
+      "label": "Hyprland window management, binds and the hypr-canvas infinite canvas",
+      "requires": [
+        "base",
+        "terminal",
+        "launcher",
+        "notifications",
+        "lock"
+      ],
+      "packages": [
+        "hyprland",
+        "hyprpm",
+        "hypridle",
+        "xdg-desktop-portal-hyprland",
+        "xdg-desktop-portal-gtk",
+        "hyprpolkitagent",
+        "xorg-xwayland",
+        "git",
+        "cmake",
+        "meson",
+        "cpio",
+        "pkgconf",
+        "gcc"
+      ],
+      "description": "Modular Lua configuration in ~/.config/hypr (one file per concern), Super-key binds and an idle lock."
     },
     "wayfire": {
       "label": "Wayfire window management, workspaces and effects",
@@ -577,6 +603,13 @@
         "gtk-layer-shell",
         "python-gobject",
         "python-cairo"
+      ]
+    },
+    "hypr-canvas": {
+      "label": "Build and install the hypr-canvas infinite canvas daemon (Rust)",
+      "module": "hyprland",
+      "packages": [
+        "cargo"
       ]
     }
   }
