@@ -30,6 +30,11 @@ enum Commands {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
+    /// Wallpaper selector and directory configuration
+    Wallpaper {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     /// Interactive desktop UI launcher
     Ui {
         /// UI component to launch (timer, menu, music, wallpaper, session)
@@ -111,6 +116,61 @@ fn repo_root() -> PathBuf {
     PathBuf::from("/mnt/code/projects/rad-dotfiles")
 }
 
+fn resolve_wallpaper_dir() -> PathBuf {
+    let cfg = paths::home_dir().join(".config").join("raccon").join("wallpaper-dir");
+    if let Ok(content) = std::fs::read_to_string(&cfg) {
+        let trimmed = content.trim();
+        if !trimmed.is_empty() {
+            return PathBuf::from(trimmed);
+        }
+    }
+    if let Ok(env_dir) = std::env::var("WALLPAPER_DIR") {
+        if !env_dir.trim().is_empty() {
+            return PathBuf::from(env_dir.trim());
+        }
+    }
+    paths::home_dir().join("Pictures").join("Wallpapers")
+}
+
+fn set_wallpaper_dir(raw: &str) {
+    let p = match std::fs::canonicalize(raw) {
+        Ok(canon) if canon.is_dir() => canon,
+        _ => {
+            eprintln!("raccon wallpaper: '{}' is not a valid directory", raw);
+            process::exit(1);
+        }
+    };
+    let home = paths::home_dir();
+    let cfg = home.join(".config").join("raccon").join("wallpaper-dir");
+    if let Some(parent) = cfg.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    let _ = std::fs::write(&cfg, format!("{}\n", p.display()));
+
+    let waypaper_ini = home.join(".config").join("waypaper").join("config.ini");
+    if let Ok(content) = std::fs::read_to_string(&waypaper_ini) {
+        let updated: String = content
+            .lines()
+            .map(|line| {
+                if line.starts_with("folder =") || line.starts_with("folder=") {
+                    format!("folder = {}", p.display())
+                } else {
+                    line.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n";
+        let _ = std::fs::write(&waypaper_ini, updated);
+    }
+
+    let float_bin = home.join(".local/bin/raccon-float");
+    if float_bin.is_file() {
+        let _ = std::process::Command::new(float_bin).arg("refresh").status();
+    }
+    println!("Wallpaper directory set to: {}", p.display());
+}
+
 fn main() {
     let cli = Cli::parse();
     let root = repo_root();
@@ -126,6 +186,17 @@ fn main() {
             if let Err(err) = raccon::countdown::cli::run(args) {
                 eprintln!("raccon countdown: {}", err);
                 process::exit(1);
+            }
+        }
+        Commands::Wallpaper { args } => {
+            if args.is_empty() {
+                let _ = std::process::Command::new("raccon-float").arg("wallpaper").spawn();
+            } else if args[0] == "set-dir" && args.len() > 1 {
+                set_wallpaper_dir(&args[1]);
+            } else if args[0] == "dir" {
+                println!("{}", resolve_wallpaper_dir().display());
+            } else {
+                let _ = std::process::Command::new("wallpaper-grid").args(&args).spawn();
             }
         }
         Commands::Ui { target } => match target.as_str() {

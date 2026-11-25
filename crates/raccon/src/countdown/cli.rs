@@ -47,6 +47,14 @@ pub fn run(args: Vec<String>) -> Result<(), String> {
             println!("Countdown stopped.");
             Ok(())
         }
+        "open" => {
+            controller::open_ui();
+            Ok(())
+        }
+        "dock" => {
+            controller::dock_ui();
+            Ok(())
+        }
         "ui" => {
             let runtime = paths::runtime_dir();
             if !transport::send("show 9", &runtime) && !transport::send("tab 9", &runtime) {

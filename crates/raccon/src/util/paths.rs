@@ -6,20 +6,30 @@ pub fn home_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("/"))
 }
 
+pub fn cache_dir() -> PathBuf {
+    std::env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home_dir().join(".cache"))
+}
+
+pub fn runtime_root() -> PathBuf {
+    std::env::var_os("XDG_RUNTIME_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home_dir().join(".cache"))
+}
+
 pub fn runtime_dir() -> PathBuf {
-    if let Some(xdg) = std::env::var_os("XDG_RUNTIME_DIR") {
-        PathBuf::from(xdg).join("raccon-menu")
-    } else {
-        home_dir().join(".cache").join("raccon-menu")
-    }
+    runtime_root().join("raccon-menu")
+}
+
+pub fn state_root() -> PathBuf {
+    std::env::var_os("XDG_STATE_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home_dir().join(".local").join("state"))
 }
 
 pub fn state_dir() -> PathBuf {
-    if let Some(xdg) = std::env::var_os("XDG_STATE_HOME") {
-        PathBuf::from(xdg).join("raccon-menu")
-    } else {
-        home_dir().join(".local").join("state").join("raccon-menu")
-    }
+    state_root().join("raccon-menu")
 }
 
 pub fn share_dir() -> PathBuf {

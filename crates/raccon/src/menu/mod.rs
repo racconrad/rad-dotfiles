@@ -1,9 +1,17 @@
+pub mod apps;
 pub mod calendar;
+pub mod cava;
 pub mod cli;
 pub mod float;
 pub mod home_apps;
 pub mod modes;
+pub mod music;
+pub mod panels;
+pub mod positioning;
 pub mod recent_apps;
+pub mod runtime;
 pub mod session;
 pub mod shortcuts;
 pub mod transport;
+pub mod walls;
+pub mod waybar_music;

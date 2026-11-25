@@ -37,9 +37,69 @@ pub fn write_status(data: &CountdownData) -> std::io::Result<()> {
     write_atomic(&path, &content)
 }
 
+fn ensure_countdown_daemon(cfg: &PathBuf) {
+    let ping = Command::new("eww")
+        .args(["-c", &cfg.to_string_lossy(), "ping"])
+        .output();
+    if ping.map(|o| o.status.success()).unwrap_or(false) {
+        return;
+    }
+    let module = crate::menu::float::keyboard_build()
+        .ok()
+        .map(|p| p.to_string_lossy().into_owned());
+    let mut cmd = Command::new("eww");
+    cmd.args(["-c", &cfg.to_string_lossy(), "--no-daemonize", "daemon"]);
+    if let Some(m) = module {
+        cmd.env("GTK_MODULES", m);
+    }
+    cmd.env("RACCON_FLOAT_KEYS", "1");
+    cmd.env("RACCON_KEYS_COMMAND", "raccon-countdown");
+    let _ = cmd.spawn();
+    for _ in 0..20 {
+        if Command::new("eww")
+            .args(["-c", &cfg.to_string_lossy(), "ping"])
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+        {
+            break;
+        }
+        thread::sleep(Duration::from_millis(50));
+    }
+}
+
+fn send_ctl(cmd: &str) -> bool {
+    let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") else {
+        return false;
+    };
+    let ctl = PathBuf::from(runtime).join("raccon-countdown-ctl");
+    let Ok(c_path) = std::ffi::CString::new(ctl.to_string_lossy().as_bytes()) else {
+        return false;
+    };
+    unsafe {
+        let fd = libc::open(
+            c_path.as_ptr(),
+            libc::O_WRONLY | libc::O_NONBLOCK | libc::O_NOFOLLOW,
+        );
+        if fd < 0 {
+            return false;
+        }
+        let payload = format!("{}\n", cmd);
+        let written = libc::write(fd, payload.as_ptr() as *const libc::c_void, payload.len());
+        libc::close(fd);
+        written == payload.len() as isize
+    }
+}
+
 pub fn open_ui() {
     let cfg = eww_config_dir();
     let home = paths::home_dir();
+    let state_root = paths::state_root();
+    crate::menu::cli::sync_palette(&home, &state_root);
+    ensure_countdown_daemon(&cfg);
+    let _ = Command::new("eww")
+        .args(["-c", &cfg.to_string_lossy(), "update", "expanded=false"])
+        .status();
     let waybar_cfg = home.join(".config").join("waybar").join("config.jsonc");
     let mut y_offset = "18px";
     if let Ok(content) = std::fs::read_to_string(&waybar_cfg) {
@@ -54,13 +114,30 @@ pub fn open_ui() {
             "open",
             "raccon-countdown",
             "--arg",
+            "x=0px",
+            "--arg",
             &format!("y={}", y_offset),
         ])
         .spawn();
+    let _ = send_ctl("show");
+}
+
+pub fn dock_ui() {
+    let pos = paths::state_dir().join("pos.ini");
+    let _ = fs::remove_file(paths::home_dir().join(".local/state/raccon-countdown/pos.ini"));
+    let _ = fs::remove_file(pos);
+    let cfg = eww_config_dir();
+    let _ = Command::new("eww")
+        .args(["-c", &cfg.to_string_lossy(), "close", "raccon-countdown"])
+        .status();
+    open_ui();
 }
 
 pub fn close_ui() {
     let cfg = eww_config_dir();
+    if send_ctl("hide") {
+        thread::sleep(Duration::from_millis(185));
+    }
     let _ = Command::new("eww")
         .args(["-c", &cfg.to_string_lossy(), "close", "raccon-countdown"])
         .spawn();
@@ -82,7 +159,10 @@ pub fn stop() -> Result<(), String> {
 
 pub fn start(spec: &str, label: &str) -> Result<u64, String> {
     let duration = parse_time_spec(spec, None)?;
-    let _ = stop();
+    let prev = read_status();
+    if prev.state != "idle" && !prev.state.is_empty() {
+        let _ = stop();
+    }
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -105,9 +185,23 @@ pub fn start(spec: &str, label: &str) -> Result<u64, String> {
 
     // Spawn supervisor in background
     let current_exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("countdown"));
-    let child = Command::new(current_exe)
-        .arg("--supervisor")
-        .spawn();
+    let exe_name = current_exe
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("countdown");
+
+    let child = if exe_name == "raccon" || exe_name.starts_with("raccon") {
+        Command::new(&current_exe)
+            .args(["countdown", "--supervisor"])
+            .spawn()
+            .or_else(|_| Command::new("raccon").args(["countdown", "--supervisor"]).spawn())
+    } else {
+        Command::new(&current_exe)
+            .arg("--supervisor")
+            .spawn()
+            .or_else(|_| Command::new("countdown").arg("--supervisor").spawn())
+            .or_else(|_| Command::new("raccon").args(["countdown", "--supervisor"]).spawn())
+    };
 
     if let Ok(c) = child {
         let mut with_pid = initial;
@@ -232,6 +326,10 @@ pub fn run_supervisor() {
             } else {
                 format!("Countdown: {}", updated.label)
             };
+            let confetti = paths::home_dir().join(".cache/raccon-float/raccon-confetti");
+            if confetti.is_file() {
+                let _ = Command::new(&confetti).spawn();
+            }
             let _ = Command::new("notify-send")
                 .args([
                     "-u",

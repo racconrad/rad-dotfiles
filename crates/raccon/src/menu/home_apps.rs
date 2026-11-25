@@ -55,24 +55,47 @@ pub fn edit(state_dir: &Path, args: &[String]) -> Result<(), String> {
     let action = &args[0];
     let mut items = load_items(state_dir);
 
+    let resolve_key = |raw: &str, items: &[String]| -> Option<String> {
+        if DEFAULT_SHORTCUTS.contains(&raw) || items.iter().any(|i| i == raw) {
+            return Some(raw.to_string());
+        }
+        for k in items {
+            if crate::util::hash::sha256_hex(k) == raw {
+                return Some(k.clone());
+            }
+        }
+        for app in crate::menu::apps::cached_applications() {
+            if app.id == raw || app.token == raw {
+                return Some(app.id);
+            }
+        }
+        if raw.len() != 64 || !raw.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Some(raw.to_string());
+        }
+        None
+    };
+
     match action.as_str() {
         "reset" => {
             items = DEFAULT_SHORTCUTS.iter().map(|s| s.to_string()).collect();
         }
         "add" => {
-            let key = args.get(1).ok_or("Missing app to add")?;
-            if !items.contains(key) && items.len() < LIMIT {
-                items.push(key.clone());
+            let raw = args.get(1).ok_or("Missing app to add")?;
+            let key = resolve_key(raw, &items).ok_or("Application is no longer available.")?;
+            if !items.contains(&key) && items.len() < LIMIT {
+                items.push(key);
             }
         }
         "remove" => {
-            let key = args.get(1).ok_or("Missing app to remove")?;
-            items.retain(|k| k != key);
+            let raw = args.get(1).ok_or("Missing app to remove")?;
+            let key = resolve_key(raw, &items).ok_or("Shortcut is not in the main menu.")?;
+            items.retain(|k| k != &key);
         }
         "move" => {
-            let key = args.get(1).ok_or("Missing app to move")?;
+            let raw = args.get(1).ok_or("Missing app to move")?;
+            let key = resolve_key(raw, &items).ok_or("Shortcut is not in the main menu.")?;
             let direction = args.get(2).map(|s| s.as_str()).unwrap_or("next");
-            if let Some(idx) = items.iter().position(|k| k == key) {
+            if let Some(idx) = items.iter().position(|k| k == &key) {
                 if direction == "previous" && idx > 0 {
                     items.swap(idx, idx - 1);
                 } else if direction == "next" && idx + 1 < items.len() {
