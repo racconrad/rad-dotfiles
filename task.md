@@ -1,6 +1,6 @@
 # Raccon Dots for Hyprland
 
-Branch `raccon-dots`, from `main` (Rad Dots for Wayfire, the old one) at f7f18a2.
+Branch `raccon-dots` (default), rebased on `rad-dots-wayfire-old` (the former `main`, Rad Dots for Wayfire) at 89fe3ab.
 
 ## Done
 - [x] `modules/hyprland`: modular Lua config in `~/.config/hypr` (one file per concern)
@@ -28,5 +28,5 @@ Branch `raccon-dots`, from `main` (Rad Dots for Wayfire, the old one) at f7f18a2
 - [ ] Keyboard and mouse binds of `hypr-canvas` (only the commands were tested, in a nested Hyprland)
 - [ ] CPU and fans under load, compared with Wayfire
 
-## Open
-- [ ] Snapshot of the 160 uncommitted changes on `main` as "rad-dots wayfire (old)": needs a decision
+## Repository
+- [x] Pending changes committed on the old branch; `main` renamed to `rad-dots-wayfire-old`; `raccon-dots` is the default branch
