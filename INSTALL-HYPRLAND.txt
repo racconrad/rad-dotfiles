@@ -1,0 +1,41 @@
+Raccon Dots for Hyprland - install commands
+Arch / CachyOS, Hyprland 0.57 (Lua config). Run in order. Nothing here removes Wayfire:
+pick the "Hyprland" session at the SDDM login, or "Wayfire" to go back.
+
+1. Get the branch
+   git clone https://github.com/racconrad/rad-dotfiles.git raccon-dots
+   cd raccon-dots
+   git checkout raccon-dots
+
+2. System packages (needs sudo)
+   sudo pacman -S --needed hyprland hyprpm hypridle hyprlock xdg-desktop-portal-hyprland \
+        xdg-desktop-portal-gtk hyprpolkitagent xorg-xwayland git cmake meson cpio pkgconf gcc cargo
+
+3. Preview, then install the profile (dotfiles, ~/.config/hypr, apps, hypr-canvas build)
+   ./install.sh --profile profiles/hyprland-desktop.json --check
+   ./install.sh --profile profiles/hyprland-desktop.json --dry-run --files
+   ./install.sh --profile profiles/hyprland-desktop.json --setup hypr-canvas --yes
+
+   Without the installer, by hand:
+   cp -r modules/hyprland/files/.config/hypr ~/.config/hypr
+   cargo build --release --locked --manifest-path crates/hypr-canvas/Cargo.toml
+   install -Dm755 crates/hypr-canvas/target/release/hypr-canvas ~/.local/bin/hypr-canvas
+
+4. Check the configuration before logging in
+   Hyprland --verify-config -c ~/.config/hypr/hyprland.lua      # must print: config ok
+
+5. Log out and choose the "Hyprland" session in SDDM.
+
+6. Plugins (inside the Hyprland session; hyprpm asks you to confirm each build)
+   hyprpm update
+   hyprpm add https://github.com/hyprwm/hyprland-plugins
+   hyprpm enable hyprexpo
+   hyprpm reload
+
+7. Check the canvas daemon
+   hypr-canvas status        # workspace=1 offset=0,0 windows=N
+   hypr-canvas look right
+
+Rollback
+   Log in with the "Wayfire" session. ~/.config/wayfire.ini is not touched.
+   Installer backups: ./install.sh --restore ~/.local/state/raccon-dots/backups/TIMESTAMP-ID --yes
