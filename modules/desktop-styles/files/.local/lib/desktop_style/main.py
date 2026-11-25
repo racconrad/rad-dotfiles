@@ -23,18 +23,27 @@ CURRENT = CONFIG / 'current'
 BIN = HOME / '.local/bin'
 PROFILES = {
     'modern': dict(icon='view-grid-symbolic', widget_frame='none', name='Default', detail='Clean, rounded surfaces', font='Inter', radius=14, border=0, alpha=1, skin='minimal', position='bottom'),
-    'glass': dict(icon='view-reveal-symbolic', widget_frame='none', name='Transparent', detail='Translucent surfaces', font='Inter', radius=20, border=1, alpha=.88, skin='glass', position='bottom'),
     'terminal': dict(icon='utilities-terminal-symbolic', widget_frame='terminal', name='Classic', detail='Monospaced type and fine borders', font='JetBrainsMono Nerd Font Mono', radius=0, border=1, alpha=1, skin='terminal', position='bottom'),
-    'monochrome': dict(icon='format-text-code-symbolic', widget_frame='none', name='Mono', detail='Two colors from your wallpaper', font='JetBrainsMono Nerd Font Mono', radius=0, border=1, alpha=1, skin='monochrome', position='bottom'),
-    'retro': dict(icon='applications-games-symbolic', widget_frame='retro', name='Retro', detail='Pixel type and a 16-color palette', font='Silkscreen', radius=0, border=2, alpha=1, skin='pixel', position='bottom'),
-    'ascii': dict(icon='format-text-code-symbolic', widget_frame='ascii', name='Night', detail='Navy, ivory, coral and cyan', font='JetBrainsMono Nerd Font Mono', radius=0, border=1, alpha=1, skin='ascii', position='bottom'),
-    'retrofuture': dict(icon='applications-engineering-symbolic', widget_frame='future', name='Raccon Retrofuture', detail='Smoked metal, luminous instruments and a sculpted dock', font='Inter', radius=22, border=1, alpha=.96, skin='glass', position='bottom'),
-    'expressive': dict(icon='preferences-desktop-theme-symbolic', widget_frame='none', name='Raccon Expressive', detail='Wallpaper colors, bold type and playful sculpted shapes', font='Inter', radius=32, border=0, alpha=1, skin='minimal', position='bottom'),
+    'dynamic': dict(icon='preferences-desktop-theme-symbolic', widget_frame='none', name='Dynamic', detail='Wallpaper colors, bold type and playful sculpted shapes', font='Inter', radius=32, border=0, alpha=1, skin='minimal', position='bottom'),
+    'collage': dict(icon='applications-multimedia-symbolic', widget_frame='none', name='Collage', detail='Sharp Vocaloid/UTAU paper-cutout layers and bold ink slices', font='Inter Display', radius=0, border=2, alpha=1, skin='minimal', position='bottom'),
+    'macxp': dict(icon='computer-symbolic', widget_frame='none', name='Vintage', detail='Early Macintosh grays and simple hairline borders', font='Inter', radius=4, border=2, alpha=1, skin='minimal', position='bottom'),
 }
 STYLE_ALIASES = {'gnome':'modern','windows':'modern','default':'modern','simple':'modern',
-                 'transparent':'glass','classic':'terminal','mono':'monochrome','night':'ascii','ascii bloom':'ascii'}
+                 'transparent':'modern','glass':'modern',
+                 'classic':'terminal','mono':'terminal','monochrome':'terminal',
+                 'retro':'terminal','night':'terminal','ascii':'terminal','ascii bloom':'terminal',
+                 'retrofuture':'modern','raccon retrofuture':'modern',
+                 'expressive':'dynamic','raccon expressive':'dynamic',
+                 'vocaloid':'collage','utau':'collage','utauloid':'collage',
+                 'maximalist':'collage','maximalism':'collage','maximal':'collage',
+                 'papel mache':'collage','papier-mache':'collage',
+                 'vintage':'macxp','mac':'macxp','macintosh':'macxp','windows xp':'macxp','xp':'macxp',
+                 'luna':'macxp','platinum':'macxp','classic os':'macxp','retro os':'macxp'}
 WIDGET_FRAME_ICONS = dict(auto='insert-link-symbolic', none='window-minimize-symbolic', future='applications-engineering-symbolic',
-                         gnome='preferences-desktop-symbolic', windows='preferences-system-windows-symbolic', **{k:v['icon'] for k,v in PROFILES.items()})
+                         gnome='preferences-desktop-symbolic', windows='preferences-system-windows-symbolic',
+                         monochrome='format-text-code-symbolic', retro='applications-games-symbolic',
+                         glass='view-reveal-symbolic', ascii='format-text-code-symbolic',
+                         **{k:v['icon'] for k,v in PROFILES.items()})
 
 # Frame adopted by widgets set to «Heredar escritorio»; 'auto' follows the style.
 WIDGET_FRAMES = {'auto': 'Follow theme', 'none': 'No frame', 'monochrome': 'Mono', 'terminal': 'Classic',
@@ -105,8 +114,24 @@ def run(argv, check=True):
     return subprocess.run([str(a) for a in argv], capture_output=True, text=True, timeout=30, check=check)
 
 
+def canvas_mode_active():
+    tool=BIN/'raccon-canvas-mode'
+    if not os.access(tool,os.X_OK):
+        tool=BIN/'wf-canvas-mode'
+    if not os.access(tool,os.X_OK):
+        return False
+    env=dict(os.environ)
+    user_ini=HOME/'.config/wayfire/user.ini'
+    if user_ini.is_file() and 'WF_CANVAS_INI' not in env:
+        env['WF_CANVAS_INI']=str(user_ini)
+    try:
+        return subprocess.run([str(tool),'status'],env=env,capture_output=True,text=True,timeout=2).stdout.strip()=='canvas'
+    except (OSError,subprocess.SubprocessError):
+        return False
+
+
 def widgets_available():
-    return os.access(BIN/'widgetctl',os.X_OK)
+    return os.access(BIN/'widgetctl',os.X_OK) and not canvas_mode_active()
 
 
 def validate_css(text):
@@ -144,7 +169,7 @@ def update(_publish=True, _extra_action=None, **values):
         for key in ('selected','current'):
             if key in state:state[key]=normalize_style(state[key])
         state['bar'] = bar_preferences()
-        state['motion'] = state.get('current') not in ('monochrome', 'terminal', 'retro', 'ascii')
+        state['motion'] = state.get('current') != 'terminal'
         state['compact_motion'] = read(HOME/'.local/state/desktop-power/status.json').get('policy',{}).get('animation_factor',1) < 1
         save(STATE/'ui.json',state)
     # The resident deflisten receives this atomic write through FileEvents.
@@ -278,7 +303,9 @@ def source_palette(refresh=False):
         raise ValueError('Original palette not found. Reapply your wallpaper.')
     # Matugen may substitute a blue seed for a neutral photograph. Monochrome
     # follows the image itself, including gray wallpapers, rather than that seed.
-    pair=meta.get('image_pair') if signature and signature==meta.get('wallpaper') and meta.get('image_pair_version')==1 else None
+    cached_meta=bool(signature and signature==meta.get('wallpaper') and meta.get('image_pair_version')==2)
+    pair=meta.get('image_pair') if cached_meta else None
+    accents=list(meta.get('image_accents') or []) if cached_meta else []
     if signature and not pair:
         try:
             from PIL import Image, ImageOps
@@ -296,12 +323,25 @@ def source_palette(refresh=False):
                     # text instead of replacing every neutral image with white.
                     contrast=contrasting_tone(dominant,max(candidates,key=lambda c:contrast_ratio(dominant,c)))
                 pair=[dominant,contrast]
+                accents=[]
+                for min_sat,lo_l,hi_l in ((0.15,0.12,0.88),(0.06,0.08,0.92)):
+                    for cand in candidates:
+                        if len(accents)>=3:break
+                        ch,cl,cs=colorsys.rgb_to_hls(*rgb(cand))
+                        if cs<min_sat or not (lo_l<=cl<=hi_l):continue
+                        if any(min(abs(ch-ah)%1.0,1.0-abs(ch-ah)%1.0)<0.08 for ah in (colorsys.rgb_to_hls(*rgb(a))[0] for a in accents)):
+                            continue
+                        accents.append(cand)
         except (OSError,ValueError,ImportError):
             pair=None
+            accents=[]
     colors=dict(colors)
-    if pair:colors.update(wallpaper_dominant=pair[0],wallpaper_contrast=pair[1])
+    if pair:
+        colors.update(wallpaper_dominant=pair[0],wallpaper_contrast=pair[1])
+        for idx,accent in enumerate(accents[:3],1):
+            colors[f'wallpaper_accent_{idx}']=accent
     save(path,colors)
-    save(meta_path,dict(wallpaper=signature,raw_mtime=raw_time,image_pair=pair,image_pair_version=1))
+    save(meta_path,dict(wallpaper=signature,raw_mtime=raw_time,image_pair=pair,image_accents=accents[:3],image_pair_version=2))
     return colors
 
 
@@ -338,66 +378,20 @@ def contrasting_tone(background,seed):
 def palette(style, source):
     style=normalize_style(style)
     colors = dict(source)
-    if style == 'expressive':
+    if style == 'dynamic':
         from desktop_style.expressive import palette as expressive_palette
         return expressive_palette(source)
-    if style == 'retrofuture':
-        from desktop_style.retrofuture import palette as retrofuture_palette
-        return retrofuture_palette(source)
-    if style == 'ascii':
-        # An art-directed companion to ASCII Bloom, independent of the active
-        # wallpaper. Keep the original source intact for every other profile.
-        colors.update(surface='#091523', surface_dim='#091523', background='#091523',
-            surface_bright='#253c50', surface_container_lowest='#060f1b',
-            surface_container_low='#0c1b2b', surface_container='#102235',
-            surface_container_high='#172e43', surface_container_highest='#203a50',
-            surface_variant='#203a50', on_surface='#f3e9d2', on_background='#f3e9d2',
-            on_surface_variant='#b2c4cc', outline='#7894a4', outline_variant='#526f82',
-            primary='#ff9b91', on_primary='#29191e', primary_container='#51303b',
-            on_primary_container='#ffe1d9', primary_fixed='#ffe1d9', primary_fixed_dim='#ff9b91',
-            on_primary_fixed='#29191e', on_primary_fixed_variant='#51303b',
-            secondary='#8bd6de', on_secondary='#082a33', secondary_container='#16414d',
-            on_secondary_container='#c2f2f3', secondary_fixed='#c2f2f3', secondary_fixed_dim='#8bd6de',
-            on_secondary_fixed='#082a33', on_secondary_fixed_variant='#16414d',
-            tertiary='#dec0dc', on_tertiary='#332338', tertiary_container='#4c3750',
-            on_tertiary_container='#f5def0', tertiary_fixed='#f5def0', tertiary_fixed_dim='#dec0dc',
-            on_tertiary_fixed='#332338', on_tertiary_fixed_variant='#4c3750',
-            error='#ffb4ab', on_error='#390e16', error_container='#59232b', on_error_container='#ffdad6',
-            inverse_surface='#e4dece', inverse_on_surface='#102235', inverse_primary='#844c48',
-            surface_tint='#8bd6de', shadow='#000000', scrim='#000000')
-        return colors, [colors[k] for k in ('surface','surface_container','primary','secondary','on_surface')]
+    if style == 'collage':
+        from desktop_style.collage import palette as collage_palette
+        return collage_palette(source)
+    if style == 'macxp':
+        from desktop_style.macxp import palette as macxp_palette
+        return macxp_palette(source)
     for role in ('primary', 'secondary', 'tertiary'):
-        colors.setdefault(role + '_fixed_dim', colors[role])
-    h, _, _ = colorsys.rgb_to_hls(*rgb(colors['primary']))
-    if style == 'monochrome':
-        bg=colors.get('wallpaper_dominant',colors.get('source_color',colors['primary']))
-        fg=colors.get('wallpaper_contrast',colors.get('on_primary',colors['on_surface']))
-        if contrast_ratio(bg,fg)<4.5:
-            fg=max(('#111111','#ffffff'),key=lambda c:contrast_ratio(bg,c))
-        for key in colors:
-            foreground = key.startswith('on_') or key in ('primary','secondary','tertiary','error','outline','outline_variant','inverse_surface','inverse_primary') or 'fixed_dim' in key
-            if key in ('on_primary','on_secondary','on_tertiary','on_error','inverse_on_surface'):
-                foreground = False
-            colors[key] = fg if foreground else bg
-        colors['primary_container']=fg
-        colors['on_primary_container']=bg
-        return colors, [bg,fg]
-    if style == 'retro':
-        # Four neutral steps plus twelve chromatic steps, shifted by wallpaper hue.
-        swatches = [hexcolor(colorsys.hls_to_rgb(h,l,.16)) for l in (.07,.20,.69,.94)]
-        swatches += [hexcolor(colorsys.hls_to_rgb((h+offset)%1,l,.60)) for l in (.32,.70) for offset in (0,1/6,2/6,3/6,4/6,5/6)]
-        for key, color in colors.items():
-            colors[key] = min(swatches, key=lambda s: sum((a-b)**2 for a,b in zip(rgb(s),rgb(color))))
-        colors['surface'] = swatches[0]
-        colors['on_surface'] = swatches[3]
-        colors['on_surface_variant'] = swatches[2]
-        for role in ('primary','secondary','tertiary','error'):
-            if luminance(colors[role]) < .35: colors[role] = swatches[10]
-            colors['on_'+role] = swatches[0]
-            colors['on_'+role+'_container'] = swatches[3]
-            colors[role+'_container']=swatches[1]
-        return colors, swatches
-    return colors, [colors[k] for k in ('surface','surface_container','primary','secondary','tertiary','on_surface')]
+        if role in colors:
+            colors.setdefault(role + '_fixed_dim', colors[role])
+    swatches = [colors[k] for k in ('surface','surface_container','primary','secondary','tertiary','on_surface') if k in colors]
+    return colors, swatches
 
 
 def templates():
@@ -593,11 +587,12 @@ def configure_windows(style):
     settings=managed_settings(); p=PROFILES[style]
     if 'taskbar' in settings:
         original=read(STATE/'geometry.json').get('taskbar',settings['taskbar'])
-        settings['taskbar']={'exists':True,'icon_size':32} if style in ('retrofuture','expressive') else original
+        settings['taskbar']={'exists':True,'icon_size':32} if style in ('dynamic','collage') else original
     settings['window'].update(rounded_corner_radius=str(p['radius']),border_size=str(p['border']),
-                              shadow_radius='24' if style in ('glass', 'retrofuture') else '0',title_font=p['font']+' 10')
+                              shadow_radius='18' if style=='collage' else '24' if style=='glass' else '0',title_font=p['font']+' 10')
     if settings.get('fuzzel'):
-        settings['fuzzel']['main']['font']=p['font']+':size=12'
+        fuzzel_font='Inter' if p['font'] in ('Inter Display','Fira Sans Compressed') else p['font']
+        settings['fuzzel']['main']['font']=fuzzel_font+':size=12'
         settings['fuzzel']['border'].update(radius=str(p['radius']),width=str(p['border']))
     set_managed(settings)
 
@@ -690,7 +685,47 @@ def refresh_clients(bar_restart=False):
         time.sleep(.1)
         with (STATE/'osd.log').open('ab') as log:
             subprocess.Popen(servers[0][1],env=servers[0][2],stdin=subprocess.DEVNULL,stdout=log,stderr=log,start_new_session=True)
+    if canvas_mode_active():
+        canvas_tool = BIN/'raccon-canvas-mode'
+        if not os.access(canvas_tool, os.X_OK):
+            canvas_tool = BIN/'wf-canvas-mode'
+        if os.access(canvas_tool, os.X_OK):
+            try:
+                result = run([canvas_tool, 'refresh'], False)
+                if result.returncode: warnings.append(str(canvas_tool)+': '+result.stderr.strip()[:160])
+            except (OSError, subprocess.TimeoutExpired) as exc: warnings.append(str(exc))
     return warnings
+
+
+CANVAS_CONF_COLORS = (
+    ('hud_background', 'surface_container', 'e6'),
+    ('hud_foreground', 'on_surface', 'ff'),
+    ('hud_accent', 'primary', 'ff'),
+    ('hud_border_color', 'outline_variant', '66'),
+    ('background_dot_color', 'primary', '44'),
+)
+
+
+def update_canvas_conf(text, colors, style=None):
+    """Update Canvas color and style keys cleanly in place while preserving unrelated settings and comments."""
+    updates = {key: f'{key} = \\#{colors[role][1:]}{alpha}' for key, role, alpha in CANVAS_CONF_COLORS}
+    if style in PROFILES:
+        updates['hud_border_radius'] = f'hud_border_radius = {min(32.0, float(PROFILES[style]["radius"])):.1f}'
+        updates['hud_animation'] = f'hud_animation = {"fade" if style in ("monochrome", "terminal", "retro", "ascii") else "pop"}'
+    seen = set()
+    lines = []
+    for line in text.splitlines():
+        match = re.match(r'^\s*(?:#\s*)?([A-Za-z0-9_]+)\s*=', line)
+        if match and match[1] in updates:
+            key = match[1]
+            lines.append(updates[key])
+            seen.add(key)
+        else:
+            lines.append(line)
+    for key, value in updates.items():
+        if key not in seen:
+            lines.append(value)
+    return '\n'.join(lines) + '\n'
 
 
 def apply(style, wallpaper=False):
@@ -727,16 +762,6 @@ def apply(style, wallpaper=False):
                 # Compatibility for an older installed manager. New managers
                 # load the same overrides after the generated module defaults.
                 outputs[widget_palette]+='\n'+widgets
-        if style in ('monochrome','retro'):
-            # Constrain fixed ANSI colors and opacity suffixes as well as semantic roles.
-            def nearest(match):
-                value=match[0][:7]
-                chosen=min(swatches,key=lambda s:sum((a-b)**2 for a,b in zip(rgb(s),rgb(value))))
-                return chosen+('ff' if len(match[0])==9 else '')
-            for path in outputs:
-                outputs[path]=re.sub(r'#[0-9a-fA-F]{8}\b|#[0-9a-fA-F]{6}\b',nearest,outputs[path])
-            if HOME/'.config/cava/config' in outputs:
-                outputs[HOME/'.config/cava/config']=outputs[HOME/'.config/cava/config'].replace('gradient = 1','gradient = 0')+f"\nforeground = '{colors['primary']}'\n"
         outputs.update({CURRENT/'raccon.scss':menu,CURRENT/'waybar.css':bar,CURRENT/'rofi.rasi':rofi})
         for name in ('widgets','panels','swaync','swayosd','wlogout','gtklock'):
             outputs[CURRENT/(name+'.css')]=appearance[name]
@@ -746,11 +771,12 @@ def apply(style, wallpaper=False):
         outputs[HOME/'.config/rofi/colors.rasi']=appearance['rofi_colors']
         outputs[HOME/'.config/raccon-menu/_desktop-style.scss']=menu
         outputs[CONFIG/'_palette.scss']=''.join(f'${key}: {value};\n' for key,value in colors.items())
+        canvas_conf=HOME/'.config/wayfire/canvas.conf'
+        if canvas_conf.is_file():
+            outputs[canvas_conf]=update_canvas_conf(canvas_conf.read_text(),colors,style)
         kitty=HOME/'.config/kitty/colors.conf'
         if kitty in outputs:
             outputs[kitty]+=f'\n# Shared desktop appearance\nfont_family {PROFILES[style]["font"]}\nbackground_opacity {PROFILES[style]["alpha"]}\n'
-            if style=='monochrome':
-                outputs[kitty]=re.sub(r'(?m)^(color\d+)\s+.*$',lambda m:m[1]+' '+(colors['surface'] if m[1]=='color0' else colors['on_surface']),outputs[kitty])
         fuzzel=HOME/'.config/fuzzel/colors.ini'
         if fuzzel in outputs:
             tokens=json.loads(appearance['tokens']);opacity=f'{round(tokens["opacity"]*255):02x}'
@@ -808,6 +834,7 @@ def apply(style, wallpaper=False):
                 restart=configure_bar(style)
                 configure_windows(style)
                 warnings=refresh_clients(restart)
+                prepare_sddm_cache()
                 save(STATE/'selection.json',dict(style=style,name=PROFILES[style]['name'],swatches=swatches,warnings=warnings))
                 update(catalog=catalog,choices=list(catalog.values()),current=style,selected=style,frame=widget_frame(style),busy=False,notice='Style applied' if not warnings else 'Applied; check desktop-style status for details.')
             except Exception:
@@ -825,14 +852,10 @@ def preview(style, source):
     p=bar_profile(style); r=p['radius']; bg=c['surface']; panel=c['surface_container']; fg=c['on_surface']; accent=c['primary']; edge=c['outline_variant']
     ybar=0 if p['position']=='top' else 234
     svg=[f'<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280"><rect width="440" height="280" rx="12" fill="{bg}"/>']
-    if style in ('glass','retrofuture'):
-        svg.append(f'<path d="M0 120 L440 20 V200 L0 280 Z" fill="{accent}" opacity=".42"/>')
     def rect(x,y,w,h,fill,rad=r): svg.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{rad}" fill="{fill}" fill-opacity="{p["alpha"]}" stroke="{edge}" stroke-width="{p["border"]}"/>')
     def label(x,y,text,size=12,color=fg): svg.append(f'<text x="{x}" y="{y}" fill="{color}" font-family="{escape(p["font"])}" font-size="{size}">{escape(text)}</text>')
     rect(18,48,130,88,panel); label(30,78,'10:24',25); label(30,105,'My desktop',10)
     rect(166,48,254,158,panel); label(182,76,'Raccon Menu',14)
-    if style=='retrofuture':
-        svg.append(f'<path d="M180 84 H406" stroke="{c["secondary"]}" stroke-width="1"/>')
     for i,name in enumerate(('Apps','Files','Terminal')):
         rect(180+i*76,94,66,64,bg,min(r,8)); label(185+i*76,134,name,9)
     rect(180,173,226,19,bg,min(r,5)); label(188,186,'Search apps',9)
@@ -842,20 +865,15 @@ def preview(style, source):
         rect(14,ybar,94,32,panel); rect(162,ybar,116,32,panel); rect(318,ybar,108,32,panel)
     label(25,ybar+21,'Apps',11); label(180,ybar+21,'1   2   3',11,accent); label(334,ybar+21,'73%  10:24',10)
     if style=='terminal': label(24,170,'> working_',12,accent)
-    if style=='ascii':
-        label(24,160,'+--[ night ]--+',11,c['secondary'])
-        label(28,178,': * + # + * :',11,fg)
-        label(28,194,'  + @ # @ +',11,accent)
-        label(182,65,'[ raccon / menu ]',10,c['secondary'])
-    if style=='retro':
-        for x,y in ((26,156),(34,156),(50,156),(58,156),(26,164),(34,164),(42,164),(50,164),(58,164),(34,172),(50,172)):
-            rect(x,y,8,8,accent,0)
     svg.append('</svg>')
-    if style=='retrofuture':
-        from desktop_style.retrofuture import preview_svg
-        svg=[preview_svg(c,p['font'])]
-    if style=='expressive':
+    if style=='dynamic':
         from desktop_style.expressive_preview import preview_svg
+        svg=[preview_svg(c,p)]
+    elif style=='collage':
+        from desktop_style.collage_preview import preview_svg
+        svg=[preview_svg(c,p)]
+    elif style=='macxp':
+        from desktop_style.macxp_preview import preview_svg
         svg=[preview_svg(c,p)]
     path=CONFIG/'previews'/f'{style}.svg';write(path,''.join(svg))
     # Decode a small cached raster when opening the picker. SVG/font rendering
@@ -1115,16 +1133,30 @@ def reset():
 
 
 def companion_wallpaper(style):
-    if style != 'ascii':
-        raise ValueError('This style has no companion wallpaper')
-    path = HOME / '.local/share/wallpapers/raccon/ascii-bloom.png'
-    if not path.is_file():
-        raise ValueError('No Night wallpaper: put your own image at ~/.local/share/wallpapers/raccon/ascii-bloom.png')
-    # Reuse the guarded transaction, including duplicate detection and palette
-    # refresh. Never call the wallpaper backend directly from the selector.
-    subprocess.run([str(BIN/'wallpaper-set'), str(path)], capture_output=True,
-                   text=True, timeout=90, check=True)
-    update(notice='Night wallpaper selected')
+    raise ValueError('This style has no companion wallpaper')
+
+
+def _sddm_background_mode(home):
+    current = home / '.cache/current-wallpaper'
+    image = Path(current.read_text().strip()) if current.is_file() else Path('/nonexistent')
+    if image.suffix.lower() not in ('.png', '.jpg', '.jpeg', '.webp', '.bmp'):
+        image = home / '.cache/wallpaper-frame.png'
+    return 'wallpaper' if image.is_file() else 'solid'
+
+
+def prepare_sddm_cache():
+    assets = HOME / '.local/share/raccon/sddm'
+    prep = assets / 'prepare.py'
+    if not prep.is_file():
+        return
+    try:
+        subprocess.run(
+            [sys.executable, str(prep), '--home', str(HOME), '--output',
+             str(HOME / '.local/share/sddm/themes/raccon'), '--background', _sddm_background_mode(HOME)],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 def apply_sddm():
@@ -1159,8 +1191,8 @@ def apply_sddm():
             with tempfile.TemporaryDirectory(prefix='raccon-sddm-') as temp:
                 theme = Path(temp)/'theme'
                 subprocess.run([sys.executable, str(assets/'prepare.py'), '--home', str(HOME),
-                                '--output', str(theme)], capture_output=True, text=True,
-                               timeout=30, check=True)
+                                '--output', str(theme), '--background', _sddm_background_mode(HOME)],
+                               capture_output=True, text=True, timeout=30, check=True)
                 update(notice='Authenticate to update the login screen')
                 # The overlay must yield focus to the desktop's polkit agent.
                 if was_visible:
@@ -1223,6 +1255,7 @@ def main():
             else:
                 source=source_palette();catalog=preview_catalog(source)
                 write(CONFIG/'_palette.scss',''.join(f'${k}: {v};\n' for k,v in source.items()))
+                prepare_sddm_cache()
                 update(catalog=catalog,choices=list(catalog.values()))
         elif command=='frame': set_widget_frame(args[1],args[2] if len(args)>2 else None)
         elif command=='extra': extra_action(args[1])

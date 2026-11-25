@@ -65,7 +65,7 @@ class PopupThemeTests(unittest.TestCase):
         self.assertIn('#ee1133', (self.home/'.config/waybar/colors.css').read_text())
 
     def test_restore_or_invalid_tokens_fall_back_without_retaining_old_style(self):
-        self.publish('ascii'); menu.palette()
+        self.publish('terminal'); menu.palette()
         self.tokens.unlink(); menu.palette()
         self.assertIn('$primary: #ee1133;', (menu.CONFIG/'_palette.scss').read_text())
         self.assertEqual(menu.appearance_state({})['style'], 'original')
@@ -88,8 +88,8 @@ class PopupThemeTests(unittest.TestCase):
             return json.loads(proc.stdout.readline())
         try:
             self.assertEqual(receive()['style'], 'modern')
-            self.publish('ascii')
-            state = receive(); self.assertEqual(state['style'], 'ascii'); self.assertEqual(state['motion'], menu.motion({}) > 0)
+            self.publish('terminal')
+            state = receive(); self.assertEqual(state['style'], 'terminal'); self.assertEqual(state['motion'], menu.motion({}) > 0)
             self.assertEqual((runtime/'visible').read_text(), '0')
         finally:
             proc.terminate(); proc.communicate(timeout=4)

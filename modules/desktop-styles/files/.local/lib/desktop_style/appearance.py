@@ -3,15 +3,15 @@ import json
 
 
 def resolve(name, profile, colors):
-    strict = name in ('monochrome', 'retro', 'terminal', 'ascii')
+    strict = name == 'terminal'
     widget_frame = profile.get('widget_frame', name)
     if widget_frame not in ('none','monochrome','terminal','retro','future','glass','modern','gnome','windows','ascii'):
         widget_frame = 'none'
     return dict(style=name, font=profile['font'], radius=profile['radius'],
                 control_radius=min(profile['radius'], 10), border=profile['border'],
-                opacity=profile['alpha'] if name in ('glass', 'retrofuture') else 1,
-                panel_padding=16 if strict or name == 'windows' else 20,
-                control_padding=8 if strict or name == 'windows' else 10,
+                opacity=profile['alpha'] if name == 'glass' else 1,
+                panel_padding=14 if strict or name == 'windows' else 16,
+                control_padding=5 if strict or name == 'windows' else 6,
                 position=profile['position'], continuous=profile.get('continuous',False),
                 strict=strict, colors=colors, widgets=dict(skin=profile['skin'], frame=widget_frame,
                     fx='none' if strict else 'focus', background='surface'))
@@ -58,7 +58,7 @@ tooltip label {{ padding: 0; }}
     menu = f'.popup, .popup * {{ font-family: "{font}", "JetBrainsMono Nerd Font Propo", sans-serif; }}\n'
     menu += panel('.popup .panel.panel, .popup .side-panel.side-panel') + controls('.popup')
     menu += f'''
-.popup .side-panel.side-panel {{ padding: {pad-4}px; }}
+.popup .side-panel.side-panel {{ padding: {max(10, pad-4)}px; }}
 .popup .daily-app, .popup .app-launch, .popup .mode-row, .popup .session-choice, .popup .nav-tab, .popup .music-art, .popup .music-progress trough, .popup .music-progress progress {{ border-radius: {q}px; }}
 .popup .daily-app {{ background: {raised}; color: {fg}; }}
 .popup .daily-app label, .popup .daily-app image {{ color: {fg}; }}
@@ -133,32 +133,42 @@ tooltip label {{ padding: 0; }}
     bar=f'window#waybar, window#waybar * {{ font-family: "{font}", "Eva-Icons", "JetBrainsMono Nerd Font Propo", sans-serif; }}\n'
     bar+=panel('window#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar')
     bar+='window#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar { padding: 0 6px; }\n'
-    chips=['clock','hardware','workspaces','custom-workspace-base','cpu','memory','temperature','disk','network','bluetooth','wireplumber','backlight','idle_inhibitor','custom-desktop-mode','custom-notification','custom-power','custom-updates','custom-hardware-toggle','tray','custom-music-open','custom-music-prev','custom-music-play','custom-music-next','battery','power-profiles-daemon']+[f'custom-ws{i}' for i in range(1,11)]
+    chips=['clock','hardware','workspaces','custom-workspace-base','cpu','memory','temperature','disk','network','bluetooth','wireplumber','backlight','idle_inhibitor','custom-desktop-mode','custom-canvas-mode','custom-tiling','custom-notification','custom-power','custom-updates','custom-hardware-toggle','tray','custom-music-viz','custom-music-prev','custom-music-play','custom-music-next','battery','power-profiles-daemon']+[f'custom-ws{i}' for i in range(1,11)]
     allchips=', '.join('window#waybar #'+key for key in chips)
-    bar+=f'{allchips} {{ border-radius: {q}px; color: {fg}; background: transparent; }}\n'
-    bar+=f'window#waybar #clock, window#waybar #hardware, window#waybar #workspaces {{ background: {raised}; }}\n'
+    r_ac,g_ac,b_ac=(int(accent[1:3],16),int(accent[3:5],16),int(accent[5:7],16))
+    hover_tint=f'rgba({r_ac},{g_ac},{b_ac},0.10)'
+    bar+=f'{allchips} {{ border-radius: {q}px; color: {fg}; background: transparent; border: none; }}\n'
+    bar+=f'window#waybar #clock {{ color: {accent}; font-weight: 700; background: {raised}; border-bottom: 2px solid {accent}; padding: 0 11px; }}\n'
+    bar+=f'window#waybar #custom-power {{ color: {colors["error"]}; background: transparent; }}\n'
+    bar+=f'window#waybar #hardware, window#waybar #workspaces {{ background: transparent; border: none; }}\n'
+    bar+=f'window#waybar #custom-desktop-mode, window#waybar #custom-canvas-mode {{ border-bottom: 1px solid {edge}; }}\n'
+    bar+=f'window#waybar #custom-music-play {{ color: {accent}; }}\n'
+    bar+=f'window#waybar #custom-music-viz.playing {{ color: {accent}; }}\n'
     active=', '.join('window#waybar #'+key+'.active' for key in chips if key.startswith('custom-ws'))
-    bar+=f'{active}, window#waybar #workspaces button.active, window#waybar #taskbar button.active {{ background: {accent}; color: {onaccent}; border-radius: {q}px; }}\n'
-    bar+=f'window#waybar #taskbar button, window#waybar #workspaces button {{ border-radius: {q}px; }}\n'
+    bar+=f'{active}, window#waybar #workspaces button.active, window#waybar #taskbar button.active {{ background: transparent; color: {accent}; border-radius: {q}px; }}\n'
+    bar+=f'window#waybar #taskbar button, window#waybar #workspaces button {{ border-radius: {q}px; background: transparent; }}\n'
     bar+='window#waybar, window#waybar * { transition: none; animation: none; box-shadow: none; background-image: none; -gtk-icon-transform: none; }\n'
     bar+='window#waybar #taskbar button, window#waybar #taskbar button:hover { padding: 4px 7px; }\n'
     workspace=', '.join('window#waybar #custom-ws'+str(i)+state for i in range(1,11) for state in ('','.active',':hover'))
     bar+=f'{workspace}, window#waybar #workspaces button, window#waybar #workspaces button.active, window#waybar #workspaces button:hover {{ padding: 0 8px; }}\n'
-    bar+=f'window#waybar #taskbar button:hover, window#waybar #workspaces button:hover {{ background: transparent; color: {fg}; }}\n'
-    bar+=f'window#waybar #taskbar button.active:hover, window#waybar #workspaces button.active:hover {{ background: {accent}; color: {onaccent}; }}\n'
+    bar+=f'window#waybar #taskbar button:hover, window#waybar #workspaces button:hover {{ background: {hover_tint}; color: {fg}; }}\n'
+    bar+=f'window#waybar #taskbar button.active:hover, window#waybar #workspaces button.active:hover {{ background: {hover_tint}; color: {accent}; }}\n'
     # Allocate borders inside each island, with identical geometry for every state.
     bar+=f'window#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar {{ min-height: 44px; padding: 2px 6px; }}\n'
     bar+=f'{allchips} {{ margin: 4px 1px; padding: 0 7px; min-height: 24px; }}\n'
     bar+='window#waybar #hardware { margin: 4px 2px; padding: 0 2px; }\nwindow#waybar #hardware > * { margin-top: 0; margin-bottom: 0; }\n'
     bar+='window#waybar #taskbar button, window#waybar #taskbar button:hover, window#waybar #taskbar button.active { margin: 2px 1px; padding: 3px 6px; min-height: 30px; border: 1px solid transparent; }\n'
+    bar+=f'window#waybar #taskbar button.active {{ border-bottom: 1px solid {accent}; }}\n'
     bar+='window#waybar #taskbar.empty { background: transparent; border: none; min-height: 0; padding: 0; }\n'
+    empty_music=', '.join(f'window#waybar #custom-music-{k}.empty' for k in ('viz','prev','play','next'))
+    bar+=f'{empty_music} {{ background: transparent; border: none; margin: 0; padding: 0; min-width: 0; min-height: 0; }}\n'
     # Distinct workspace states without changing any allocation on hover.
     empty=', '.join(f'window#waybar #custom-ws{i}.empty' for i in range(1,11))
     occupied=', '.join(f'window#waybar #custom-ws{i}.occupied' for i in range(1,11))
     hover=', '.join(f'window#waybar #custom-ws{i}:hover' for i in range(1,11))
-    bar+=f'{empty} {{ color: {muted}; }}\n{occupied} {{ color: {fg}; background: {raised}; }}\n'
-    bar+=f'{hover}, window#waybar #taskbar button:not(.active):hover {{ background: {raised}; color: {fg}; }}\n'
-    bar+=f'{active} {{ background: {accent}; color: {onaccent}; }}\n'
+    bar+=f'{empty} {{ color: {muted}; background: transparent; }}\n{occupied} {{ color: {fg}; background: transparent; }}\n'
+    bar+=f'{hover}, window#waybar #taskbar button:not(.active):hover {{ background: {hover_tint}; color: {fg}; }}\n'
+    bar+=f'{active} {{ background: transparent; color: {accent}; border-bottom: 1px solid {accent}; }}\n'
     if not t['strict']:
         interactive=allchips+', window#waybar #taskbar button'
         bar+=f'{interactive} {{ transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out; }}\n'
@@ -171,11 +181,6 @@ tooltip label {{ padding: 0; }}
     bar+=f'window#waybar.{t["position"]} > box {{ padding: {padding}; }}\n'
     if t['strict']:
         bar+='window#waybar * { background-image: none; box-shadow: none; text-shadow: none; }\n'
-    if name=='monochrome':
-        bar+=f'{allchips} {{ opacity: 1; }}\n'
-        widgets+=f'{root} .gen-title, {root} .pl-title {{ border-bottom: 1px solid {fg}; padding-bottom: 6px; margin-bottom: 6px; font-weight: bold; }}\n'
-        selector+=f'.style-selector .header {{ border-bottom: 1px solid {fg}; padding-bottom: 12px; }}\n'
-        widgets+=f'{root} .gen-icon, {root} .pl-icon {{ background: {bg}; color: {fg}; }}\n'
 
     rofi=f'''* {{ font: "{font} 11"; text-color: @fg; }}
 window {{ border: {b}px; border-color: @outline; border-radius: {r}px; background-color: @bg; padding: {pad}px; }}
@@ -190,24 +195,28 @@ element-text selected.normal {{ text-color: @on-accent; }}
         'bg':bg+f'{round(t["opacity"]*255):02x}', 'bg-alt':raised,
         'accent':accent,'on-accent':onaccent,'accent-soft':raised,
         'outline':edge,'fg':fg,'fg-dim':muted}.items())+'}\n'
-    swaync=f'* {{ font-family: "{font}", "JetBrainsMono Nerd Font Propo", sans-serif; }}\n'
+    notif_font = 'Inter' if font in ('Inter Display', 'Fira Sans Compressed') else font
+    swaync=f'* {{ font-family: "{notif_font}", "Noto Sans", "JetBrainsMono Nerd Font Propo", sans-serif; }}\n'
     swaync+=panel('.control-center.control-center, .notification.notification')
     swaync+=controls('.control-center')+controls('.notification')
-    # Notification density is independent of the selected desktop style.
+    # Notification density and readable font metrics are preserved across styles.
     swaync+=f'''.control-center.control-center {{ padding: 6px; }}
 .notification.notification {{ padding: 0; }}
 .notification .notification-default-action {{ padding: 0; border: none; }}
 .notification .notification-action {{ padding: 4px 7px; }}
-.notification .summary, .notification .body {{ color: {fg}; }}
+.notification .text-box label {{ opacity: 1; }}
+.notification .summary {{ font-family: "{notif_font}", "Noto Sans", "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 14px; font-weight: 700; color: {fg}; opacity: 1; }}
+.notification .body {{ font-family: "{notif_font}", "Noto Sans", "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 13px; font-weight: 400; color: {fg}; opacity: 1; }}
+.notification .time {{ font-family: "{notif_font}", "Noto Sans", "JetBrainsMono Nerd Font Propo", sans-serif; font-size: 11px; color: {muted}; opacity: 1; }}
 .close-button.close-button {{ padding: 0; min-width: 18px; min-height: 18px; }}
 '''
 
-    # OSD is a compact floating indicator, never a full panel.
-    osd=f'''window#osd {{ background: transparent; background-image: none; border: none; border-radius: 0; padding: 0; box-shadow: none; }}
-window#osd * {{ font-family: "{font}"; color: {fg}; text-shadow: none; box-shadow: none; }}
-window#osd #container {{ margin: 6px 8px; padding: 0; }}
+    # OSD is a compact floating indicator that still respects the active style shape and readable type.
+    osd=f'''window#osd {{ background: {surface}; background-image: none; border: {b}px solid {edge}; border-radius: {q}px; padding: 0; box-shadow: none; }}
+window#osd * {{ font-family: "{notif_font}", "Noto Sans", sans-serif; color: {fg}; text-shadow: none; box-shadow: none; }}
+window#osd #container {{ margin: 6px 10px; padding: 0; }}
 window#osd image {{ -gtk-icon-transform: scale(.8); }}
-window#osd label {{ font-size: 12px; }}
+window#osd label {{ font-size: 13px; }}
 window#osd progressbar, window#osd segmentedprogress {{ min-height: 3px; min-width: 120px; background: transparent; border: none; padding: 0; }}
 window#osd trough, window#osd segment {{ min-height: 3px; background: transparent; border: none; border-radius: 0; }}
 window#osd progress, window#osd segment.active {{ min-height: 3px; background: {fg}; border: none; border-radius: 0; }}
@@ -234,41 +243,36 @@ window#osd progress, window#osd segment.active {{ min-height: 3px; background: {
         editor+=f'{editor_scope} * {{ transition: none; animation: none; }}\n'
         editor+=f'{editor_scope} .wcard:disabled {{ opacity: 1; }}\n'
 
-    if name == 'ascii':
-        cyan=colors['secondary']
-        # Fine typographic rules, square controls, and color-coded text. No
-        # raster overlays or ambient repaints on interactive desktop surfaces.
-        menu+=f'''
-.popup .header {{ border-bottom: 1px dashed {edge}; padding-bottom: 12px; }}
-.popup .title, .popup .side-title {{ color: {cyan}; font-weight: 500; font-size: 14px; }}
-.popup .search-bar {{ background: {bg}; border-style: dashed; }}
-.popup .ascii-prompt {{ color: {accent}; }}
-.popup .navigation {{ border-top: 1px dashed {edge}; padding-top: 8px; }}
-.popup .daily-app {{ border-color: {edge}; }}
-'''
-        widgets+=f'''
-{root} .gen-head, {root} .pl-head, {root} .music-head {{ border-bottom: 1px dashed {edge}; padding-bottom: 8px; }}
-{root} .gen-title, {root} .pl-title, {root} .greeting {{ color: {cyan}; font-weight: 500; }}
-{root} .gen-icon, {root} .pl-icon, {root} .sys-chip {{ background: transparent; color: {accent}; }}
-{root} progress highlight {{ background: {cyan}; }}
-'''
-        selector+=f'.style-selector .header {{ border-bottom: 1px dashed {edge}; padding-bottom: 12px; }}\n.style-selector .preview-title {{ color: {cyan}; }}\n'
-        panels+=f'#desktop-menu .panel-title {{ color: {cyan}; }}\n'
-        editor+=f'{editor_scope} .panel-title, {editor_scope} .group-title {{ color: {cyan}; }}\n{editor_scope} .section {{ border-style: dashed; }}\n'
-        bar+=f'window#waybar {{ border-bottom: 1px solid {edge}; }}\nwindow#waybar #clock {{ color: {cyan}; background: transparent; }}\n'
-        swaync+=f'.notification .summary {{ color: {cyan}; }}\n'
-
     # gtk.css has USER priority, above each application's theme provider.
     # Mutable shape rules there would pin old radii in resident Eww processes.
     gtk='/* Global GTK files define color roles; shape and typography belong to the live application adapters. */\n'
+    gtklock = f'''
+@keyframes lock-enter {{ 0% {{ opacity: 0; }} 100% {{ opacity: 1; }} }}
+window {{ background-color: {colors['surface']}; color: {fg}; font-family: "{font}", "JetBrainsMono Nerd Font Propo", sans-serif; }}
+#window-box {{ background: {alpha(bg) if t['opacity'] < 1 else bg}; border: {max(1,b)}px solid {edge}; border-radius: {r}px; padding: 30px 38px; box-shadow: 0 16px 42px rgba(0,0,0,0.45); animation: lock-enter 240ms ease-out 1; }}
+#clock-label {{ color: {accent}; font-weight: 700; font-size: 60px; }}
+#date-label {{ color: {muted}; font-size: 14px; }}
+#user-image {{ border-radius: {min(r, 999) if r > 0 else 0}px; border: {max(1,b)}px solid {accent}; }}
+#user-name {{ color: {fg}; font-weight: 700; }}
+#input-field {{ background: {raised}; color: {fg}; border: {max(1,b)}px solid {edge}; border-radius: {q}px; padding: 8px 14px; transition: border-color 150ms ease-out; }}
+#input-field:focus {{ border-color: {accent}; }}
+#unlock-button {{ background: {accent}; color: {onaccent}; border: none; border-radius: {q}px; font-weight: 700; transition: background-color 140ms ease-out; }}
+#unlock-button:hover, #unlock-button:focus {{ background: {colors['primary_container']}; color: {colors['on_primary_container']}; }}
+#powerbar-box button {{ background: {raised}; color: {fg}; border: {max(1,b)}px solid {edge}; border-radius: {q}px; transition: background-color 140ms ease-out, border-color 140ms ease-out; }}
+#powerbar-box button:hover, #powerbar-box button:focus {{ background: {accent}; color: {onaccent}; border-color: {accent}; }}
+#powerbar-box #poweroff-button:hover, #powerbar-box #poweroff-button:focus {{ background: {colors['error']}; color: {colors['on_error']}; border-color: {colors['error']}; }}
+'''
     outputs = dict(widget_editor=editor+tooltip,widgets=widgets+tooltip,raccon=menu+tooltip,panels=panels+tooltip,selector=selector+tooltip,
                 waybar=bar+tooltip,rofi=rofi,rofi_colors=rofi_colors,swaync=swaync+tooltip,swayosd=osd+tooltip,gtk=gtk,
-                wlogout='',gtklock='',tokens=json.dumps(t,ensure_ascii=False,indent=2)+'\n')
+                wlogout='',gtklock=gtklock,tokens=json.dumps(t,ensure_ascii=False,indent=2)+'\n')
 
-    if name == 'expressive':
+    if name == 'dynamic':
         from desktop_style.expressive_surfaces import decorate
         return decorate(outputs, colors, t)
-    if name == 'retrofuture':
-        from desktop_style.retrofuture import decorate
-        return decorate(outputs, colors)
+    if name == 'collage':
+        from desktop_style.collage_surfaces import decorate
+        return decorate(outputs, colors, t)
+    if name == 'macxp':
+        from desktop_style.macxp_surfaces import decorate
+        return decorate(outputs, colors, t)
     return outputs

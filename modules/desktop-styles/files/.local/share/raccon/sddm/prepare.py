@@ -9,6 +9,19 @@ import shutil
 import subprocess
 
 
+def _matugen_fallback(home):
+    found = {}
+    scss = home / '.config/eww/_colors.scss'
+    if scss.is_file():
+        for match in re.finditer(r'\$(\w+):\s*(#[0-9a-fA-F]{6})\s*;', scss.read_text()):
+            found[match.group(1)] = match.group(2)
+    css = home / '.config/waybar/colors.css'
+    if css.is_file():
+        for match in re.finditer(r'@define-color\s+(\w+)\s+(#[0-9a-fA-F]{6})\s*;', css.read_text()):
+            found.setdefault(match.group(1), match.group(2))
+    return found
+
+
 def prepare(home, output, background='solid'):
     source = Path(__file__).resolve().parent / 'raccon'
     if output.resolve().is_relative_to(source.resolve()) or source.resolve().is_relative_to(output.resolve()):
@@ -27,7 +40,8 @@ def prepare(home, output, background='solid'):
         tokens = json.loads((home / '.config/desktop-style/current/tokens.json').read_text())
     except (OSError, ValueError):
         tokens = {}
-    colors = tokens.get('colors', {})
+    colors = _matugen_fallback(home)
+    colors.update(tokens.get('colors', {}))
     roles = dict(background='background', surface='surface_container', field='surface_container_high',
                  foreground='on_surface', muted='on_surface_variant', accent='primary',
                  onAccent='on_primary', outline='outline_variant', error='error')

@@ -96,9 +96,9 @@ class DesktopStylesTests(unittest.TestCase):
         self.assertEqual(initial['current'],'original')
         self.assertEqual(initial['selected'],'modern')
         self.assertFalse(initial['busy'])
-        self.assertEqual(len(initial['choices']),8)
+        self.assertEqual(len(initial['choices']),5)
         self.assertEqual([row['name'] for row in initial['choices']],
-                         ['Default','Transparent','Classic','Mono','Retro','Night','Raccon Retrofuture','Raccon Expressive'])
+                         ['Default','Classic','Dynamic','Collage','Vintage'])
         self.assertEqual(source.count(':image-height 280'),1)
         for name in ('waybar.css','raccon.scss','rofi.rasi'):
             self.assertNotIn(b'background:',plan['.config/desktop-style/current/'+name][0])
@@ -116,6 +116,9 @@ class DesktopStylesTests(unittest.TestCase):
                 self.assertNotIn('desktop-style prewarm',shortcut)
                 hook=plan['.local/bin/wallpaper-theme'][0].decode()
                 self.assertEqual('desktop-style" wallpaper' in hook,enabled)
+                if enabled:
+                    self.assertNotIn('wayfire-theme-apply" &',hook)
+                    self.assertNotIn('desktop-style" wallpaper &',hook)
 
     def test_desktop_entry_supports_target_home_with_spaces(self):
         _,plan=self.plan(['desktop-styles'])
@@ -174,7 +177,7 @@ class DesktopStylesTests(unittest.TestCase):
         env={**os.environ,'HOME':str(self.home),'XDG_STATE_HOME':str(self.home/'.local/state')}
         result=subprocess.run([str(self.home/'.local/bin/desktop-style'),'list'],env=env,capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
-        self.assertEqual(len(json.loads(result.stdout)),8)
+        self.assertEqual(len(json.loads(result.stdout)),5)
         folder=self.home/'.local/state/desktop-power';folder.mkdir(parents=True)
         for mode,locks in (('working',False),('balanced',True)):
             (folder/'preference.json').write_text(json.dumps({'mode':mode}))
@@ -190,7 +193,7 @@ class DesktopStylesTests(unittest.TestCase):
         text=yuck.read_text()
         match=re.search(r'\(deflisten ui :initial ("(?:[^"\\]|\\.)*")',text)
         initial=json.loads(json.loads(match[1]))
-        initial.update(current='glass',selected='windows',busy=True,notice='Private runtime trace')
+        initial.update(current='modern',selected='windows',busy=True,notice='Private runtime trace')
         yuck.write_text(text[:match.start(1)]+json.dumps(json.dumps(initial))+text[match.end(1):])
         private=self.home/'.local/state/desktop-style/original.json';private.parent.mkdir(parents=True)
         private.write_text('{"private":"rollback data"}')
@@ -217,7 +220,7 @@ class DesktopStylesTests(unittest.TestCase):
             raw=self.home/'.config/matugen/out/desktop-style-source.json'
             raw.parent.mkdir(parents=True,exist_ok=True)
             raw.write_text(json.dumps(original))
-            engine.save(engine.STATE/'selection.json',{'style':'monochrome'})
+            engine.save(engine.STATE/'selection.json',{'style':'collage'})
             (self.home/'.config/waybar/colors.css').write_text('@define-color primary #ffffff;\n@define-color surface #000000;\n@define-color on_surface #ffffff;')
             self.assertEqual(engine.source_palette(refresh=True),original)
             self.assertEqual(json.loads(raw.read_text()),original)
@@ -238,37 +241,6 @@ class DesktopStylesTests(unittest.TestCase):
                 self.assertEqual(engine.source_palette()['primary'],'#ffccaa')
                 self.assertEqual(invoke.call_count,2)
                 self.assertIn('--dry-run',invoke.call_args.args[0])
-
-    def test_monochrome_background_is_actual_dominant_image_color(self):
-        from PIL import Image
-        self.install_fixture()
-        with patch.dict(os.environ,{'HOME':str(self.home),'DESKTOP_STYLE_NO_TRANSITION':'1'}):
-            engine=self.load_engine();original=engine.source_palette()
-            image=self.home/'wallpaper.png'
-            photo=Image.new('RGB',(32,32),'#d08030')
-            photo.paste('#080808',(0,0,8,8));photo.save(image)
-            folder=self.home/'.cache';folder.mkdir()
-            (folder/'current-wallpaper').write_text(str(image))
-            raw=self.home/'.config/matugen/out/desktop-style-source.json';raw.parent.mkdir(parents=True,exist_ok=True)
-            raw.write_text(json.dumps(original))
-            colors,pair=engine.palette('monochrome',engine.source_palette())
-            self.assertEqual(colors['surface'],'#d08030')
-            self.assertEqual(colors['on_surface'],'#080808')
-            self.assertEqual(set(colors.values()),set(pair))
-            self.assertGreaterEqual(engine.contrast_ratio(*pair),4.5)
-
-    def test_monochrome_gray_wallpaper_does_not_inherit_matugen_blue_seed(self):
-        from PIL import Image
-        self.install_fixture()
-        with patch.dict(os.environ,{'HOME':str(self.home),'DESKTOP_STYLE_NO_TRANSITION':'1'}):
-            engine=self.load_engine();original=engine.source_palette()
-            image=self.home/'gray.png';Image.new('RGB',(16,16),'#303030').save(image)
-            folder=self.home/'.cache';folder.mkdir();(folder/'current-wallpaper').write_text(str(image))
-            raw=self.home/'.config/matugen/out/desktop-style-source.json';raw.parent.mkdir(parents=True,exist_ok=True);raw.write_text(json.dumps(original))
-            colors,pair=engine.palette('monochrome',engine.source_palette())
-            self.assertEqual(colors['surface'],'#303030')
-            self.assertNotEqual(colors['on_surface'],'#ffffff')
-            self.assertGreaterEqual(engine.contrast_ratio(*pair),4.5)
 
     def test_repeated_waybar_reload_emits_close_write_without_replacing_monitor_inode(self):
         import time
@@ -330,6 +302,72 @@ class DesktopStylesTests(unittest.TestCase):
                     finally:
                         Gtk.StyleContext.remove_provider_for_screen(window.get_screen(),provider)
                         window.destroy()
+
+    def test_canvas_conf_updates_snapshot_resets_and_refreshes_in_canvas_mode(self):
+        self.install_fixture()
+        canvas_conf = self.home / '.config/wayfire/canvas.conf'
+        canvas_conf.parent.mkdir(parents=True, exist_ok=True)
+        canvas_conf.write_text(
+            '# User header comment\n'
+            'pan_key_step = 400\n'
+            '# hud_background = \\#2B2930E6\n'
+            'hud_foreground = \\#000000FF\n'
+            '# hud_accent = \\#FFB0CBFF\n'
+            'inactive_alpha = 0.88\n'
+        )
+        original_conf = canvas_conf.read_text()
+        with patch.dict(os.environ, {'HOME': str(self.home), 'DESKTOP_STYLE_NO_TRANSITION': '1'}):
+            engine = self.load_engine()
+            with patch.object(engine, 'update'), patch.object(engine, 'refresh_clients', return_value=[]), \
+                 patch.object(engine, 'preview', return_value={}), patch.object(engine, 'run'):
+                engine.apply('collage')
+                colors, _ = engine.palette('collage', engine.source_palette())
+                updated = canvas_conf.read_text()
+                self.assertIn('# User header comment', updated)
+                self.assertIn('pan_key_step = 400', updated)
+                self.assertIn('inactive_alpha = 0.88', updated)
+                self.assertIn(f'hud_background = \\#{colors["surface_container"][1:]}e6', updated)
+                self.assertIn(f'hud_foreground = \\#{colors["on_surface"][1:]}ff', updated)
+                self.assertIn(f'hud_accent = \\#{colors["primary"][1:]}ff', updated)
+                self.assertIn(f'hud_border_color = \\#{colors["outline_variant"][1:]}66', updated)
+                self.assertIn(f'background_dot_color = \\#{colors["primary"][1:]}44', updated)
+                self.assertIn('hud_border_radius = 0.0', updated)
+                self.assertIn('hud_animation = pop', updated)
+                self.assertIn(str(canvas_conf), engine.read(engine.STATE / 'original.json'))
+                for style_name, radius, anim in (
+                    ('terminal', '0.0', 'fade'),
+                    ('macxp', '4.0', 'pop'),
+                    ('modern', '14.0', 'pop'),
+                    ('dynamic', '32.0', 'pop'),
+                ):
+                    styled = engine.update_canvas_conf(updated, colors, style_name)
+                    self.assertIn('pan_key_step = 400', styled)
+                    self.assertIn(f'hud_border_radius = {radius}', styled)
+                    self.assertIn(f'hud_animation = {anim}', styled)
+                engine.reset()
+                self.assertEqual(canvas_conf.read_text(), original_conf)
+
+            bin_dir = self.home / '.local/bin'
+            bin_dir.mkdir(parents=True, exist_ok=True)
+            raccon_mode = bin_dir / 'raccon-canvas-mode'
+            saved_raccon_mode = raccon_mode.read_bytes() if raccon_mode.exists() else None
+            raccon_mode.unlink(missing_ok=True)
+            wf_mode = bin_dir / 'wf-canvas-mode'
+            wf_mode.write_text('#!/bin/sh\necho canvas\n')
+            wf_mode.chmod(0o755)
+            with patch.object(engine, 'BIN', bin_dir), patch.object(engine, 'run') as invoke, \
+                 patch.object(engine, 'reload_bar_style'):
+                invoke.return_value = subprocess.CompletedProcess([], 0, '', '')
+                engine.refresh_clients()
+                self.assertEqual(invoke.call_args_list[-1].args[0], [bin_dir / 'wf-canvas-mode', 'refresh'])
+
+            raccon_mode.write_bytes(saved_raccon_mode) if saved_raccon_mode else raccon_mode.write_text('#!/bin/sh\necho canvas\n')
+            raccon_mode.chmod(0o755)
+            with patch.object(engine, 'BIN', bin_dir), patch.object(engine, 'run') as invoke, \
+                 patch.object(engine, 'reload_bar_style'):
+                invoke.return_value = subprocess.CompletedProcess([], 0, '', '')
+                engine.refresh_clients()
+                self.assertEqual(invoke.call_args_list[-1].args[0], [bin_dir / 'raccon-canvas-mode', 'refresh'])
 
 
 if __name__=='__main__':unittest.main()

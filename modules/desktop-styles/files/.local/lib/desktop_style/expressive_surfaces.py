@@ -13,7 +13,7 @@ def decorate(outputs, c, tokens):
     shape = 'border-radius: 32px 12px 32px 12px;'
     outputs['raccon'] += f'''
 .popup .panel.panel, .popup .side-panel.side-panel {{ {shape} background: {bg}; }}
-.popup.style-expressive .title {{ font-size: 28px; font-weight: 800; letter-spacing: -.5px; }}
+.popup.style-dynamic .title {{ font-size: 28px; font-weight: 800; letter-spacing: -.5px; }}
 .popup .side-title {{ font-size: 18px; font-weight: 700; }}
 .popup .search-bar {{ border-radius: 24px; background: {raised}; border-color: {primary}; }}
 .popup .daily-app {{ background: {pc}; border-radius: 24px 8px 24px 8px; }}
@@ -36,20 +36,20 @@ def decorate(outputs, c, tokens):
 .popup .music-button:hover, .popup .music-button:focus {{ background: {secondary}; }}
 .popup .music-button:hover image, .popup .music-button:focus image {{ color: {on_secondary}; }}
 .popup .music-title {{ font-size: 16px; font-weight: 700; }}
-.popup.float-popup.style-expressive .panel.float-card {{ {shape} }}
-.popup.float-popup.style-expressive .float-title {{ font-size: 28px; }}
-.popup.float-popup.style-expressive .session-body {{ border-radius: 28px 8px 28px 8px; background: {sc}; }}
-.popup.float-popup.style-expressive .session-body label {{ color: {osc}; }}
-.popup.float-popup.style-expressive .session-body .session-hint {{ color: {osc}; }}
-.popup.float-popup.style-expressive button.session-tile:hover .session-body,
-.popup.float-popup.style-expressive button.session-tile:focus .session-body,
-.popup.float-popup.style-expressive button.session-tile.armed .session-body {{ background: {pc}; }}
-.popup.float-popup.style-expressive button.session-tile:hover label,
-.popup.float-popup.style-expressive button.session-tile:focus label,
-.popup.float-popup.style-expressive button.session-tile.armed label {{ color: {opc}; }}
-.popup.float-popup.style-expressive button.session-tile.danger.armed .session-body {{ background: {c['error_container']}; }}
-.popup.float-popup.style-expressive button.session-tile.danger.armed label {{ color: {c['on_error_container']}; }}
-.popup.style-expressive.motion:not(.still) button {{ transition: background-color 200ms ease-out, color 200ms ease-out, border-radius 220ms cubic-bezier(.2,.8,.2,1); }}
+.popup.float-popup.style-dynamic .panel.float-card {{ {shape} }}
+.popup.float-popup.style-dynamic .float-title {{ font-size: 28px; }}
+.popup.float-popup.style-dynamic .session-body {{ border-radius: 28px 8px 28px 8px; background: {sc}; }}
+.popup.float-popup.style-dynamic .session-body label {{ color: {osc}; }}
+.popup.float-popup.style-dynamic .session-body .session-hint {{ color: {osc}; }}
+.popup.float-popup.style-dynamic button.session-tile:hover .session-body,
+.popup.float-popup.style-dynamic button.session-tile:focus .session-body,
+.popup.float-popup.style-dynamic button.session-tile.armed .session-body {{ background: {pc}; }}
+.popup.float-popup.style-dynamic button.session-tile:hover label,
+.popup.float-popup.style-dynamic button.session-tile:focus label,
+.popup.float-popup.style-dynamic button.session-tile.armed label {{ color: {opc}; }}
+.popup.float-popup.style-dynamic button.session-tile.danger.armed .session-body {{ background: {c['error_container']}; }}
+.popup.float-popup.style-dynamic button.session-tile.danger.armed label {{ color: {c['on_error_container']}; }}
+.popup.style-dynamic.motion:not(.still) button {{ transition: background-color 200ms ease-out, color 200ms ease-out, border-radius 220ms cubic-bezier(.2,.8,.2,1); }}
 .popup.motion .daily-app:active, .popup.motion .nav-tab:active {{ border-radius: 12px; }}
 .popup.still, .popup.still * {{ transition: none; animation: none; -gtk-icon-transform: none; }}
 '''
@@ -67,16 +67,22 @@ window .style-selector .selector-main, window .style-selector .selector-extra {{
 '''
     if not tokens['continuous']:
         outputs['waybar'] += f'window#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar {{ {shape} }}\n'
+    pr, pg, pb = (int(primary[1:3], 16), int(primary[3:5], 16), int(primary[5:7], 16))
+    hover_tint = f'rgba({pr}, {pg}, {pb}, 0.10)'
     outputs['waybar'] += f'''
-window#waybar #clock {{ background: {primary}; color: {on_primary}; font-weight: 800; border-radius: 24px; }}
-window#waybar #custom-music-open {{ background: {sc}; color: {osc}; border-radius: 18px 6px 18px 6px; }}
-window#waybar #network, window#waybar #wireplumber {{ background: {tc}; color: {otc}; border-radius: 16px; }}
+window#waybar #clock {{ background: {raised}; color: {primary}; font-weight: 800; border: none; border-bottom: 2px solid {primary}; border-radius: 10px 4px 10px 4px; padding: 0 11px; }}
+window#waybar #custom-music-viz:not(.empty),
+window#waybar #custom-music-prev, window#waybar #custom-music-play, window#waybar #custom-music-next {{ background: transparent; color: {fg}; border: none; border-radius: 0px; }}
+window#waybar #custom-music-viz.playing {{ color: {primary}; }}
+window#waybar #custom-music-play {{ color: {primary}; }}
+window#waybar #network, window#waybar #wireplumber {{ background: transparent; color: {fg}; border: none; border-radius: 0px; }}
 window#waybar #taskbar button, window#waybar #taskbar button:hover,
-window#waybar #taskbar button.active {{ min-height: 36px; padding: 4px 7px; border-radius: 22px 8px 22px 8px; }}
-window#waybar #taskbar button:not(:disabled) {{ transition: background-color 180ms ease-out, border-radius 220ms ease-out; }}
-window#waybar #taskbar button:active {{ border-radius: 12px; }}
-window#waybar #taskbar button:focus {{ box-shadow: inset 0 0 0 2px {primary}; }}
-window#waybar #taskbar button.active:focus {{ box-shadow: inset 0 0 0 2px {on_primary}; }}
+window#waybar #taskbar button.active {{ min-height: 36px; padding: 4px 7px; border-radius: 8px; background: transparent; border: none; border-bottom: 1px solid transparent; }}
+window#waybar #taskbar button:hover {{ background: {hover_tint}; }}
+window#waybar #taskbar button.active {{ background: transparent; color: {primary}; border-bottom: 2px solid {primary}; }}
+window#waybar #taskbar button:not(:disabled) {{ transition: background-color 180ms ease-out; }}
+window#waybar #taskbar button:focus {{ box-shadow: inset 0 0 0 1px {primary}; }}
+window#waybar #taskbar button.active:focus {{ box-shadow: inset 0 0 0 1px {primary}; }}
 window#waybar #taskbar.empty {{ background: transparent; border: none; padding: 0; min-height: 0; }}
 '''
     root = '.rw-desktop.wroot.rw-desktop.wroot'

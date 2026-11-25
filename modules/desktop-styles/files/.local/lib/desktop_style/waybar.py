@@ -76,12 +76,13 @@ def compact(text, vertical, saved):
     for key, value in document.data.items():
         if key.startswith('group/') and isinstance(value, dict): changes[(key, 'orientation')] = 'vertical'
     formats = {
-        'clock': {'format': '{:%H\n%M}', 'format-alt': '{:%d\n%b}'},
+        'clock': {'format': '{:%I\n%M}', 'format-alt': '{:%d\n%b}'},
         'wireplumber': {'format': '{icon}'},
         'backlight': {'format': '{icon}', 'tooltip-format': 'Brightness: {percent}%'},
         'network': {'format-wifi': '󰤨'},
         'bluetooth': {'format-connected': '󰂱'},
         'custom/desktop-mode': {'format': '{icon}'},
+        'custom/canvas-mode': {'format': '\ueb0e'},
         'custom/updates': {'format': '󰚰\n{}'},
         'cpu': {'format': '󰻠\n{usage}%'},
         'memory': {'format': '󰍛\n{percentage}%'},

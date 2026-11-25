@@ -146,7 +146,7 @@ static void configure_extras(GtkWidget *window) {
     g_object_get(gtk_widget_get_settings(window),"gtk-enable-animations",&enabled,NULL);
     GdkWindow *surface=gtk_widget_get_window(window);
     GdkMonitor *monitor=surface?gdk_display_get_monitor_at_window(gtk_widget_get_display(window),surface):NULL;
-    if(monitor) { GdkRectangle bounds;gdk_monitor_get_geometry(monitor,&bounds);below=bounds.width<1080;screen_height=bounds.height; }
+    if(monitor) { GdkRectangle bounds;gdk_monitor_get_workarea(monitor,&bounds);below=bounds.width<1040;screen_height=bounds.height; }
     GtkStyleContext *context=gtk_widget_get_style_context(shell?shell:window);
     if(below)gtk_style_context_add_class(context,"extras-below");
     else gtk_style_context_remove_class(context,"extras-below");
@@ -167,6 +167,7 @@ static void configure_extras(GtkWidget *window) {
     if(GTK_IS_SCROLLED_WINDOW(scroll)) {
         gint main_height=0;
         if(below&&main)gtk_widget_get_preferred_height(main,NULL,&main_height);
+        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),GTK_POLICY_NEVER,GTK_POLICY_AUTOMATIC);
         gtk_scrolled_window_set_propagate_natural_height(GTK_SCROLLED_WINDOW(scroll),TRUE);
         gtk_scrolled_window_set_propagate_natural_width(GTK_SCROLLED_WINDOW(scroll),TRUE);
         gtk_scrolled_window_set_max_content_height(GTK_SCROLLED_WINDOW(scroll),MAX(80,screen_height-main_height-24));

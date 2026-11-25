@@ -20,8 +20,8 @@ class ExpressiveCascadeTests(unittest.TestCase):
         from gi.repository import Gtk
         if not Gtk.init_check()[0]:
             self.skipTest('GTK display required for offscreen computed styles')
-        colors, _ = main.palette('expressive', dict(primary='#a097f7', surface='#101010', error='#ffb4ab'))
-        output = appearance.build('expressive', main.PROFILES['expressive'], colors)
+        colors, _ = main.palette('dynamic', dict(primary='#a097f7', surface='#101010', error='#ffb4ab'))
+        output = appearance.build('dynamic', main.PROFILES['dynamic'], colors)
         window = Gtk.OffscreenWindow()
         root = Gtk.Box()
         for name in ('rw-desktop', 'wroot', 'rw-clock'):
@@ -51,8 +51,8 @@ class ExpressiveCascadeTests(unittest.TestCase):
         for surface in ('#101010', '#fafafa'):
             source = dict(primary='#a097f7', secondary='#b6cbee', tertiary='#ebbad0',
                           surface=surface, error='#ffb4ab')
-            colors, _ = main.palette('expressive', source)
-            output = appearance.build('expressive', main.PROFILES['expressive'], colors)
+            colors, _ = main.palette('dynamic', source)
+            output = appearance.build('dynamic', main.PROFILES['dynamic'], colors)
             provider = Gtk.CssProvider()
             provider.load_from_data(output['wlogout'].encode())
             window = Gtk.OffscreenWindow()
@@ -87,8 +87,8 @@ class ExpressiveCascadeTests(unittest.TestCase):
             self.skipTest('GTK display required for offscreen computed styles')
         source = dict(re.findall(r'\$(\w+):\s*(#[\da-fA-F]{6});',
             (ROOT / 'modules/desktop-styles/files/.config/desktop-style/_palette.scss').read_text()))
-        colors, _ = main.palette('expressive', source)
-        output = appearance.build('expressive', main.PROFILES['expressive'], colors)
+        colors, _ = main.palette('dynamic', source)
+        output = appearance.build('dynamic', main.PROFILES['dynamic'], colors)
         palette = ''.join(f'${key}: {value};\n' for key, value in colors.items())
         palette += '$island_background: $surface_container;\n$island_outline: $outline_variant;\n'
         settings = Gtk.Settings.get_default()
@@ -111,7 +111,7 @@ class ExpressiveCascadeTests(unittest.TestCase):
                     provider.load_from_path(str(css))
                     window = Gtk.OffscreenWindow()
                     root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-                    for name in ('popup', 'style-expressive', 'still'):
+                    for name in ('popup', 'style-dynamic', 'still'):
                         root.get_style_context().add_class(name)
                     if popup != 'raccon-menu':
                         root.get_style_context().add_class('float-popup' if popup == 'raccon-float' else 'music-popup')

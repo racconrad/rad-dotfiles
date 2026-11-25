@@ -218,8 +218,12 @@ def capture_styles(home, include_docs=True, missing=None):
         '.local/lib/desktop_style/__init__.py', '.local/lib/desktop_style/main.py',
         '.local/lib/desktop_style/cli.py',
         '.local/lib/desktop_style/appearance.py', '.local/lib/desktop_style/transition.py',
-        '.local/lib/desktop_style/retrofuture.py', '.local/lib/desktop_style/expressive.py',
+        '.local/lib/desktop_style/expressive.py',
         '.local/lib/desktop_style/expressive_surfaces.py', '.local/lib/desktop_style/expressive_preview.py',
+        '.local/lib/desktop_style/collage.py',
+        '.local/lib/desktop_style/collage_surfaces.py', '.local/lib/desktop_style/collage_preview.py',
+        '.local/lib/desktop_style/macxp.py',
+        '.local/lib/desktop_style/macxp_surfaces.py', '.local/lib/desktop_style/macxp_preview.py',
         '.local/lib/desktop_style/selector_input.c',
         '.local/share/applications/desktop-style.desktop',
         '.local/share/fonts/Silkscreen/Silkscreen-Regular.ttf',
@@ -229,7 +233,7 @@ def capture_styles(home, include_docs=True, missing=None):
         '.config/desktop-style/source-colors.json',
         '.config/desktop-style/waybar.json',
     ]
-    for name in ('modern','glass','terminal','monochrome','retro','ascii','retrofuture','expressive'):
+    for name in ('modern','terminal','dynamic','collage','macxp'):
         paths += [f'.config/desktop-style/previews/{name}.svg',
                   f'.config/desktop-style/previews/{name}-colors.svg',
                   f'.config/desktop-style/previews/{name}.png']

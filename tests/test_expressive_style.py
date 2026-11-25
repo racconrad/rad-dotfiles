@@ -21,11 +21,14 @@ def source_colors():
 
 class ExpressiveStyleTests(unittest.TestCase):
     def test_palette_follows_wallpaper_roles_without_mutating_source(self):
+        self.assertNotIn('retrofuture', main.PROFILES)
+        self.assertEqual(main.normalize_style('retrofuture'), 'modern')
+        self.assertEqual(main.normalize_style('expressive'), 'dynamic')
         source = source_colors()
         original = dict(source)
-        first, swatches = main.palette('expressive', source)
+        first, swatches = main.palette('dynamic', source)
         source.update(primary='#ffa060', secondary='#60e0b0', tertiary='#80a0ff')
-        second, _ = main.palette('expressive', source)
+        second, _ = main.palette('dynamic', source)
         for role in ('primary', 'secondary', 'tertiary'):
             self.assertNotEqual(first[role], second[role])
             hue = colorsys.rgb_to_hls(*main.rgb(second[role]))[0]
@@ -43,7 +46,7 @@ class ExpressiveStyleTests(unittest.TestCase):
                 source = source_colors()
                 source.update(surface=surface, primary=seed, secondary=seed, tertiary=seed)
                 original = dict(source)
-                colors, _ = main.palette('expressive', source)
+                colors, _ = main.palette('dynamic', source)
                 self.assertEqual(source, original)
                 self.assertEqual(main.luminance(colors['surface']) < .5, surface == '#101010')
                 if seed in ('#000000', '#ffffff', '#808080'):
@@ -62,8 +65,8 @@ class ExpressiveStyleTests(unittest.TestCase):
         import gi
         gi.require_version('Gtk', '3.0')
         from gi.repository import Gtk
-        colors, _ = main.palette('expressive', source_colors())
-        output = appearance.build('expressive', main.PROFILES['expressive'], colors)
+        colors, _ = main.palette('dynamic', source_colors())
+        output = appearance.build('dynamic', main.PROFILES['dynamic'], colors)
         for key in ('raccon', 'waybar', 'widgets', 'panels', 'selector', 'swaync', 'swayosd',
                     'widget_editor', 'wlogout', 'gtklock'):
             with self.subTest(key=key):
@@ -81,11 +84,11 @@ class ExpressiveStyleTests(unittest.TestCase):
         self.assertFalse(tokens['strict'])
 
     def test_bar_layout_and_position_remain_user_preferences(self):
-        colors, _ = main.palette('expressive', source_colors())
+        colors, _ = main.palette('dynamic', source_colors())
         for position in ('top', 'bottom', 'left', 'right'):
             for continuous in (False, True):
-                profile = dict(main.PROFILES['expressive'], position=position, continuous=continuous)
-                output = appearance.build('expressive', profile, colors)
+                profile = dict(main.PROFILES['dynamic'], position=position, continuous=continuous)
+                output = appearance.build('dynamic', profile, colors)
                 tokens = json.loads(output['tokens'])
                 self.assertEqual(tokens['position'], position)
                 self.assertEqual(tokens['continuous'], continuous)
@@ -95,18 +98,18 @@ class ExpressiveStyleTests(unittest.TestCase):
         shipped = ROOT / 'modules/desktop-styles/files/.config/desktop-style'
         yuck = (shipped / 'eww.yuck').read_text()
         initial = json.loads(json.loads(re.search(r'\(deflisten ui :initial ("(?:[^"\\]|\\.)*")', yuck)[1]))
-        row = initial['catalog']['expressive']
-        self.assertEqual(row['name'], 'Raccon Expressive')
+        row = initial['catalog']['dynamic']
+        self.assertEqual(row['name'], 'Dynamic')
         for extension in ('.png', '.svg', '-colors.svg'):
-            self.assertTrue((shipped / 'previews' / ('expressive' + extension)).is_file())
+            self.assertTrue((shipped / 'previews' / ('dynamic' + extension)).is_file())
         with tempfile.TemporaryDirectory() as directory, patch.object(main, 'CONFIG', Path(directory)):
             main.save(main.CONFIG / 'waybar.json', dict(position='left', layout='continuous'))
-            row = main.preview('expressive', source_colors())
+            row = main.preview('dynamic', source_colors())
             self.assertEqual(Path(row['preview']).read_bytes()[:8], b'\x89PNG\r\n\x1a\n')
-            tree = ET.parse(main.CONFIG / 'previews/expressive.svg')
+            tree = ET.parse(main.CONFIG / 'previews/dynamic.svg')
             self.assertEqual(tree.getroot().attrib['viewBox'], '0 0 440 280')
             from PIL import Image
-            colors, _ = main.palette('expressive', source_colors())
+            colors, _ = main.palette('dynamic', source_colors())
             with Image.open(row['preview']) as image:
                 self.assertEqual(image.convert('RGB').getpixel((24, 225)), tuple(round(v * 255) for v in main.rgb(colors['primary'])))
 

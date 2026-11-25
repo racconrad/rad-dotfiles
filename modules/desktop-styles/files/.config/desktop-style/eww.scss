@@ -55,22 +55,39 @@ $spring: cubic-bezier(.2, .8, .2, 1);
 .style-selector.still, .style-selector.still * { transition: none; animation: none; -gtk-icon-transform: none; }
 .style-selector.reduce-motion.closing, .style-selector.reduce-motion .enter,
 .style-selector.reduce-motion .style-list.enter .theme-choice { opacity: 1; }
-.style-selector .close { min-width: 16px; min-height: 16px; }
-.style-selector .style-option.frame-option { padding: 6px 2px; }
-.style-selector .apply:disabled { opacity: .6; }
+.style-selector button.close {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 5px;
+  border-radius: 99px;
+  background: rgba($surface_container_highest, 0.90);
+  border: 1px solid rgba($outline_variant, 0.55);
+  color: $on_surface;
+  transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out, -gtk-icon-transform 160ms $spring;
+}
+.style-selector button.close image { color: $on_surface; }
+.style-selector button.close:hover {
+  background: $error_container;
+  border-color: $error;
+  color: $on_error_container;
+  -gtk-icon-transform: scale(1.10);
+}
+.style-selector button.close:hover image { color: $on_error_container; }
+.style-selector button.close:active { -gtk-icon-transform: scale(0.92); }
+.style-selector button.style-option { padding: 5px 8px; }
+.style-selector button.style-option.frame-option { padding: 5px 2px; }
+.style-selector button.apply:disabled { opacity: .6; }
 
-.style-selector .theme-choice { min-height: 28px; padding: 6px 10px; border-radius: 8px; }
-.style-selector .theme-choice.selected { background: $primary_container; color: $on_primary_container; border-color: $primary_container; }
+.style-selector button.theme-choice { min-height: 26px; padding: 5px 9px; border-radius: 8px; border: 1px solid transparent; transition: background-color 160ms ease-out, border-color 160ms ease-out, box-shadow 160ms ease-out; }
+.style-selector .theme-choice.selected { background: $primary_container; color: $on_primary_container; border-color: rgba($primary, 0.6); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
 .style-selector .theme-choice.selected label { color: $on_primary_container; }
 .style-selector .theme-choice.selected image { color: $on_primary_container; }
-.style-selector .theme-choice:hover:not(.selected) { background: $surface_container_high; color: $on_surface; border-color: transparent; }
+.style-selector .theme-choice:hover:not(.selected) { background: $surface_container_high; color: $on_surface; border-color: rgba($outline_variant, 0.4); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); }
 .style-selector .theme-choice:hover:not(.selected) label { color: $on_surface; }
 .style-selector .theme-choice:hover:not(.selected) image { color: $on_surface; }
 .style-selector .choice-icon { padding: 0; }
 .style-selector .heading { font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
 .style-selector .style-emblem { padding: 6px; border-radius: 8px; background: $primary_container; color: $on_primary_container; }
-.style-selector button.close { min-width: 28px; min-height: 28px; padding: 4px; border-radius: 8px; }
-.style-selector button.close:hover { background: $surface_container_high; }
 .style-selector button.restore { min-width: 28px; min-height: 28px; padding: 6px 10px; border-radius: 8px; }
 .style-selector button.frame-toggle { min-width: 26px; min-height: 26px; padding: 4px; border-radius: 6px; }
 .style-selector button.apply { min-width: 0; min-height: 0; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; }
@@ -90,9 +107,9 @@ $spring: cubic-bezier(.2, .8, .2, 1);
 .style-selector .bar-picker { padding-top: 4px; }
 .style-selector .bar-picker button { padding: 7px 10px; }
 .style-selector .extra-title { font-size: 15px; font-weight: 600; }
-.style-selector .extra-close { min-width: 18px; min-height: 18px; padding: 6px; }
+.style-selector button.extra-close { min-width: 18px; min-height: 18px; padding: 4px 5px; }
 .style-selector .selector-extra .caption { font-size: 11px; }
-.style-selector .selector-extra .frame-option { padding: 7px; min-width: 22px; min-height: 22px; }
+.style-selector .selector-extra button.frame-option { padding: 5px; min-width: 22px; min-height: 22px; }
 .style-selector.extras-below .selector-extra { margin-left: 0; margin-top: 4px; }
 /* The shell is transparent; only the main card and its attached options draw. */
 window .style-selector.style-shell { background: transparent; border: none; padding: 0; }

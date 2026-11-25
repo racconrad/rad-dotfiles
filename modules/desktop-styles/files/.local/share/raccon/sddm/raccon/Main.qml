@@ -29,23 +29,91 @@ Rectangle {
     readonly property bool compact: height < 760
     readonly property int inset: compact ? 20 : 28
     property bool busy: false
+    property bool entered: false
+    property bool exiting: false
+    property real shakeOffset: 0
     property string message: ""
     property string powerAction: ""
     property date now: new Date()
 
+    function cycleSession(step) {
+        if (busy || session.count <= 1) return;
+        session.currentIndex = (session.currentIndex + step + session.count) % session.count;
+        message = qsTr("Session: %1").arg(session.displayText);
+    }
+
+    function cycleUser() {
+        if (busy || userItems.count <= 1) {
+            username.forceActiveFocus();
+            username.selectAll();
+            return;
+        }
+        const total = userItems.count;
+        let current = -1;
+        for (let i = 0; i < total; i++) {
+            const item = userItems.objectAt(i);
+            if (item && item.name === username.text) {
+                current = i;
+                break;
+            }
+        }
+        const nextItem = userItems.objectAt((current + 1) % total);
+        if (nextItem) {
+            username.text = nextItem.name;
+            message = "";
+            password.forceActiveFocus();
+        }
+    }
+
+    Keys.onPressed: (event) => {
+        if (event.key === Qt.Key_Escape) {
+            if (powerPrompt.opened) { powerPrompt.close(); event.accepted = true; return; }
+            if (users.opened) { users.close(); event.accepted = true; return; }
+            if (session.popup.opened) { session.popup.close(); event.accepted = true; return; }
+            password.clear();
+            message = "";
+            password.forceActiveFocus();
+            event.accepted = true;
+        } else if (event.key === Qt.Key_F1 || ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_Tab) ||
+                   ((event.modifiers & Qt.AltModifier) && event.key === Qt.Key_S)) {
+            cycleSession(1);
+            event.accepted = true;
+        } else if (event.key === Qt.Key_F2 || ((event.modifiers & Qt.AltModifier) && event.key === Qt.Key_U)) {
+            cycleUser();
+            event.accepted = true;
+        } else if ((event.modifiers & Qt.AltModifier) && event.key === Qt.Key_H) {
+            if (!busy) showPassword.toggle();
+            event.accepted = true;
+        } else if ((event.modifiers & Qt.AltModifier) && event.key === Qt.Key_R) {
+            if (!busy && sddm.canReboot) confirmPower("restart");
+            event.accepted = true;
+        } else if ((event.modifiers & Qt.AltModifier) && event.key === Qt.Key_P) {
+            if (!busy && sddm.canPowerOff) confirmPower("shutdown");
+            event.accepted = true;
+        }
+    }
+
     FontLoader { id: bundledFont; source: cfg("fontFile", "") }
     Image {
+        id: wallpaperImage
         anchors.fill: parent
         source: root.cfg("wallpaper", "")
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
         visible: status === Image.Ready
+        opacity: root.exiting ? 0.45 : (root.entered ? 1.0 : 0.0)
+        Behavior on opacity { enabled: root.motion; NumberAnimation { duration: 320; easing.type: Easing.OutCubic } }
     }
     Rectangle {
         anchors.fill: parent
-        color: root.color
-        opacity: Number(root.cfg("dim", "0.24"))
         visible: root.cfg("wallpaper", "") !== ""
+        opacity: root.exiting ? 0.72 : 1.0
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Qt.rgba(root.color.r, root.color.g, root.color.b, 0.34) }
+            GradientStop { position: 0.55; color: Qt.rgba(root.color.r, root.color.g, root.color.b, 0.52) }
+            GradientStop { position: 1.0; color: Qt.rgba(root.color.r, root.color.g, root.color.b, 0.72) }
+        }
+        Behavior on opacity { enabled: root.motion; NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
     }
 
     component Label: Text {
@@ -68,13 +136,18 @@ Rectangle {
         icon.color: primary || hovered || down ? root.onAccent : root.foreground
         palette.buttonText: primary || hovered || down ? root.onAccent : root.foreground
         opacity: enabled ? 1 : 0.45
+        scale: down ? 0.985 : (hovered ? 1.012 : 1.0)
+        Behavior on scale { enabled: root.motion; NumberAnimation { duration: 110; easing.type: Easing.OutQuad } }
         onActiveFocusChanged: if (activeFocus) viewport.ensureVisible(action)
+        Keys.onReturnPressed: if (enabled) clicked()
+        Keys.onEnterPressed: if (enabled) clicked()
         background: Rectangle {
             radius: Math.min(root.corner, 10)
             color: action.primary || action.hovered || action.down ? root.accent : "transparent"
             border.width: action.visualFocus ? 2 : (action.primary ? 0 : root.edge)
             border.color: action.visualFocus ? root.accent : root.outline
             Behavior on color { enabled: root.motion; ColorAnimation { duration: 110 } }
+            Behavior on border.color { enabled: root.motion; ColorAnimation { duration: 110 } }
         }
     }
     component Field: Controls.TextField {
@@ -104,7 +177,13 @@ Rectangle {
         y: Math.max(24, card.y - height - 32)
         spacing: 4
         visible: root.height > 850 && !root.narrow
-        Label { text: Qt.formatTime(root.now, "hh:mm"); font.pixelSize: 42; font.weight: Font.Medium }
+        opacity: root.exiting ? 0.0 : (root.entered ? 1.0 : 0.0)
+        transform: Translate {
+            y: root.exiting ? -14 : (root.entered ? 0 : 18)
+            Behavior on y { enabled: root.motion; NumberAnimation { duration: root.exiting ? 220 : 360; easing.type: root.exiting ? Easing.InCubic : Easing.OutCubic } }
+        }
+        Behavior on opacity { enabled: root.motion; NumberAnimation { duration: root.exiting ? 200 : 340; easing.type: root.exiting ? Easing.InCubic : Easing.OutCubic } }
+        Label { text: Qt.formatTime(root.now, "h:mm ap").toUpperCase(); font.pixelSize: 44; font.weight: Font.DemiBold }
         Label { text: Qt.formatDate(root.now, "dddd, d MMMM"); color: root.muted; font.pixelSize: 15 }
     }
     Timer { interval: 10000; running: true; repeat: true; onTriggered: root.now = new Date() }
@@ -133,6 +212,24 @@ Rectangle {
             radius: root.corner
             border.width: root.edge
             border.color: root.outline
+            opacity: root.exiting ? 0.0 : (root.entered ? 1.0 : 0.0)
+            scale: root.exiting ? 0.96 : (root.entered ? 1.0 : 0.96)
+            transform: Translate {
+                x: root.shakeOffset
+                y: root.exiting ? -18 : (root.entered ? 0 : 24)
+                Behavior on y { enabled: root.motion; NumberAnimation { duration: root.exiting ? 220 : 340; easing.type: root.exiting ? Easing.InCubic : Easing.OutCubic } }
+            }
+            Behavior on opacity { enabled: root.motion; NumberAnimation { duration: root.exiting ? 220 : 320; easing.type: root.exiting ? Easing.InCubic : Easing.OutCubic } }
+            Behavior on scale { enabled: root.motion; NumberAnimation { duration: root.exiting ? 220 : 340; easing.type: root.exiting ? Easing.InCubic : Easing.OutCubic } }
+
+            SequentialAnimation {
+                id: failShake
+                NumberAnimation { target: root; property: "shakeOffset"; to: -8; duration: 45; easing.type: Easing.OutQuad }
+                NumberAnimation { target: root; property: "shakeOffset"; to: 8; duration: 60; easing.type: Easing.InOutQuad }
+                NumberAnimation { target: root; property: "shakeOffset"; to: -5; duration: 55; easing.type: Easing.InOutQuad }
+                NumberAnimation { target: root; property: "shakeOffset"; to: 4; duration: 50; easing.type: Easing.InOutQuad }
+                NumberAnimation { target: root; property: "shakeOffset"; to: 0; duration: 50; easing.type: Easing.OutQuad }
+            }
 
             ColumnLayout {
                 id: form
@@ -170,6 +267,8 @@ Rectangle {
                         placeholderText: qsTr("Username")
                         enabled: !root.busy
                         Accessible.name: qsTr("Username")
+                        KeyNavigation.tab: chooseUser.visible ? chooseUser : password
+                        KeyNavigation.backtab: shutdownBtn
                         onAccepted: password.forceActiveFocus()
                     }
                     Action {
@@ -180,12 +279,21 @@ Rectangle {
                         visible: userItems.count > 0
                         enabled: !root.busy
                         Accessible.name: qsTr("Choose user")
+                        KeyNavigation.tab: password
+                        KeyNavigation.backtab: username
                         onClicked: users.open()
                         Controls.Menu {
                             id: users
                             y: parent.height + 4
                             width: Math.min(300, card.width - 56)
                             padding: 6
+                            enter: Transition {
+                                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: root.motion ? 150 : 0 }
+                                NumberAnimation { property: "scale"; from: 0.96; to: 1; duration: root.motion ? 150 : 0; easing.type: Easing.OutCubic }
+                            }
+                            exit: Transition {
+                                NumberAnimation { property: "opacity"; from: 1; to: 0; duration: root.motion ? 110 : 0 }
+                            }
                             background: Rectangle { color: root.field; radius: Math.min(root.corner, 10); border.width: 1; border.color: root.outline }
                             Instantiator {
                                 id: userItems
@@ -218,6 +326,8 @@ Rectangle {
                         placeholderText: qsTr("Enter your password")
                         enabled: !root.busy
                         Accessible.name: qsTr("Password")
+                        KeyNavigation.tab: showPassword
+                        KeyNavigation.backtab: chooseUser.visible ? chooseUser : username
                         onAccepted: root.login()
                         onTextEdited: root.message = ""
                     }
@@ -229,6 +339,8 @@ Rectangle {
                         implicitHeight: 48
                         enabled: !root.busy
                         Accessible.name: checked ? qsTr("Hide password") : qsTr("Show password")
+                        KeyNavigation.tab: session
+                        KeyNavigation.backtab: password
                     }
                 }
                 Label { text: qsTr("Session"); Layout.topMargin: root.compact ? 12 : 16; Layout.bottomMargin: 8 }
@@ -246,6 +358,8 @@ Rectangle {
                     font.family: root.family
                     font.pixelSize: 14
                     Accessible.name: qsTr("Desktop session")
+                    KeyNavigation.tab: signIn
+                    KeyNavigation.backtab: showPassword
                     onActiveFocusChanged: if (activeFocus) viewport.ensureVisible(session)
                     contentItem: Label { text: session.count ? session.displayText : qsTr("No sessions installed"); verticalAlignment: Text.AlignVCenter }
                     indicator: Image { x: session.width - width - 14; y: (session.height - height) / 2; width: 14; height: 14; source: "icons/down.svg" }
@@ -269,6 +383,13 @@ Rectangle {
                         width: session.width
                         padding: 6
                         implicitHeight: Math.min(contentItem.implicitHeight + 12, 240)
+                        enter: Transition {
+                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: root.motion ? 150 : 0 }
+                            NumberAnimation { property: "scale"; from: 0.96; to: 1; duration: root.motion ? 150 : 0; easing.type: Easing.OutCubic }
+                        }
+                        exit: Transition {
+                            NumberAnimation { property: "opacity"; from: 1; to: 0; duration: root.motion ? 110 : 0 }
+                        }
                         contentItem: ListView { clip: true; implicitHeight: contentHeight; model: session.popup.visible ? session.delegateModel : null; currentIndex: session.highlightedIndex; boundsBehavior: Flickable.StopAtBounds; Controls.ScrollBar.vertical: Controls.ScrollBar {} }
                         background: Rectangle { color: root.field; radius: Math.min(root.corner, 10); border.width: 1; border.color: root.outline }
                     }
@@ -294,6 +415,8 @@ Rectangle {
                     text: root.busy ? qsTr("Signing in…") : qsTr("Sign in")
                     icon.source: "icons/next.svg"
                     enabled: !root.busy && username.text.trim().length > 0 && session.currentIndex >= 0
+                    KeyNavigation.tab: restartBtn
+                    KeyNavigation.backtab: session
                     onClicked: root.login()
                 }
                 RowLayout {
@@ -301,19 +424,34 @@ Rectangle {
                     Layout.topMargin: root.compact ? 12 : 18
                     spacing: 8
                     Action {
+                        id: restartBtn
                         Layout.fillWidth: true
                         icon.source: "icons/reboot.svg"
                         text: qsTr("Restart")
                         enabled: !root.busy && sddm.canReboot
+                        KeyNavigation.tab: shutdownBtn
+                        KeyNavigation.backtab: signIn
                         onClicked: root.confirmPower("restart")
                     }
                     Action {
+                        id: shutdownBtn
                         Layout.fillWidth: true
                         icon.source: "icons/shutdown.svg"
                         text: qsTr("Shut down")
                         enabled: !root.busy && sddm.canPowerOff
+                        KeyNavigation.tab: username
+                        KeyNavigation.backtab: restartBtn
                         onClicked: root.confirmPower("shutdown")
                     }
+                }
+                Label {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 10
+                    text: qsTr("Tab: navigate · Alt+S: session · Alt+R/P: power · Esc: reset")
+                    color: root.muted
+                    font.pixelSize: 11
+                    opacity: 0.72
+                    horizontalAlignment: Text.AlignHCenter
                 }
             }
         }
@@ -328,6 +466,16 @@ Rectangle {
         modal: true
         focus: true
         closePolicy: Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
+        enter: Transition {
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: root.motion ? 170 : 0 }
+            NumberAnimation { property: "scale"; from: 0.94; to: 1; duration: root.motion ? 180 : 0; easing.type: Easing.OutCubic }
+        }
+        exit: Transition {
+            NumberAnimation { property: "opacity"; from: 1; to: 0; duration: root.motion ? 130 : 0 }
+            NumberAnimation { property: "scale"; from: 1; to: 0.96; duration: root.motion ? 130 : 0; easing.type: Easing.InCubic }
+        }
+        onOpened: powerCancelBtn.forceActiveFocus()
+        onClosed: password.forceActiveFocus()
         background: Rectangle { color: root.surface; radius: root.corner; border.width: 1; border.color: root.outline }
         Controls.Overlay.modal: Rectangle { color: "#99000000" }
         contentItem: ColumnLayout {
@@ -335,17 +483,37 @@ Rectangle {
             Label { text: root.powerAction === "restart" ? qsTr("Restart the computer?") : qsTr("Shut down the computer?"); font.pixelSize: 18; wrapMode: Text.WordWrap; Layout.fillWidth: true }
             RowLayout {
                 spacing: 8
-                Action { text: qsTr("Cancel"); Layout.fillWidth: true; onClicked: powerPrompt.close() }
                 Action {
+                    id: powerCancelBtn
+                    text: qsTr("Cancel")
+                    Layout.fillWidth: true
+                    KeyNavigation.right: powerConfirmBtn
+                    KeyNavigation.tab: powerConfirmBtn
+                    onClicked: powerPrompt.close()
+                }
+                Action {
+                    id: powerConfirmBtn
                     primary: true
                     text: root.powerAction === "restart" ? qsTr("Restart") : qsTr("Shut down")
                     Layout.fillWidth: true
+                    KeyNavigation.left: powerCancelBtn
+                    KeyNavigation.backtab: powerCancelBtn
                     onClicked: {
                         powerPrompt.close();
-                        if (root.powerAction === "restart") sddm.reboot(); else sddm.powerOff();
+                        root.exiting = true;
+                        powerExitTimer.restart();
                     }
                 }
             }
+        }
+    }
+    Timer {
+        id: powerExitTimer
+        interval: root.motion ? 190 : 0
+        repeat: false
+        onTriggered: {
+            if (root.powerAction === "restart") sddm.reboot();
+            else sddm.powerOff();
         }
     }
     function confirmPower(action) { powerAction = action; powerPrompt.open(); }
@@ -361,13 +529,18 @@ Rectangle {
         function onLoginFailed() {
             root.busy = false;
             root.message = qsTr("Sign-in failed. Check your user and password.");
+            if (root.motion) failShake.restart();
             password.clear();
             password.forceActiveFocus();
         }
-        function onLoginSucceeded() { password.clear(); }
+        function onLoginSucceeded() {
+            password.clear();
+            root.exiting = true;
+        }
     }
     Component.onCompleted: {
         if (session.currentIndex < 0 && session.count > 0) session.currentIndex = 0;
+        entered = true;
         if (username.text) password.forceActiveFocus(); else username.forceActiveFocus();
     }
 }
