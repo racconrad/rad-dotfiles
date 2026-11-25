@@ -1,0 +1,16 @@
+[package]
+name = "hypr-canvas"
+version = "0.1.0"
+edition = "2021"
+description = "Infinite canvas for Hyprland: pans floating windows over the IPC socket, idle at zero CPU"
+license = "MIT"
+
+[dependencies]
+libc = "0.2"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
