@@ -13,6 +13,8 @@ Enable **tinyWidgets** on the Features page to open its own page. Get the source
 | GitHub | Activity and avatar | GitHub CLI (`gh auth login`), ImageMagick |
 | Minecraft | Animated scene | `python-pillow` |
 
+Global Quickshell animations can be toggled via `~/.config/raccon/config.json` with `{"animations": true|false}` (defaults to `true`).
+
 ## Layouts
 
 **Personal**, **Trabajo**, **Gaming**, **Dashboard**, **Cyberpunk** and **silly**. Choose which to install and which is active. **Keep** preserves an existing `instances.json`; a new install starts with Trabajo.
