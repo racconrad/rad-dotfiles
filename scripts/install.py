@@ -801,7 +801,7 @@ def welcome(args):
     return input('Press Enter to select components, or q to quit: ').strip().lower() != 'q'
 
 
-FEATURES = ['wayfire', 'waybar', 'desktop', 'power', 'themes', 'wallpaper', 'audio', 'chat-theme', 'tinywidgets', 'desktop-styles']
+FEATURES = ['wayfire', 'waybar', 'desktop', 'power', 'themes', 'wallpaper', 'audio', 'chat-theme', 'tinywidgets', 'desktop-styles', 'hyprland', 'quickshell']
 APPS = ['terminal', 'shell', 'launcher', 'notifications', 'lock', 'browser', 'filemanager', 'tools', 'git', 'nvim', 'vscode', 'ai']
 GROUP_LABELS = {'terminal': 'Terminal application', 'shell': 'Shell and prompt',
                 'launcher': 'Application launcher', 'notifications': 'Notifications', 'lock': 'Screen locker',

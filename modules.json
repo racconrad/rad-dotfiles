@@ -530,6 +530,27 @@
         "python-pillow"
       ],
       "description": "Default, Transparent, Classic, Mono, Retro and Night; cached previews, shared wallpaper colors and optional integration with an installed tinyWidgets runtime."
+    },
+    "quickshell": {
+      "label": "Quickshell desktop interface and widgets",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "quickshell"
+      ],
+      "description": "Modern desktop bar, app menu, and widgets built with Quickshell (QML)."
+    },
+    "hyprland": {
+      "label": "Hyprland Wayland compositor configuration",
+      "requires": [
+        "base"
+      ],
+      "packages": [
+        "hyprland",
+        "hypridle"
+      ],
+      "description": "Dynamic tiling Wayland compositor configured with Lua, hypridle, and custom bindings."
     }
   },
   "optional_packages": {
