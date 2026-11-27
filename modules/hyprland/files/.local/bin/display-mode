@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""Select a Hyprland projection mode with fuzzel or a command-line argument."""
+import argparse
+import json
+import os
+from pathlib import Path
+import subprocess
+from tempfile import NamedTemporaryFile
+
+MODES = {
+    'laptop': 'Solo laptop',
+    'mirror': 'Duplicar',
+    'extend-right': 'Extender a la derecha',
+    'extend-left': 'Extender a la izquierda',
+    'external': 'Solo pantalla externa',
+}
+
+
+def notify(title, body=''):
+    try:
+        subprocess.run(['notify-send', '-a', 'Pantallas', '-i', 'video-display', title, body],
+                       stderr=subprocess.DEVNULL, timeout=3)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+def monitor_rule(name, *, position='0x0', scale=1, mirror='', disabled=False):
+    return (f'hl.monitor({{output={json.dumps(name)}, position="{position}", '
+            f'scale={json.dumps(scale)}, mirror={json.dumps(mirror)}, disabled={str(disabled).lower()}}})')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--restore', action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('mode', nargs='?', choices=MODES)
+    args = parser.parse_args()
+    state = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'raccon/display-mode'
+    mode = args.mode
+    if args.restore:
+        try:
+            mode = state.read_text().strip()
+        except FileNotFoundError:
+            return 0
+        if mode not in MODES:
+            return 0
+    outputs = json.loads(subprocess.check_output(['hyprctl', '-j', 'monitors', 'all'], timeout=3))
+    names = [output['name'] for output in outputs if output['name'] != 'FALLBACK']
+    internal = next((name for name in names if name.startswith(('eDP', 'LVDS', 'DSI'))), None)
+    external = next((name for name in names if name != internal), None)
+    if not internal or not external:
+        if mode is None:
+            notify('Se necesitan dos pantallas', 'Conecta un monitor o proyector')
+        if not internal or (not args.restore and mode not in (None, 'laptop')):
+            return 0 if args.restore or mode is None else 1
+        mode = 'laptop'
+    elif mode is None:
+        selection = subprocess.run(['fuzzel', '--dmenu', '--index', '--prompt', f'Proyectar ({external}): ',
+                                    '--lines', '5', '--width', '34'], input='\n'.join(MODES.values()) + '\n',
+                                   capture_output=True, text=True)
+        if selection.returncode:
+            return 0
+        mode = list(MODES)[int(selection.stdout)]
+    internal_scale = next((output.get('scale', 1) for output in outputs if output.get('name') == internal), 1)
+    rules = [monitor_rule(internal, scale=internal_scale, disabled=mode == 'external')]
+    if external:
+        position = {'extend-right': 'auto-right', 'extend-left': 'auto-left'}.get(mode, '0x0')
+        rules.append(monitor_rule(external, position=position, scale=1,
+                                  mirror=internal if mode == 'mirror' else '', disabled=mode == 'laptop'))
+    reply = subprocess.check_output(['hyprctl', 'eval', '; '.join(rules)], text=True, timeout=3).strip()
+    if reply != 'ok':
+        raise SystemExit(reply)
+    if not args.restore:
+        state.parent.mkdir(parents=True, exist_ok=True)
+        with NamedTemporaryFile(mode='w', dir=state.parent, delete=False) as temporary:
+            temporary.write(mode + '\n')
+        Path(temporary.name).replace(state)
+        notify(MODES[mode], '' if mode == 'laptop' else external)
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        raise SystemExit(main())
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        raise SystemExit(f'display-mode: {error}') from None

@@ -26,3 +26,14 @@ hl.bind(mod .. " + ALT + mouse:272", canvas("drag-start pan"),  { non_consuming 
 hl.bind(mod .. " + ALT + mouse:272", canvas("drag-end"),        { release = true, non_consuming = true })
 hl.bind(mod .. " + mouse:272",       canvas("drag-start edge"), { non_consuming = true })
 hl.bind(mod .. " + mouse:272",       canvas("drag-end"),        { release = true, non_consuming = true })
+
+-- Natural scroll: content follows the fingers, so the camera pans against the scroll direction
+-- (scroll events are already inverted by libinput when natural_scroll is on).
+for _, ev in ipairs({ { "mouse_up", "up" }, { "mouse_down", "down" }, { "mouse_left", "left" }, { "mouse_right", "right" } }) do
+    hl.bind(mod .. " + ALT + " .. ev[1], canvas("pan " .. ev[2] .. " 80"))
+end
+
+-- Zoom needs the hypr-canvas plugin (hl.plugin.canvas); without it the daemon reports an error and pan/move keep working.
+hl.bind(mod .. " + equal", canvas("zoom in"))
+hl.bind(mod .. " + minus", canvas("zoom out"))
+hl.bind(mod .. " + 0",     canvas("zoom reset"))

@@ -11,6 +11,14 @@ hl.window_rule({
     no_focus = true,
 })
 
+-- hypr-canvas only moves floating windows, so every window floats.
+hl.window_rule({
+    name  = "float-all-for-canvas",
+    match = { class = ".*" },
+    float = true,
+})
+
+-- Kept explicit so utilities stay floating if the catch-all above is ever removed.
 hl.window_rule({
     name  = "float-utilities",
     match = { class = "^(org\\.pulseaudio\\.pavucontrol|pavucontrol|nm-connection-editor|blueman-manager|org\\.kde\\.polkit-kde-authentication-agent-1)$" },
@@ -26,7 +34,7 @@ hl.window_rule({
 -- Bar, notifications and OSD blur like windows do.
 hl.layer_rule({
     name  = "blur-shell-layers",
-    match = { namespace = "^(waybar|swaync-control-center|swaync-notification-window|swayosd)$" },
+    match = { namespace = "^(swaync-control-center|swaync-notification-window|swayosd)$" },
     blur  = true,
     ignore_alpha = 0.3,
 })

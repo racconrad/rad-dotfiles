@@ -7,5 +7,5 @@ return {
     search   = "fuzzel",
     lock     = "~/.local/bin/lock",
     session  = "~/.local/bin/raccon-float session",
-    shot     = "~/.local/bin/screenshot",
+    shot     = "~/.local/bin/raccon-capture",
 }
