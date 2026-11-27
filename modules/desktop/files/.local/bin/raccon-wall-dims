@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+"""Print {"<path>": [width, height]} for the media paths read from stdin, one per line.
+
+Sizes are cached by path and mtime in ~/.cache/raccon-float/dims.json, so only new files are probed.
+"""
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+VIDEO = ('.mp4', '.webm', '.mkv', '.mov', '.gif')
+cache_file = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'raccon-float' / 'dims.json'
+
+
+def probe(path):
+    if path.lower().endswith(VIDEO):
+        out = subprocess.run(
+            ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height:stream_side_data=rotation',
+             '-of', 'json', path], capture_output=True, text=True, timeout=15).stdout
+        stream = json.loads(out)['streams'][0]
+        width, height = stream['width'], stream['height']
+        rotation = abs(int((stream.get('side_data_list') or [{}])[0].get('rotation', 0)))
+        return [height, width] if rotation in (90, 270) else [width, height]
+    from PIL import Image
+    with Image.open(path) as img:
+        width, height = img.size
+        # EXIF orientations 5-8 swap the axes.
+        if (img.getexif().get(274) or 1) in (5, 6, 7, 8):
+            width, height = height, width
+        return [width, height]
+
+
+try:
+    cache = json.loads(cache_file.read_text())
+except (OSError, ValueError):
+    cache = {}
+
+result, dirty = {}, False
+for line in sys.stdin:
+    path = line.strip()
+    if not path:
+        continue
+    try:
+        stamp = os.stat(path).st_mtime_ns
+    except OSError:
+        continue
+    hit = cache.get(path)
+    if hit and hit[0] == stamp:
+        result[path] = hit[1:]
+        continue
+    try:
+        size = probe(path)
+    except Exception:
+        continue
+    cache[path] = [stamp, *size]
+    result[path] = size
+    dirty = True
+
+if dirty:
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(json.dumps(cache))
+print(json.dumps(result))

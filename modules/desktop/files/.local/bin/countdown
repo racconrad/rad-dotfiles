@@ -10,4 +10,5 @@ REPO_COUNTDOWN="$SCRIPT_DIR/../../../../../crates/raccon/target/release/countdow
 if [ -x "$REPO_COUNTDOWN" ]; then
     exec "$REPO_COUNTDOWN" "$@"
 fi
-exec python3 "$HOME/.local/lib/raccon_countdown/cli.py" "$@"
+echo "countdown: raccon binary not found" >&2
+exit 127
