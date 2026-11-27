@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+# Screenshots and screen recordings.
+#   raccon-capture shot area|window|screen|edit
+#   raccon-capture rec area|screen [--audio]
+#   raccon-capture rec stop|toggle
+#   raccon-capture status          idle | recording <seconds>
+#   raccon-capture recent [count]  newest captures, one path per line
+#   raccon-capture thumb <video>   cached first frame of a recording
+#   raccon-capture folder [shots|videos]  open a capture folder (newest by default)
+set -euo pipefail
+
+pics="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
+vids="${XDG_VIDEOS_DIR:-$HOME/Videos}/Recordings"
+state="${XDG_RUNTIME_DIR:-/tmp}/raccon-capture.rec"
+stamp() { date +%Y%m%d-%H%M%S; }
+notify() { notify-send -a capture "$@" 2>/dev/null || true; }
+
+# Visible windows of the focused workspace, as slurp regions.
+window_regions() {
+  hyprctl clients -j | jq -r --argjson ws "$(hyprctl activeworkspace -j | jq .id)" \
+    '.[] | select(.workspace.id == $ws and .mapped and (.hidden | not)) | "\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"'
+}
+
+pick() {
+  case "$1" in
+    window) window_regions | slurp -r -b '#00000066' -c '#ffffffcc' -w 2 ;;
+    *) slurp -d -b '#00000066' -c '#ffffffcc' -w 2 ;;
+  esac
+}
+
+shot() {
+  mkdir -p -- "$pics"
+  local file="$pics/screenshot-$(stamp).png" geom
+  case "$1" in
+    screen) grim "$file" ;;
+    area|window|edit)
+      geom="$(pick "${1/edit/area}")" || exit 0
+      [ -n "$geom" ] || exit 0
+      grim -g "$geom" "$file"
+      [ "$1" = edit ] && { swappy -f "$file" -o "$file"; }
+      ;;
+    *) echo "unknown shot mode: $1" >&2; exit 1 ;;
+  esac
+  wl-copy --type image/png < "$file" || true
+  # The shell shows the preview card; fall back to a notification when it is not running.
+  preview close
+  preview open || notify -i "$file" "Screenshot saved" "$(basename -- "$file")"
+}
+
+# State line: pid, start epoch, file, region (empty for the whole screen), tab separated.
+recording_pid() {
+  [ -f "$state" ] || return 1
+  local pid
+  IFS=$'\t' read -r pid _ < "$state"
+  kill -0 "$pid" 2>/dev/null && echo "$pid" || { rm -f -- "$state"; return 1; }
+}
+
+# The recording indicator and the preview card live in the shell; a missing shell is not an error.
+frame() { qs -c raccon ipc call raccon "$1" captureframe >/dev/null 2>&1 || true; }
+preview() { qs -c raccon ipc call raccon "$1" capturepreview >/dev/null 2>&1; }
+
+rec_start() {
+  recording_pid >/dev/null && { echo "already recording" >&2; exit 1; }
+  mkdir -p -- "$vids"
+  local mode="$1" file="$vids/recording-$(stamp).mp4" args=() geom=""
+  shift
+  [ "${1:-}" = "--audio" ] && args+=(--audio)
+  if [ "$mode" = area ]; then
+    geom="$(pick area)" || exit 0
+    [ -n "$geom" ] || exit 0
+    args+=(-g "$geom")
+  fi
+  setsid wf-recorder "${args[@]}" -f "$file" >/dev/null 2>&1 &
+  printf '%s\t%s\t%s\t%s\n' "$!" "$(date +%s)" "$file" "$geom" > "$state"
+  frame open
+  notify "Recording started" "$(basename -- "$file")"
+}
+
+rec_stop() {
+  local pid file
+  pid="$(recording_pid)" || { echo "not recording" >&2; exit 1; }
+  IFS=$'\t' read -r _ _ file _ < "$state"
+  rm -f -- "$state"
+  frame close
+  kill -INT "$pid"
+  while kill -0 "$pid" 2>/dev/null; do sleep 0.1; done
+  preview close
+  preview open || notify "Recording saved" "$(basename -- "$file")"
+}
+
+# First frame of a recording, cached, for the preview card.
+thumb() {
+  local out="${XDG_CACHE_HOME:-$HOME/.cache}/raccon-capture/$(basename -- "$1").jpg"
+  mkdir -p -- "$(dirname -- "$out")"
+  [ -f "$out" ] || ffmpeg -nostdin -loglevel error -y -ss 0.5 -i "$1" -frames:v 1 -vf scale=464:-1 "$out" 2>/dev/null \
+    || ffmpeg -nostdin -loglevel error -y -i "$1" -frames:v 1 -vf scale=464:-1 "$out"
+  echo "$out"
+}
+
+# Open a capture folder: the newest capture's by default, or shots / videos.
+folder() {
+  local dir
+  case "${1:-}" in
+    shots) dir="$pics" ;;
+    videos) dir="$vids" ;;
+    *) dir="$(dirname -- "$(ls -t "$pics"/*.png "$vids"/*.mp4 2>/dev/null | head -n 1)")" ;;
+  esac
+  mkdir -p -- "$dir"
+  xdg-open "$dir"
+}
+
+case "${1:-}" in
+  shot) shot "${2:?usage: raccon-capture shot area|window|screen|edit}" ;;
+  rec)
+    case "${2:-}" in
+      area|screen) rec_start "$2" "${@:3}" ;;
+      stop) rec_stop ;;
+      toggle) if recording_pid >/dev/null; then rec_stop; else rec_start screen; fi ;;
+      *) echo "usage: raccon-capture rec area|screen|stop|toggle" >&2; exit 1 ;;
+    esac
+    ;;
+  status)
+    if recording_pid >/dev/null; then
+      IFS=$'\t' read -r _ started _ geom < "$state"
+      echo "recording $(( $(date +%s) - started )) $geom"
+    else
+      echo idle
+    fi
+    ;;
+  thumb) thumb "${2:?usage: raccon-capture thumb <video>}" ;;
+  folder) folder "${2:-}" ;;
+  recent)
+    shopt -s nullglob
+    ls -t "$pics"/*.png "$vids"/*.mp4 2>/dev/null | head -n "${2:-4}"
+    ;;
+  *) echo "usage: raccon-capture shot|rec|status|recent|thumb|folder" >&2; exit 1 ;;
+esac

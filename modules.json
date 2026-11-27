@@ -120,6 +120,8 @@
         "cliphist",
         "grim",
         "slurp",
+        "wf-recorder",
+        "jq",
         "swappy",
         "rofi",
         "swayosd",
