@@ -14,7 +14,7 @@ CACHE_DIR = Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache'))
 CACHE_FILE = CACHE_DIR / 'raccon-updates-cache.json'
 LOCK_FILE = CACHE_DIR / 'raccon-updates.lock'
 CACHE_TTL = 7200  # 2 hours cache validity
-RACCON_ICON = Path.home() / '.config/waybar/icons/raccoon-symbolic.svg'
+RACCON_ICON = Path.home() / '.config/raccon/icons/raccoon-symbolic.svg'
 
 
 def detect_aur_helper():
@@ -93,7 +93,7 @@ def load_cache():
     return None
 
 
-def save_cache(official, aur, flatpaks, waybar_payload):
+def save_cache(official, aur, flatpaks, status_payload):
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     tmp = CACHE_FILE.with_suffix('.tmp')
     data = {
@@ -102,7 +102,7 @@ def save_cache(official, aur, flatpaks, waybar_payload):
         'aur': aur,
         'flatpaks': flatpaks,
         'total': len(official) + len(aur) + len(flatpaks),
-        'waybar_payload': waybar_payload
+        'status_payload': status_payload
     }
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
     tmp.replace(CACHE_FILE)
@@ -187,8 +187,8 @@ def fetch_updates_payload():
 def cmd_check(force=False):
     if not force:
         cached = load_cache()
-        if cached and 'waybar_payload' in cached:
-            print(json.dumps(cached['waybar_payload'], ensure_ascii=False))
+        if cached and 'status_payload' in cached:
+            print(json.dumps(cached['status_payload'], ensure_ascii=False))
             return
 
     # Non-blocking lock to avoid duplicate concurrent checks
@@ -202,7 +202,7 @@ def cmd_check(force=False):
         if CACHE_FILE.exists():
             try:
                 cached = json.loads(CACHE_FILE.read_text())
-                print(json.dumps(cached.get('waybar_payload', {}), ensure_ascii=False))
+                print(json.dumps(cached.get('status_payload', {}), ensure_ascii=False))
                 return
             except Exception:
                 pass
@@ -234,10 +234,6 @@ def notify(title, message, urgency='normal'):
         title,
         message
     ], check=False)
-
-
-def refresh_waybar():
-    subprocess.run(['pkill', '-SIGRTMIN+8', 'waybar'], check=False)
 
 
 def build_unified_item_list(official, aur, flatpaks):
@@ -649,7 +645,6 @@ def cmd_run():
     # Update state only after operations complete to prevent bugs/flickering
     print("\nRefreshing update status...")
     fetch_updates_payload()
-    refresh_waybar()
 
     cached_now = load_cache() or {}
     remaining = cached_now.get('total', 0)

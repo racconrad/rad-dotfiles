@@ -9,8 +9,6 @@ critical = 15
 high = 80                  # Colour only; never notify at this threshold.
 notification_reset = 5
 
-# Keep animate loaded: unloading it during startup can leave rendering inhibited.
-# Zero animation_factor disables its matchers and durations instead.
 [profiles.performance]
 label = "Ahorro"
 bar_label = "Ahorro"
@@ -20,7 +18,8 @@ animation_factor = 0.0
 ambient_effects = false
 animated_wallpaper = false
 cpu_profile = "power-saver"
-disable_plugins = ["extra-animations", "blur", "wobbly", "winshadows", "focus-change"]
+blur = false
+shadow = false
 
 [profiles.balanced]
 label = "Equilibrado"
@@ -31,7 +30,6 @@ animation_factor = 0.45
 ambient_effects = false
 animated_wallpaper = true
 cpu_profile = "balanced"
-disable_plugins = []
 
 [profiles.complete]
 label = "Completo"
@@ -43,7 +41,6 @@ ambient_effects = true
 animated_wallpaper = true
 # Full desktop effects do not require forcing CPU turbo. Change if desired.
 cpu_profile = "balanced"
-disable_plugins = []
 
 [profiles.working]
 label = "Trabajo"
@@ -54,7 +51,6 @@ animation_factor = 0.0
 ambient_effects = false
 animated_wallpaper = false
 cpu_profile = "balanced"
-disable_plugins = ["extra-animations", "wobbly", "focus-change"]
 
 [appearance]
 # Semantic wallpaper colours. Text labels remain available without colour vision.

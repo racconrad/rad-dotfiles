@@ -48,9 +48,8 @@ def load_config():
         profile = config['profiles'][name]
         if not 0 <= profile['animation_factor'] <= 1:
             raise ValueError('animation_factor debe estar entre 0 y 1')
-        if any(plugin not in {'animate', 'extra-animations', 'blur', 'wobbly', 'winshadows', 'focus-change'}
-               for plugin in profile['disable_plugins']):
-            raise ValueError('Solo se permite desactivar los efectos opcionales documentados')
+        if any(not isinstance(profile.get(key, True), bool) for key in ('blur', 'shadow')):
+            raise ValueError('blur and shadow must be booleans')
     for value in config['appearance'].values():
         if value not in {'primary', 'secondary', 'tertiary', 'error', 'on_surface', 'on_surface_variant'}:
             raise ValueError('Usa roles semánticos documentados en appearance')

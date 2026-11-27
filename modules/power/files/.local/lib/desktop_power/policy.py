@@ -47,7 +47,7 @@ def notifications(battery, flags, settings):
             flags.pop(key, None)
     if percent <= settings['critical'] and not flags.get('critical'):
         flags.update(critical=True, warning=True)
-        return [('critical', f'Batería al {percent}%', 'Conecta el cargador. Puedes cambiar el modo desde Waybar.')], flags
+        return [('critical', f'Batería al {percent}%', 'Conecta el cargador. Puedes cambiar el modo desde el menú.')], flags
     if percent <= settings['warning'] and not flags.get('warning'):
         flags['warning'] = True
         return [('normal', f'Batería al {percent}%', f"Ahorro automático por debajo del {settings['low_battery']}%. El modo manual se respeta.")], flags
