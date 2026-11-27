@@ -3,8 +3,8 @@
   "name": "raccon-dots",
   "version": "0.3.0",
   "requested": [
-    "wayfire",
-    "waybar",
+    "hyprland",
+    "quickshell",
     "desktop",
     "power",
     "themes",
@@ -53,5 +53,5 @@
     ]
   },
   "title": "Raccoon desktop",
-  "description": "Your complete Wayfire desktop with personal widgets, Minecraft and wallpaper colors."
+  "description": "Your complete Hyprland desktop with personal widgets, Minecraft and wallpaper colors."
 }

@@ -3,8 +3,8 @@
   "name": "raccon-dots",
   "version": "0.3.0",
   "requested": [
-    "wayfire",
-    "waybar",
+    "hyprland",
+    "quickshell",
     "desktop",
     "power",
     "themes",

@@ -8,8 +8,8 @@ import subprocess
 import install
 
 EXECUTABLES = {
-    'desktop': ['eww', 'python3'], 'desktop-styles': ['eww', 'python3'],
-    'wayfire': ['wayfire'], 'waybar': ['waybar'], 'kitty': ['kitty'],
+    'desktop': ['python3'], 'desktop-styles': ['python3'], 'quickshell': ['qs'],
+    'hyprland': ['Hyprland'], 'kitty': ['kitty'],
     'alacritty': ['alacritty'], 'fuzzel': ['fuzzel'], 'rofi': ['rofi'],
     'swaync': ['swaync'], 'mako': ['mako'], 'gtklock': ['gtklock'],
     'swaylock': ['swaylock'], 'zsh': ['zsh'], 'fish': ['fish'],
@@ -39,7 +39,7 @@ def observe_processes(proc=Path('/proc')):
 
 
 def runtime_checks(home, modules, add):
-    selected = {'waybar', 'wayfire'} & set(modules)
+    selected = {'hyprland'} & set(modules)
     if not selected:
         return
     if home.resolve() != Path.home().resolve() or not os.environ.get('WAYLAND_DISPLAY'):
@@ -48,7 +48,8 @@ def runtime_checks(home, modules, add):
         return
     observed, incomplete = observe_processes()
     for name in sorted(selected):
-        if name in observed:
+        proc_name = 'Hyprland' if name == 'hyprland' else name
+        if proc_name in observed:
             add('Runtime', name, 'ok', 'Running (process observed; not functional health proof).')
         elif incomplete:
             add('Runtime', name, 'warn', 'Unknown: process state is partly inaccessible.')
@@ -106,12 +107,11 @@ def collect(home):
             add('Executables', executable, 'ok' if found else 'fail', found or 'Executable not found in PATH.',
                 '' if found else f'Install the application required by {module}, or fix PATH.')
     runtime_checks(home, modules, add)
-    if {'desktop', 'desktop-styles'} & set(modules):
-        for executable in ('cc', 'pkg-config'):
-            found = shutil.which(executable)
-            add('Build prerequisites', executable, 'ok' if found else 'warn',
-                found or 'Missing native UI rebuild prerequisite; cached adapters may still work.',
-                '' if found else 'Install this tool before rebuilding the native UI adapters.')
+    if 'quickshell' in modules:
+        shell = home / '.config/quickshell/raccon/shell.qml'
+        add('Quickshell', 'shell.qml', 'ok' if shell.is_file() else 'fail',
+            str(shell) if shell.is_file() else 'Missing ~/.config/quickshell/raccon/shell.qml.',
+            '' if shell.is_file() else 'Install the quickshell module.')
     records = receipt.get('files', {})
     if not isinstance(records, dict) or not records:
         add('Files', 'Managed files', 'warn', 'Unknown: receipt has no file hashes.')

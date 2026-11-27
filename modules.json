@@ -1,8 +1,8 @@
 {
   "defaults": [
     "hyprland",
-    "waybar",
     "desktop",
+    "quickshell",
     "power",
     "themes",
     "desktop-styles",
@@ -70,7 +70,9 @@
   "modules": {
     "ai": {
       "label": "AI skills list (skills.sh)",
-      "requires": ["base"],
+      "requires": [
+        "base"
+      ],
       "packages": [],
       "description": "Keeps only which skills.sh skills you use. The optional ai-skills setup downloads them again with npx skills; no MCP servers, app settings or credentials."
     },
@@ -105,47 +107,22 @@
       ],
       "description": "Modular Lua configuration in ~/.config/hypr (one file per concern), Super-key binds and an idle lock."
     },
-    "wayfire": {
-      "label": "Wayfire window management, workspaces and effects",
-      "requires": [
-        "base",
-        "terminal",
-        "launcher",
-        "notifications",
-        "lock"
-      ],
-      "packages": [
-        "wayfire",
-        "wayfire-plugins-extra",
-        "gcc",
-        "python-gobject",
-        "python-cairo",
-        "gtk3",
-        "gtk-layer-shell",
-        "wf-shell",
-        "xorg-xwayland",
-        "xdg-desktop-portal-gtk",
-        "xdg-desktop-portal-wlr",
-        "mate-polkit"
-      ],
-      "description": "Keyboard-driven tiling, workspaces, rounded decorations and compositor IPC."
-    },
     "desktop": {
       "label": "Raccoon app menu, panels, screenshots and clipboard",
       "requires": [
         "base",
         "fuzzel",
         "themes",
-        "wallpaper"
+        "wallpaper",
+        "quickshell"
       ],
       "packages": [
-        "python-gobject",
-        "gtk3",
-        "gtk-layer-shell",
         "wl-clipboard",
         "cliphist",
         "grim",
         "slurp",
+        "wf-recorder",
+        "jq",
         "swappy",
         "rofi",
         "swayosd",
@@ -158,13 +135,9 @@
         "bluez-utils",
         "xdg-utils",
         "btop",
-        "eww",
-        "gcc",
-        "pkgconf",
-        "ffmpeg",
-        "libjpeg-turbo"
+        "ffmpeg"
       ],
-      "description": "Eww Raccon Menu, deliberate PC mode and session controls, GTK audio/network/calendar panels, screenshots and clipboard."
+      "description": "Quickshell Raccon Menu, deliberate PC mode and session controls, audio/network/calendar panels, screenshots and clipboard."
     },
     "power": {
       "label": "Battery-aware power and animation profiles",
@@ -178,18 +151,6 @@
         "libnotify"
       ],
       "description": "Switch desktop effects and CPU profile according to battery and charger."
-    },
-    "waybar": {
-      "label": "Waybar island dock and desktop controls",
-      "requires": [
-        "desktop",
-        "power"
-      ],
-      "packages": [
-        "waybar",
-        "pacman-contrib"
-      ],
-      "description": "The island dock with your raccoon, workspace buttons, media and power controls."
     },
     "themes": {
       "label": "Material You, GTK / Qt themes, fonts and cursors",
@@ -355,7 +316,8 @@
         "bat",
         "eza",
         "ffmpeg",
-        "plymouth"
+        "plymouth",
+        "pacman-contrib"
       ],
       "description": "Your terminal toolkit: file navigation, Git UI, monitoring, visualizers and plymouth-from-video for boot animations from videos/GIFs."
     },
@@ -393,8 +355,21 @@
       "packages": [],
       "description": "Apply your personal Legcord CSS theme."
     },
+    "quickshell": {
+      "label": "Quickshell widget shell (replaces Eww)",
+      "requires": [
+        "base",
+        "themes"
+      ],
+      "packages": [
+        "quickshell",
+        "inter-font",
+        "ttf-jetbrains-mono-nerd"
+      ],
+      "description": "Resident QML shell in ~/.config/quickshell/raccon, themed by matugen and driven over `qs ipc`."
+    },
     "widgets": {
-      "label": "tinyWidgets runtime and personal defaults",
+      "label": "tinyWidgets runtime and personal defaults (legacy Eww)",
       "requires": [
         "base"
       ],
@@ -466,7 +441,7 @@
       ]
     },
     "tinywidgets": {
-      "label": "tinyWidgets — your personal desktop companions",
+      "label": "tinyWidgets — your personal desktop companions (legacy Eww)",
       "requires": [
         "widgets"
       ],
@@ -474,7 +449,7 @@
       "description": "Install the app when needed, then choose your layouts, themes and integrations."
     },
     "widgets-profiles": {
-      "label": "Your saved widget layouts",
+      "label": "Your saved widget layouts (legacy Eww)",
       "requires": [
         "widgets"
       ],
@@ -482,7 +457,7 @@
       "description": "Trabajo, Gaming, Dashboard, Cyberpunk, silly and your current Personal layout."
     },
     "widgets-themes": {
-      "label": "Personal themes and appearance",
+      "label": "Personal themes and appearance (legacy Eww)",
       "requires": [
         "widgets"
       ],
@@ -490,7 +465,7 @@
       "description": "Your clean / scan / transparent style, plus Quiet, Pixel and Terminal presets."
     },
     "widgets-motion": {
-      "label": "Your IN / OUT animation presets",
+      "label": "Your IN / OUT animation presets (legacy Eww)",
       "requires": [
         "widgets"
       ],
@@ -498,7 +473,7 @@
       "description": "Personal 60 FPS, Balanced 24 FPS or Quiet transitions."
     },
     "widgets-palette": {
-      "label": "Wallpaper colors for widgets",
+      "label": "Wallpaper colors for widgets (legacy Eww)",
       "requires": [
         "widgets",
         "themes"
@@ -507,7 +482,7 @@
       "description": "Connect Matugen to the tinyWidgets palette without restarting windows."
     },
     "widgets-music": {
-      "label": "Music widgets and MPRIS controls",
+      "label": "Music widgets and MPRIS controls (legacy Eww)",
       "requires": [
         "widgets"
       ],
@@ -517,7 +492,7 @@
       "description": "Read and control the active media player."
     },
     "widgets-github": {
-      "label": "GitHub activity and avatars",
+      "label": "GitHub activity and avatars (legacy Eww)",
       "requires": [
         "widgets"
       ],
@@ -528,7 +503,7 @@
       "description": "Show GitHub activity. Sign in separately with gh auth login."
     },
     "widgets-minecraft": {
-      "label": "Your animated Minecraft scene",
+      "label": "Your animated Minecraft scene (legacy Eww)",
       "requires": [
         "widgets"
       ],
@@ -538,15 +513,13 @@
       "description": "Enable the animated Pillow renderer; source assets stay in tinyWidgets."
     },
     "desktop-styles": {
-      "label": "Global desktop styles and Eww selector",
+      "label": "Collage desktop style",
       "requires": [
-        "wayfire",
-        "waybar",
+        "quickshell",
         "wallpaper",
         "themes"
       ],
       "packages": [
-        "eww",
         "python",
         "python-gobject",
         "gtk3",
@@ -555,7 +528,7 @@
         "adwaita-fonts",
         "python-pillow"
       ],
-      "description": "Default, Transparent, Classic, Mono, Retro and Night; cached previews, shared wallpaper colors and optional integration with an installed tinyWidgets runtime."
+      "description": "Fixed Collage desktop style with wallpaper-driven Material You colors and surfaces for menus and system widgets."
     }
   },
   "optional_packages": {

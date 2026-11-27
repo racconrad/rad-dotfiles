@@ -4,7 +4,7 @@
   "version": "0.3.0",
   "requested": [
     "hyprland",
-    "waybar",
+    "quickshell",
     "desktop",
     "power",
     "themes",
@@ -15,8 +15,7 @@
     "audio",
     "chat-theme",
     "browser",
-    "filemanager",
-    "tinywidgets"
+    "filemanager"
   ],
   "choices": {
     "terminal": "kitty",
@@ -53,6 +52,6 @@
       "widgets-palette"
     ]
   },
-  "title": "Raccoon desktop",
-  "description": "Your complete Wayfire desktop with personal widgets, Minecraft and wallpaper colors."
+  "title": "Hyprland desktop",
+  "description": "Your complete Hyprland desktop with personal widgets, Minecraft and wallpaper colors."
 }
