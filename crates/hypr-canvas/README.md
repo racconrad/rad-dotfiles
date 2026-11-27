@@ -1,8 +1,8 @@
 # hypr-canvas
 
 An infinite canvas for Hyprland, written in Rust. It keeps a camera over your floating windows and
-moves them through Hyprland's own IPC socket. Based on the Wayfire `canvas` plugin and on
-`sarodscommits/hyprland-infinitie-desktop-v2`, without Python and without reading input devices.
+moves them through Hyprland's own IPC socket. It replaces the old canvas-session adapter. Inspired by
+`sarodscommits/hyprland-infinitie-desktop-v2`; it needs neither Python nor direct input-device access.
 
 - One thread, one `poll(2)`. With no gesture active it only wakes for a Hyprland event or a command.
 - No `hyprctl` forks, no `input` group, no evdev. The cursor is read over IPC only while you drag.
