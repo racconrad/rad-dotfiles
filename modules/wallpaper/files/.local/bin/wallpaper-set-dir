@@ -32,7 +32,7 @@ if [[ -f "$HOME/.config/waypaper/config.ini" ]]; then
   sed -i "s|^folder =.*|folder = $target|" "$HOME/.config/waypaper/config.ini" 2>/dev/null || true
 fi
 
-# Refresh floating card in Eww if active
+# Refresh floating card if active
 if command -v raccon-float >/dev/null 2>&1; then
   raccon-float refresh >/dev/null 2>&1 || true
 fi

@@ -1,4 +1,4 @@
-/* Clipboard history: list with image previews, styled like the waybar dock islands.
+/* Clipboard history: list with image previews, styled like the cut-paper widgets.
    Colors come from matugen (colors.rasi). */
 @import "colors.rasi"
 

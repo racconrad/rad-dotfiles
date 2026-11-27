@@ -11,14 +11,16 @@ import subprocess
 
 def _matugen_fallback(home):
     found = {}
-    scss = home / '.config/eww/_colors.scss'
-    if scss.is_file():
-        for match in re.finditer(r'\$(\w+):\s*(#[0-9a-fA-F]{6})\s*;', scss.read_text()):
-            found[match.group(1)] = match.group(2)
-    css = home / '.config/waybar/colors.css'
-    if css.is_file():
-        for match in re.finditer(r'@define-color\s+(\w+)\s+(#[0-9a-fA-F]{6})\s*;', css.read_text()):
-            found.setdefault(match.group(1), match.group(2))
+    qs_colors = home / '.config/quickshell/raccon/colors.json'
+    if qs_colors.is_file():
+        try:
+            palette = json.loads(qs_colors.read_text())
+            if isinstance(palette, dict):
+                for k, v in palette.items():
+                    if isinstance(k, str) and isinstance(v, str):
+                        found[k] = v
+        except (OSError, ValueError):
+            pass
     return found
 
 
@@ -47,6 +49,8 @@ def prepare(home, output, background='solid'):
                  onAccent='on_primary', outline='outline_variant', error='error')
     for key, role in roles.items():
         color = colors.get(role, '')
+        if not color and key == 'background':
+            color = colors.get('surface', '')
         if re.fullmatch(r'#[0-9a-fA-F]{6}', color):
             values[key] = color
     values['font'] = tokens.get('font', values['font'])

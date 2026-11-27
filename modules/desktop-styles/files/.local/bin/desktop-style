@@ -1,2 +1,2 @@
 #!/bin/sh
-exec python3 "$HOME/.local/lib/desktop_style/cli.py" "$@"
+PYTHONPATH="$HOME/.local/lib" exec python3 -P -m desktop_style.main "$@"

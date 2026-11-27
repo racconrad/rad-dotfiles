@@ -3,18 +3,14 @@ import json
 
 
 def resolve(name, profile, colors):
-    strict = name == 'terminal'
-    widget_frame = profile.get('widget_frame', name)
-    if widget_frame not in ('none','monochrome','terminal','retro','future','glass','modern','gnome','windows','ascii'):
-        widget_frame = 'none'
-    return dict(style=name, font=profile['font'], radius=profile['radius'],
+    return dict(style='collage', font=profile['font'], radius=profile['radius'],
                 control_radius=min(profile['radius'], 10), border=profile['border'],
-                opacity=profile['alpha'] if name == 'glass' else 1,
-                panel_padding=14 if strict or name == 'windows' else 16,
-                control_padding=5 if strict or name == 'windows' else 6,
+                opacity=1,
+                panel_padding=16,
+                control_padding=6,
                 position=profile['position'], continuous=profile.get('continuous',False),
-                strict=strict, colors=colors, widgets=dict(skin=profile['skin'], frame=widget_frame,
-                    fx='none' if strict else 'focus', background='surface'))
+                strict=False, colors=colors, widgets=dict(skin=profile['skin'], frame='none',
+                    fx='focus', background='surface'))
 
 
 def build(name, profile, colors):
@@ -89,30 +85,14 @@ tooltip label {{ padding: 0; }}
     panels += panel('menu, popover, window.popup')
     panels += f'menu, menu *, popover, popover * {{ font-family: "{font}", "JetBrainsMono Nerd Font Propo", sans-serif; color: {fg}; }}\nmenuitem:hover, menuitem:selected {{ background: {accent}; color: {onaccent}; }}\n'
 
-    selector = f'.style-selector, .style-selector * {{ font-family: "{font}", "JetBrainsMono Nerd Font Propo", sans-serif; }}\n'
-    selector += panel('window .style-selector .selector-main, window .style-selector .selector-extra') + controls('.style-selector')
-    selector += f'.style-selector .selector-extra {{ padding: 12px; margin-left: 4px; }}\n'
-    selector += f'''
-.style-selector .style-option, .style-selector .close, .style-selector .restore {{ border-radius: {q}px; }}
-.style-selector .style-option.selected, .style-selector button.apply {{ background: {accent}; color: {onaccent}; border: 1px solid {accent}; }}
-.style-selector .style-option.selected label, .style-selector button.apply label {{ color: {onaccent}; }}
-.style-selector .option-status, .style-selector .subtitle, .style-selector .caption, .style-selector .notice {{ color: {muted}; }}
-.style-selector .option-status {{ font-size: 11px; }}
-.style-selector .style-option {{ padding: 6px 8px; }}
-.style-selector .style-option:disabled {{ opacity: 1; }}
-'''
-
     # This file is appended AFTER generated module/skin styles, not to the palette.
     root='.rw-desktop.wroot.rw-desktop.wroot'
     card=', '.join(f'.rw-motion-space {root} .{name}.{name}' for name in ('card','clock-card','mc-inventory'))
     widgets=f'{root}, {root} * {{ font-family: "{font}", "JetBrainsMono Nerd Font Propo", sans-serif; }}\n'
     widgets+=panel(card)+controls(root)
     media=', '.join(f'.rw-motion-space {root} .{key}.{key}' for key in ('photo-frame','image-frame'))
-    # Longhand only: background shorthand resets cover/contain and the image itself.
     widgets+=f'{media} {{ background-color: {surface}; padding: 0; border-width: 0; border-radius: {r}px; box-shadow: inset 0 0 0 {b}px {edge}; background-position: center; background-repeat: no-repeat; transition: none; }}\n'
     chrome='.rw-motion-space .rw-window-frame:not(.rw-frame-none)'
-    # Variant chrome owns its palette roles, geometry, and typography in shared
-    # SCSS. A generic titlebar override would erase every style's identity.
     integrated=', '.join(f'{chrome} .rw-window-body > {root} .{key}' for key in ('card','clock-card'))
     widgets+=f'{integrated} {{ background: transparent; border: none; border-radius: 0; box-shadow: none; }}\n'
     framed_media=', '.join(f'{chrome} .rw-window-body > {root} .{key}.{key}' for key in ('photo-frame','image-frame'))
@@ -129,58 +109,6 @@ tooltip label {{ padding: 0; }}
 {root} .gen-icon, {root} .pl-icon, {root} .sys-chip {{ background: {raised}; color: {accent}; border-radius: {q}px; }}
 {root} .gen-title, {root} .pl-title {{ color: {accent}; }}
 '''
-
-    bar=f'window#waybar, window#waybar * {{ font-family: "{font}", "Eva-Icons", "JetBrainsMono Nerd Font Propo", sans-serif; }}\n'
-    bar+=panel('window#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar')
-    bar+='window#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar { padding: 0 6px; }\n'
-    chips=['clock','hardware','workspaces','custom-workspace-base','cpu','memory','temperature','disk','network','bluetooth','wireplumber','backlight','idle_inhibitor','custom-desktop-mode','custom-canvas-mode','custom-tiling','custom-notification','custom-power','custom-updates','custom-hardware-toggle','tray','custom-music-viz','custom-music-prev','custom-music-play','custom-music-next','battery','power-profiles-daemon']+[f'custom-ws{i}' for i in range(1,11)]
-    allchips=', '.join('window#waybar #'+key for key in chips)
-    r_ac,g_ac,b_ac=(int(accent[1:3],16),int(accent[3:5],16),int(accent[5:7],16))
-    hover_tint=f'rgba({r_ac},{g_ac},{b_ac},0.10)'
-    bar+=f'{allchips} {{ border-radius: {q}px; color: {fg}; background: transparent; border: none; }}\n'
-    bar+=f'window#waybar #clock {{ color: {accent}; font-weight: 700; background: {raised}; border-bottom: 2px solid {accent}; padding: 0 11px; }}\n'
-    bar+=f'window#waybar #custom-power {{ color: {colors["error"]}; background: transparent; }}\n'
-    bar+=f'window#waybar #hardware, window#waybar #workspaces {{ background: transparent; border: none; }}\n'
-    bar+=f'window#waybar #custom-desktop-mode, window#waybar #custom-canvas-mode {{ border-bottom: 1px solid {edge}; }}\n'
-    bar+=f'window#waybar #custom-music-play {{ color: {accent}; }}\n'
-    bar+=f'window#waybar #custom-music-viz.playing {{ color: {accent}; }}\n'
-    active=', '.join('window#waybar #'+key+'.active' for key in chips if key.startswith('custom-ws'))
-    bar+=f'{active}, window#waybar #workspaces button.active, window#waybar #taskbar button.active {{ background: transparent; color: {accent}; border-radius: {q}px; }}\n'
-    bar+=f'window#waybar #taskbar button, window#waybar #workspaces button {{ border-radius: {q}px; background: transparent; }}\n'
-    bar+='window#waybar, window#waybar * { transition: none; animation: none; box-shadow: none; background-image: none; -gtk-icon-transform: none; }\n'
-    bar+='window#waybar #taskbar button, window#waybar #taskbar button:hover { padding: 4px 7px; }\n'
-    workspace=', '.join('window#waybar #custom-ws'+str(i)+state for i in range(1,11) for state in ('','.active',':hover'))
-    bar+=f'{workspace}, window#waybar #workspaces button, window#waybar #workspaces button.active, window#waybar #workspaces button:hover {{ padding: 0 8px; }}\n'
-    bar+=f'window#waybar #taskbar button:hover, window#waybar #workspaces button:hover {{ background: {hover_tint}; color: {fg}; }}\n'
-    bar+=f'window#waybar #taskbar button.active:hover, window#waybar #workspaces button.active:hover {{ background: {hover_tint}; color: {accent}; }}\n'
-    # Allocate borders inside each island, with identical geometry for every state.
-    bar+=f'window#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar {{ min-height: 44px; padding: 2px 6px; }}\n'
-    bar+=f'{allchips} {{ margin: 4px 1px; padding: 0 7px; min-height: 24px; }}\n'
-    bar+='window#waybar #hardware { margin: 4px 2px; padding: 0 2px; }\nwindow#waybar #hardware > * { margin-top: 0; margin-bottom: 0; }\n'
-    bar+='window#waybar #taskbar button, window#waybar #taskbar button:hover, window#waybar #taskbar button.active { margin: 2px 1px; padding: 3px 6px; min-height: 30px; border: 1px solid transparent; }\n'
-    bar+=f'window#waybar #taskbar button.active {{ border-bottom: 1px solid {accent}; }}\n'
-    bar+='window#waybar #taskbar.empty { background: transparent; border: none; min-height: 0; padding: 0; }\n'
-    empty_music=', '.join(f'window#waybar #custom-music-{k}.empty' for k in ('viz','prev','play','next'))
-    bar+=f'{empty_music} {{ background: transparent; border: none; margin: 0; padding: 0; min-width: 0; min-height: 0; }}\n'
-    # Distinct workspace states without changing any allocation on hover.
-    empty=', '.join(f'window#waybar #custom-ws{i}.empty' for i in range(1,11))
-    occupied=', '.join(f'window#waybar #custom-ws{i}.occupied' for i in range(1,11))
-    hover=', '.join(f'window#waybar #custom-ws{i}:hover' for i in range(1,11))
-    bar+=f'{empty} {{ color: {muted}; background: transparent; }}\n{occupied} {{ color: {fg}; background: transparent; }}\n'
-    bar+=f'{hover}, window#waybar #taskbar button:not(.active):hover {{ background: {hover_tint}; color: {fg}; }}\n'
-    bar+=f'{active} {{ background: transparent; color: {accent}; border-bottom: 1px solid {accent}; }}\n'
-    if not t['strict']:
-        interactive=allchips+', window#waybar #taskbar button'
-        bar+=f'{interactive} {{ transition: background-color 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out; }}\n'
-    if t['continuous']:
-        bar+=f'window#waybar {{ background: {surface}; }}\nwindow#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar {{ background: transparent; border: none; border-radius: 0; }}\nwindow#waybar > box {{ padding-top: 0; }}\n'
-    else:
-        bar+='window#waybar { background: transparent; }\n'
-    inset=0 if t['continuous'] else 8
-    padding=dict(top=f'0 0 {inset}px 0',bottom=f'{inset}px 0 0 0',left=f'0 {inset}px 0 0',right=f'0 0 0 {inset}px')[t['position']]
-    bar+=f'window#waybar.{t["position"]} > box {{ padding: {padding}; }}\n'
-    if t['strict']:
-        bar+='window#waybar * { background-image: none; box-shadow: none; text-shadow: none; }\n'
 
     rofi=f'''* {{ font: "{font} 11"; text-color: @fg; }}
 window {{ border: {b}px; border-color: @outline; border-radius: {r}px; background-color: @bg; padding: {pad}px; }}
@@ -262,17 +190,9 @@ window {{ background-color: {colors['surface']}; color: {fg}; font-family: "{fon
 #powerbar-box button:hover, #powerbar-box button:focus {{ background: {accent}; color: {onaccent}; border-color: {accent}; }}
 #powerbar-box #poweroff-button:hover, #powerbar-box #poweroff-button:focus {{ background: {colors['error']}; color: {colors['on_error']}; border-color: {colors['error']}; }}
 '''
-    outputs = dict(widget_editor=editor+tooltip,widgets=widgets+tooltip,raccon=menu+tooltip,panels=panels+tooltip,selector=selector+tooltip,
-                waybar=bar+tooltip,rofi=rofi,rofi_colors=rofi_colors,swaync=swaync+tooltip,swayosd=osd+tooltip,gtk=gtk,
+    outputs = dict(widget_editor=editor+tooltip,widgets=widgets+tooltip,raccon=menu+tooltip,panels=panels+tooltip,
+                rofi=rofi,rofi_colors=rofi_colors,swaync=swaync+tooltip,swayosd=osd+tooltip,gtk=gtk,
                 wlogout='',gtklock=gtklock,tokens=json.dumps(t,ensure_ascii=False,indent=2)+'\n')
 
-    if name == 'dynamic':
-        from desktop_style.expressive_surfaces import decorate
-        return decorate(outputs, colors, t)
-    if name == 'collage':
-        from desktop_style.collage_surfaces import decorate
-        return decorate(outputs, colors, t)
-    if name == 'macxp':
-        from desktop_style.macxp_surfaces import decorate
-        return decorate(outputs, colors, t)
-    return outputs
+    from desktop_style.collage_surfaces import decorate
+    return decorate(outputs, colors, t)

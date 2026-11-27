@@ -2,7 +2,7 @@
 Type=Application
 Name=Estilo del escritorio
 Comment=Cambia la apariencia de la barra, widgets y aplicaciones
-Exec="@RDOT_HOME@/.local/bin/desktop-style" open
+Exec="@RDOT_HOME@/.local/bin/desktop-style" apply
 Icon=preferences-desktop-theme
 Categories=Settings;DesktopSettings;
 Keywords=tema;estilo;apariencia;theme;monocromo;retro;

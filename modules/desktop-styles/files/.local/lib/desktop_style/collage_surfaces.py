@@ -87,53 +87,6 @@ def decorate(outputs, c, tokens):
 .popup.still, .popup.still * {{ transition: none; animation: none; -gtk-icon-transform: none; }}
 '''
 
-    outputs['selector'] += f'''
-window .style-selector .selector-main {{ {cutout_panel} }}
-window .style-selector .selector-extra {{ {cutout_sub} }}
-.style-selector .heading {{ font-family: {display_font}; font-size: 30px; font-weight: 800; color: {primary}; }}
-.style-selector.style-shell .style-emblem {{ background: {pc}; color: {opc}; border: 1px solid {primary}; border-radius: 0px; box-shadow: none; }}
-.style-selector .style-option {{ border-radius: 0px; border: 1px solid transparent; }}
-.style-selector .style-option.selected {{ border: 1px solid {primary}; background: {pc}; color: {opc}; box-shadow: none; }}
-.style-selector .style-option.selected label, .style-selector .style-option.selected image {{ color: {opc}; }}
-.style-selector .preview-title {{ font-family: {display_font}; color: {primary}; font-size: 22px; font-weight: 800; }}
-.style-selector .apply {{ border-radius: 0px; border: 1px solid {primary}; box-shadow: none; font-weight: 800; }}
-.style-selector.motion:not(.reduce-motion):not(.still) .theme-choice {{ transition: background-color 140ms ease-out, border-color 140ms ease-out; }}
-.style-selector.still, .style-selector.still *, .style-selector.reduce-motion, .style-selector.reduce-motion * {{ transition: none; animation: none; -gtk-icon-transform: none; }}
-'''
-
-    if not tokens['continuous']:
-        outputs['waybar'] += f'window#waybar .modules-left, window#waybar .modules-right, window#waybar #taskbar {{ border-radius: 0px; border: 1px solid {edge}; background: {bg}; box-shadow: 3px 3px 0 {pc}; }}\n'
-    else:
-        outputs['waybar'] += f'window#waybar {{ border-top: 2px solid {primary}; }}\n'
-    outputs['waybar'] += f'''
-window#waybar #clock {{ background: {raised}; color: {primary}; font-family: {display_font}; font-weight: 800; border: 1px solid {edge_soft}; border-bottom: 2px solid {primary}; border-radius: 0px; padding: 0 11px; }}
-window#waybar #custom-music-viz:not(.empty),
-window#waybar #custom-music-prev, window#waybar #custom-music-play, window#waybar #custom-music-next {{ background: transparent; color: {fg}; border: none; border-radius: 0px; }}
-window#waybar #custom-music-viz.playing {{ color: {primary}; }}
-window#waybar #custom-music-play {{ color: {primary}; }}
-window#waybar #network, window#waybar #wireplumber, window#waybar #battery, window#waybar #backlight, window#waybar #bluetooth,
-window#waybar #custom-canvas-mode, window#waybar #custom-tiling, window#waybar #idle_inhibitor,
-window#waybar #custom-desktop-mode, window#waybar #custom-updates {{ background: transparent; color: {fg}; border: none; border-radius: 0px; }}
-window#waybar #custom-canvas-mode, window#waybar #custom-desktop-mode {{ border-bottom: 1px solid {edge_soft}; }}
-window#waybar #idle_inhibitor.activated {{ background: transparent; color: {primary}; border-bottom: 1px solid {primary}; }}
-window#waybar #custom-desktop-mode.performance, window#waybar #custom-desktop-mode.balanced,
-window#waybar #custom-desktop-mode.complete, window#waybar #custom-desktop-mode.auto {{ color: {fg}; }}
-window#waybar #custom-power {{ background: transparent; color: {err}; border: none; border-radius: 0px; }}
-window#waybar #clock:hover, window#waybar #network:hover, window#waybar #wireplumber:hover,
-window#waybar #battery:hover, window#waybar #backlight:hover, window#waybar #bluetooth:hover,
-window#waybar #custom-canvas-mode:hover, window#waybar #custom-tiling:hover, window#waybar #idle_inhibitor:hover,
-window#waybar #custom-desktop-mode:hover, window#waybar #custom-updates:hover,
-window#waybar #custom-workspace-base:hover, window#waybar #custom-hardware-toggle:hover {{ background: {hover_tint}; }}
-window#waybar #taskbar button, window#waybar #taskbar button:hover,
-window#waybar #taskbar button.active {{ min-height: 36px; padding: 4px 7px; border: none; border-bottom: 1px solid transparent; border-radius: 0px; background: transparent; }}
-window#waybar #taskbar button:hover {{ background: {hover_tint}; }}
-window#waybar #taskbar button.active {{ background: transparent; color: {primary}; border-bottom: 2px solid {primary}; }}
-window#waybar #taskbar button:not(:disabled) {{ transition: background-color 140ms ease-out, border-color 140ms ease-out; }}
-window#waybar #taskbar button:focus {{ box-shadow: inset 0 0 0 1px {secondary}; }}
-window#waybar #taskbar button.active:focus {{ box-shadow: inset 0 0 0 1px {primary}; }}
-window#waybar #taskbar.empty {{ background: transparent; border: none; padding: 0; min-height: 0; box-shadow: none; }}
-'''
-
     root = '.rw-desktop.wroot.rw-desktop.wroot'
     outputs['widgets'] += f'''
 .rw-motion-space {root} .card.card, .rw-motion-space {root} .clock-card.clock-card {{ {cutout_panel} background: {bg}; }}

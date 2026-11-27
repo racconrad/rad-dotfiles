@@ -15,7 +15,6 @@ if [[ -f "$cache" ]]; then
   if [[ -n "$last" && -f "$last" ]]; then
     # Fast path: only set the image; palette files already exist on disk.
     awww img "$last" --transition-type fade --transition-duration 0.6 || true
-    "$HOME/.local/bin/wayfire-theme-apply" || true
     exit 0
   fi
 fi

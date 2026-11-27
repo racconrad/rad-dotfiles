@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] || exit 0
+config="${XDG_CONFIG_HOME:-$HOME/.config}"
+code=''
+for file in "$config/hypr/conf/window-style.lua" "$config/matugen/out/hyprland-colors.lua" "$config/hypr/desktop-style.lua"; do
+  if [[ -f "$file" ]]; then
+    code+="$(cat -- "$file")"$'\n'
+  fi
+done
+[[ -n "$code" ]] || exit 0
+result="$(hyprctl eval "$code")"
+if [[ "$result" != ok ]]; then
+  printf '%s\n' "$result" >&2
+  exit 1
+fi

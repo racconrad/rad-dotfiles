@@ -1,4 +1,4 @@
-/* Wallpaper picker: a clean grid of thumbnails, styled like the waybar dock islands.
+/* Wallpaper picker: a clean grid of thumbnails, styled like the cut-paper widgets.
    Colors come from matugen (colors.rasi). */
 @import "colors.rasi"
 

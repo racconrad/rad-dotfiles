@@ -24,10 +24,6 @@ output_path = '~/.config/qt6ct/colors/matugen.conf'
 input_path = '~/.config/matugen/templates/fastfetch.jsonc'
 output_path = '~/.config/fastfetch/config.jsonc'
 
-[templates.waybar]
-input_path = '~/.config/matugen/templates/colors.css'
-output_path = '~/.config/waybar/colors.css'
-
 [templates.swaync]
 input_path = '~/.config/matugen/templates/colors.css'
 output_path = '~/.config/swaync/colors.css'
@@ -44,13 +40,13 @@ output_path = '~/.config/wlogout/colors.css'
 input_path = '~/.config/matugen/templates/colors.css'
 output_path = '~/.config/gtklock/colors.css'
 
-[templates.eww]
-input_path = '~/.config/matugen/templates/eww-colors.scss'
-output_path = '~/.config/eww/_colors.scss'
+[templates.quickshell]
+input_path = '~/.config/matugen/templates/quickshell-colors.json'
+output_path = '~/.config/quickshell/raccon/colors.json'
 
-[templates.wayfire]
-input_path = '~/.config/matugen/templates/wayfire-colors.sh'
-output_path = '~/.config/matugen/out/wayfire-colors.sh'
+[templates.hyprland]
+input_path = '~/.config/matugen/templates/hyprland-colors.lua'
+output_path = '~/.config/matugen/out/hyprland-colors.lua'
 
 [templates.kitty]
 input_path = '~/.config/matugen/templates/kitty-colors.conf'
