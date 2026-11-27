@@ -1,6 +1,8 @@
 """Working policy contracts without touching running desktop services."""
+import os
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -36,23 +38,27 @@ class WorkingModeTests(unittest.TestCase):
             self.assertFalse(policy.should_suspend({'plugged': True, 'batteries': 1}, {'mode': mode}))
             self.assertFalse(policy.should_suspend({'plugged': None, 'batteries': 0}, {'mode': mode}))
 
-    def test_working_reconcile_never_fades_windows(self):
+    def test_working_reconcile_disables_hyprland_animations_and_updates_widgets(self):
         battery = {'plugged': False, 'percent': 20, 'batteries': 1}
-        with patch.object(controller, 'load_config', return_value=self.config), \
-             patch.object(controller, 'read_battery', return_value=battery), \
-             patch.object(controller, 'read_json', return_value={'mode': 'working'}), \
-             patch.object(controller, 'publish'), \
-             patch.object(controller.effects, 'widget_policy'), \
-             patch.object(controller.effects, 'wayfire'), \
-             patch.object(controller.effects, 'cpu'), \
-             patch.object(controller.effects, 'focus_fx'), \
-             patch.object(controller.effects, 'widgets') as widgets, \
-             patch.object(controller.effects, 'widgets_need_install', return_value=False), \
-             patch.object(controller.effects, 'wallpaper'), \
-             patch.object(controller.effects, 'run'), \
-             patch.object(controller.effects, 'desktop_transition') as transition:
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch.dict(os.environ, {'XDG_CONFIG_HOME': directory}),
+            patch.object(controller, 'load_config', return_value=self.config),
+            patch.object(controller, 'read_battery', return_value=battery),
+            patch.object(controller, 'read_json', return_value={'mode': 'working'}),
+            patch.object(controller, 'publish'),
+            patch.object(controller.effects, 'widget_policy'),
+            patch.object(controller.effects, 'cpu'),
+            patch.object(controller.effects, 'widgets') as widgets,
+            patch.object(controller.effects, 'widgets_need_install', return_value=False),
+            patch.object(controller.effects, 'wallpaper'),
+            patch.object(controller.effects, 'run', return_value='ok') as run,
+        ):
             state, _, _ = controller.reconcile({})
-            transition.assert_not_called()
+            code = (Path(directory) / 'hypr/desktop-power.lua').read_text()
+            commands = [call.args[0] for call in run.call_args_list if call.args[0][0] != 'notify-send']
+            self.assertEqual(commands, [['hyprctl', 'eval', code]])
+            self.assertEqual(code.splitlines()[0], 'require("conf.animations")(0.0)')
             widgets.assert_called_once()
             self.assertEqual(state['errors'], {})
 

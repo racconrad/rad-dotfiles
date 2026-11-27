@@ -81,14 +81,6 @@ class InstallTests(unittest.TestCase):
                         json.loads(re.sub(r'^\s*//.*$', '', text, flags=re.M))
                     elif relative.endswith('.py') or data.startswith(b'#!/usr/bin/env python3'):
                         ast.parse(text, filename=relative)
-                wf = plan['.config/wayfire.ini'][0].decode()
-                self.assertIn('command_terminal = ' + choices['terminal'], wf)
-                self.assertIn('notifications = ' + choices['notifications'], wf)
-                self.assertFalse('[output:' in wf, 'Se filtraron monitores de la máquina original')
-                self.assertNotIn('command_widgets', wf)
-                bar = json.loads(plan['.config/waybar/config.jsonc'][0])
-                self.assertNotIn('custom/notification', bar['modules-right'])
-                self.assertNotIn('custom/notification', bar)
                 locker = plan['.local/bin/lock'][0].decode()
                 self.assertIn('exec ' + choices['lock'], locker)
 
@@ -110,7 +102,7 @@ class InstallTests(unittest.TestCase):
         self.assertEqual(config.read_text(), 'personal terminal\n')
         self.assertEqual(config.stat().st_mode & 0o777, 0o600)
         self.assertFalse((self.home / '.rdot').exists())
-        self.assertFalse((self.home / '.config/wayfire.ini').exists())
+        self.assertFalse((self.home / '.config/hypr/hyprland.lua').exists())
 
     def test_existing_file_symlink_is_backed_up_without_writing_through(self):
         outside = Path(self.temp.name) / 'outside'
@@ -145,7 +137,7 @@ class InstallTests(unittest.TestCase):
 
         def fail_once(path, data, mode):
             nonlocal failed
-            if str(path).endswith('.local/bin/wf-ws') and not failed:
+            if str(path).endswith('.config/hypr/hyprland.lua') and not failed:
                 failed = True
                 raise OSError('simulated full disk')
             original(path, data, mode)
@@ -155,7 +147,7 @@ class InstallTests(unittest.TestCase):
                 self.install()
         self.assertTrue(failed)
         self.assertEqual(config.read_text(), 'before')
-        self.assertFalse((self.home / '.config/wayfire.ini').exists())
+        self.assertFalse((self.home / '.config/hypr/hyprland.lua').exists())
         self.assertFalse((self.home / '.rdot').exists())
 
     def test_restore_does_not_destroy_later_user_edits(self):
@@ -171,7 +163,7 @@ class InstallTests(unittest.TestCase):
         modules, plan = self.plan(['themes', 'terminal'])
         config = tomllib.loads(plan['.config/matugen/config.toml'][0].decode())
         self.assertEqual(set(config['templates']), {'gtk3', 'gtk4', 'qt5ct', 'qt6ct', 'kitty'})
-        self.assertNotIn('.config/wayfire.ini', plan)
+        self.assertNotIn('.config/hypr/hyprland.lua', plan)
         self.assertNotIn('.config/eww/style.json', plan)
 
     def test_new_alternative_updates_previously_installed_dependents(self):
@@ -181,20 +173,19 @@ class InstallTests(unittest.TestCase):
         modules, plan = self.plan(requested, choices)
         self.assertNotIn('kitty', modules)
         self.assertNotIn('swaync', modules)
-        self.assertIn('command_terminal = alacritty', plan['.config/wayfire.ini'][0].decode())
+        self.assertIn('alacritty', plan['.config/hypr/conf/programs.lua'][0].decode())
         with redirect_stdout(self.output):
             installer.apply_plan(self.home, plan, modules, choices)
         receipt = installer.read_receipt(self.home)
-        self.assertIn('wayfire', receipt['modules'])
+        self.assertIn('hyprland', receipt['modules'])
         self.assertNotIn('kitty', receipt['modules'])
         self.assertEqual(receipt['choices']['terminal'], 'alacritty')
 
     def test_widget_preferences_are_optional_and_keep_private_instances_out(self):
-        modules, plan = self.plan(['wayfire', 'widgets'])
+        modules, plan = self.plan(['hyprland', 'widgets'])
         self.assertIn('.config/eww/style.json', plan)
         self.assertIn('.local/state/randly-widgets/palette.scss', plan)
         self.assertNotIn('.config/eww/instances.json', plan)
-        self.assertIn('command_widgets', plan['.config/wayfire.ini'][0].decode())
 
     def test_unknown_or_conflicting_modules_are_rejected(self):
         with self.assertRaisesRegex(ValueError, 'Unknown module'):
@@ -313,7 +304,7 @@ class InstallTests(unittest.TestCase):
         self.assertEqual(saved['requested'], ['terminal', 'shell'])
         self.assertEqual(saved['choices']['shell'], 'fish')
         self.assertTrue(exported.is_file())
-        self.assertFalse((self.home / '.config/wayfire.ini').exists())
+        self.assertFalse((self.home / '.config/hypr/hyprland.lua').exists())
 
     def test_dry_run_with_profile_setup_and_export_has_no_side_effects(self):
         profile = Path(self.temp.name) / 'input.json'
@@ -353,32 +344,28 @@ class InstallTests(unittest.TestCase):
 
     def test_wizard_can_uncheck_a_previously_selected_feature(self):
         args = self.wizard_args({'requested': ['terminal', 'wallpaper']})
-        inputs = ['', '6', 'i', 'y']
+        inputs = ['', '5', 'i', 'y']
         with patch('builtins.input', side_effect=inputs), redirect_stdout(self.output):
             requested = installer.interactive(args)
         self.assertEqual(requested, ['terminal'])
         self.assertNotIn('wallpaper', installer.resolve_modules(requested, installer.choices_for(args)))
 
-    def test_minimal_wayfire_does_not_start_unselected_features_or_apps(self):
+    def test_minimal_hyprland_does_not_enable_unselected_app_packages(self):
         choices = {**self.choices, 'launcher': 'fuzzel'}
-        modules, plan = self.plan(['wayfire'], choices)
-        wf = plan['.config/wayfire.ini'][0].decode()
-        for key in ['bar =', 'desktop_power =', 'wallpaper_daemon =', 'command_wallpaper =',
-                    'command_shot_area =', 'osd =', 'command_browser =', 'command_files =', 'command_editor =']:
-            self.assertIsNone(re.search('^' + re.escape(key), wf, re.M), key)
-        self.assertIn('background_mode = simple', wf)
+        modules, plan = self.plan(['hyprland'], choices)
+        self.assertIn('.config/hypr/hyprland.lua', plan)
         self.assertNotIn('firefox', installer.packages_for(modules))
         self.assertNotIn('dolphin', installer.packages_for(modules))
 
-    def test_browser_and_filemanager_alternatives_update_menu_and_shortcuts(self):
+    def test_browser_and_filemanager_alternatives_update_menu_and_packages(self):
         choices = {**self.choices, 'browser': 'chromium', 'filemanager': 'thunar'}
         modules, plan = self.plan(choices=choices)
-        wf = plan['.config/wayfire.ini'][0].decode()
-        menu = plan['.local/lib/raccon_menu/backend.py'][0].decode()
-        self.assertIn('command_browser = chromium', wf)
-        self.assertIn('command_files = thunar', wf)
-        self.assertIn("['chromium']", menu)
-        self.assertIn("['thunar']", menu)
+        self.assertIn('quickshell', modules)
+        self.assertIn('.config/quickshell/raccon/shell.qml', plan)
+        matugen = tomllib.loads(plan['.config/matugen/config.toml'][0].decode())
+        self.assertIn('quickshell', matugen['templates'])
+        self.assertIn('chromium', installer.packages_for(modules))
+        self.assertIn('thunar', installer.packages_for(modules))
         self.assertNotIn('firefox', installer.packages_for(modules))
         self.assertNotIn('dolphin', installer.packages_for(modules))
 
@@ -447,7 +434,7 @@ class InstallTests(unittest.TestCase):
 
     def test_legacy_receipt_migrates_physical_alternatives_to_selectable_roles(self):
         selection = installer.validate_selection({'name': 'raccon-dots', 'version': '0.1.0',
-            'modules': ['base', 'kitty', 'fuzzel', 'desktop', 'desktop-menu', 'wayfire'],
+            'modules': ['base', 'kitty', 'fuzzel', 'desktop', 'desktop-menu', 'hyprland'],
             'choices': self.choices})
         self.assertIn('terminal', selection['requested'])
         self.assertIn('launcher', selection['requested'])

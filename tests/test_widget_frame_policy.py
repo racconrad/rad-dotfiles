@@ -1,4 +1,4 @@
-"""Theme-specific frame policy, legacy migration and live token publication."""
+"""Frame policy and live token publication for Collage desktop style."""
 import importlib.util
 import json
 from pathlib import Path
@@ -7,62 +7,41 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-ROOT=Path(__file__).resolve().parents[1]
-LIB=ROOT/'modules/desktop-styles/files/.local/lib'
-sys.path.insert(0,str(LIB))
+ROOT = Path(__file__).resolve().parents[1]
+LIB = ROOT / 'modules/desktop-styles/files/.local/lib'
+sys.path.insert(0, str(LIB))
 from desktop_style.appearance import resolve
-spec=importlib.util.spec_from_file_location('frame_style_engine',LIB/'desktop_style/main.py')
-styles=importlib.util.module_from_spec(spec);spec.loader.exec_module(styles)
+spec = importlib.util.spec_from_file_location('frame_style_engine', LIB / 'desktop_style/main.py')
+styles = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(styles)
+
 
 class FramePolicyTests(unittest.TestCase):
     def setUp(self):
-        self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
-        self.state=Path(self.tmp.name)/'state';self.state.mkdir()
-        self.current=Path(self.tmp.name)/'current';self.current.mkdir()
-        for key,value in (('STATE',self.state),('CURRENT',self.current)):
-            p=patch.object(styles,key,value);p.start();self.addCleanup(p.stop)
-        p=patch.object(styles,'update');p.start();self.addCleanup(p.stop)
-        (self.state/'selection.json').write_text('{"style":"modern"}')
-        self.tokens=self.current/'tokens.json'
-        self.tokens.write_text(json.dumps({'style':'modern','colors':{},'widgets':{'frame':'modern'}}))
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.state = Path(self.tmp.name) / 'state'
+        self.state.mkdir()
+        self.current = Path(self.tmp.name) / 'current'
+        self.current.mkdir()
+        for key, value in (('STATE', self.state), ('CURRENT', self.current)):
+            p = patch.object(styles, key, value)
+            p.start()
+            self.addCleanup(p.stop)
+        (self.state / 'selection.json').write_text('{"style":"collage"}')
+        self.tokens = self.current / 'tokens.json'
+        self.tokens.write_text(json.dumps({'style': 'collage', 'colors': {}, 'widgets': {'frame': 'none'}}))
 
     def test_defaults_follow_style(self):
-        for name in ('modern','dynamic','collage','macxp'):
-            self.assertEqual(resolve(name,styles.PROFILES[name],{})['widgets']['frame'],'none')
-        self.assertEqual(resolve('terminal',styles.PROFILES['terminal'],{})['widgets']['frame'],'terminal')
+        self.assertEqual(resolve('collage', styles.PROFILES['collage'], {})['widgets']['frame'], 'none')
 
-    def test_inactive_theme_edit_is_saved_without_changing_live_widgets(self):
-        before=self.tokens.read_text()
-        styles.set_widget_frame('none','collage')
-        self.assertEqual(self.tokens.read_text(),before)
-        self.assertEqual(styles.widget_frame('collage'),'none')
-        self.assertEqual(styles.widget_frame('modern'),'auto')
-        styles.set_widget_frame('terminal','modern')
-        self.assertEqual(json.loads(self.tokens.read_text())['widgets']['frame'],'terminal')
-        self.assertEqual(styles.widget_frame('collage'),'none')
+    def test_widget_frame_is_none(self):
+        self.assertEqual(styles.widget_frame('collage'), 'none')
 
-    def test_auto_restores_active_theme_default(self):
-        styles.set_widget_frame('retro','modern')
-        styles.set_widget_frame('auto','modern')
-        self.assertEqual(json.loads(self.tokens.read_text())['widgets']['frame'],'none')
+    def test_with_widget_frame_preserves_none(self):
+        data = {'style': 'collage', 'widgets': {'frame': 'auto'}}
+        self.assertEqual(json.loads(styles.with_widget_frame(json.dumps(data)))['widgets']['frame'], 'none')
 
-    def test_legacy_global_choice_is_preserved_for_other_themes(self):
-        (self.state/'widget-frame.json').write_text('{"frame":"glass"}')
-        styles.set_widget_frame('none','modern')
-        self.assertEqual(styles.widget_frame('modern'),'none')
-        self.assertEqual(styles.widget_frame('collage'),'glass')
-        data=json.loads((self.state/'widget-frame.json').read_text())
-        self.assertEqual(data['version'],2)
 
-    def test_apply_uses_target_theme_not_current_theme(self):
-        styles.set_widget_frame('future','collage')
-        data={'style':'collage','widgets':{'frame':'none'}}
-        self.assertEqual(json.loads(styles.with_widget_frame(json.dumps(data)))['widgets']['frame'],'future')
-        self.assertEqual(styles.widget_frame('modern'),'auto')
-
-    def test_bad_choices_are_not_written(self):
-        for frame,style in (('unknown','modern'),('none','unknown')):
-            with self.assertRaises(ValueError):styles.set_widget_frame(frame,style)
-        self.assertFalse((self.state/'widget-frame.json').exists())
-
-if __name__=='__main__':unittest.main()
+if __name__ == '__main__':
+    unittest.main()

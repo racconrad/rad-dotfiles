@@ -26,9 +26,9 @@ class WidgetThemeTests(unittest.TestCase):
     def test_frame_picker_uses_public_api_without_rewriting_instances(self):
         with tempfile.TemporaryDirectory() as td:
             home=Path(td);state=home/'state';current=home/'current'
-            colors,_=styles.palette('terminal',self.source)
-            tokens=appearance.build('terminal',styles.PROFILES['terminal'],colors)['tokens']
-            styles.save(state/'selection.json',{'style':'terminal'})
+            colors,_=styles.palette('collage',self.source)
+            tokens=appearance.build('collage',styles.PROFILES['collage'],colors)['tokens']
+            styles.save(state/'selection.json',{'style':'collage'})
             styles.write(current/'tokens.json',tokens)
             with patch.object(styles,'STATE',state),patch.object(styles,'CURRENT',current),patch.object(styles,'widgets_available',return_value=True),patch.object(styles,'run',return_value=SimpleNamespace(stdout='{"frame":"none"}')) as run,patch.object(styles,'update'),patch.dict(sys.modules,{'desktop_style.appearance':appearance}):
                 styles.set_widget_frame('windows')

@@ -52,7 +52,7 @@ class DoctorTests(unittest.TestCase):
         result, checks = self.report()
         self.assertEqual(result, 0)
         self.assertTrue(any(c['name'] == 'kitty' and c['status'] == 'ok' for c in checks))
-        self.assertFalse(any('Wayfire' in c['name'] for c in checks))
+        self.assertFalse(any('Hyprland' in c['name'] or 'hyprland' in c['name'] for c in checks))
         self.assertFalse(any('package' in c['name'].lower() for c in checks))
         self.assertTrue(all(c['status'] == 'ok' for c in checks))
 
@@ -100,31 +100,30 @@ class DoctorTests(unittest.TestCase):
 
 
     def test_desktop_runtime_and_resolved_alternative_executables_are_checked(self):
-        self.receipt(['desktop', 'desktop-styles', 'fish', 'chromium', 'thunar'])
-        for name in ('eww', 'python3', 'fish', 'chromium', 'thunar'):
+        self.receipt(['desktop', 'desktop-styles', 'quickshell', 'fish', 'chromium', 'thunar'],
+                     {'.config/quickshell/raccon/shell.qml': 'ShellRoot {}'})
+        for name in ('qs', 'python3', 'fish', 'chromium', 'thunar'):
             self.executable(name)
         result, checks = self.report()
         checked = {c['name'] for c in checks if c['category'] == 'Executables'}
         self.assertEqual(result, 0)
-        self.assertTrue({'eww', 'python3', 'fish', 'chromium', 'thunar'} <= checked)
+        self.assertTrue({'qs', 'python3', 'fish', 'chromium', 'thunar'} <= checked)
         self.assertFalse({'kitty', 'firefox', 'dolphin', 'zsh'} & checked)
+        self.assertTrue(any(c['category'] == 'Quickshell' and c['name'] == 'shell.qml' and c['status'] == 'ok' for c in checks))
 
-
-    def test_missing_native_rebuild_tools_warn_without_claiming_runtime_failure(self):
-        self.receipt(['desktop'])
-        self.executable('eww')
-        self.executable('python3')
+    def test_missing_quickshell_entry_fails_doctor(self):
+        self.receipt(['quickshell'])
+        self.executable('qs')
         result, checks = self.report()
-        self.assertEqual(result, 0)
-        self.assertTrue(any(c['name'] == 'cc' and c['status'] == 'warn' and 'rebuild' in c['detail'] for c in checks))
-        self.assertTrue(any(c['name'] == 'pkg-config' and c['status'] == 'warn' for c in checks))
+        self.assertEqual(result, 1)
+        self.assertTrue(any(c['category'] == 'Quickshell' and c['name'] == 'shell.qml' and c['status'] == 'fail' for c in checks))
 
-    def test_selected_waybar_process_observation_is_not_functional_health_claim(self):
-        self.receipt(['waybar'])
-        self.executable('waybar')
+    def test_selected_hyprland_process_observation_is_not_functional_health_claim(self):
+        self.receipt(['hyprland'])
+        self.executable('Hyprland')
         with patch('pathlib.Path.home', return_value=self.home), \
                 patch.dict(os.environ, {'WAYLAND_DISPLAY': 'wayland-test'}), \
-                patch('doctor.observe_processes', return_value=({'waybar'}, False)):
+                patch('doctor.observe_processes', return_value=({'Hyprland'}, False)):
             result, checks = self.report()
         runtime = [c for c in checks if c['category'] == 'Runtime']
         self.assertEqual(result, 0)
@@ -133,9 +132,9 @@ class DoctorTests(unittest.TestCase):
         self.assertIn('process observed', runtime[0]['detail'])
         self.assertIn('not functional health proof', runtime[0]['detail'])
 
-    def test_stopped_waybar_is_reported_only_in_current_wayland_home(self):
-        self.receipt(['waybar'])
-        self.executable('waybar')
+    def test_stopped_hyprland_is_reported_only_in_current_wayland_home(self):
+        self.receipt(['hyprland'])
+        self.executable('Hyprland')
         with patch('pathlib.Path.home', return_value=self.home), \
                 patch.dict(os.environ, {'WAYLAND_DISPLAY': 'wayland-test'}), \
                 patch('doctor.observe_processes', return_value=(set(), False)):
@@ -145,7 +144,7 @@ class DoctorTests(unittest.TestCase):
                             and c['detail'] == 'Not running.' for c in checks))
 
     def test_foreign_home_runtime_is_not_probed(self):
-        self.receipt(['waybar', 'widgets'])
+        self.receipt(['hyprland', 'widgets'])
         with patch('pathlib.Path.home', return_value=self.home / 'other'), \
                 patch.dict(os.environ, {'WAYLAND_DISPLAY': 'wayland-test'}), \
                 patch('doctor.observe_processes') as observe:
@@ -156,7 +155,7 @@ class DoctorTests(unittest.TestCase):
         self.assertIn('Unknown', runtime[0]['detail'])
 
     def test_inaccessible_proc_is_unknown_not_stopped(self):
-        self.receipt(['wayfire'])
+        self.receipt(['hyprland'])
         with patch('pathlib.Path.home', return_value=self.home), \
                 patch.dict(os.environ, {'WAYLAND_DISPLAY': 'wayland-test'}), \
                 patch('doctor.observe_processes', return_value=(set(), True)):
@@ -164,7 +163,7 @@ class DoctorTests(unittest.TestCase):
         self.assertTrue(any(c['category'] == 'Runtime' and 'Unknown' in c['detail'] for c in checks))
 
     def test_without_wayland_session_runtime_is_not_probed(self):
-        self.receipt(['waybar'])
+        self.receipt(['hyprland'])
         with patch('pathlib.Path.home', return_value=self.home), \
                 patch.dict(os.environ, {'WAYLAND_DISPLAY': ''}), \
                 patch('doctor.observe_processes') as observe:
@@ -176,10 +175,10 @@ class DoctorTests(unittest.TestCase):
         import doctor
         proc = self.home / 'proc'
         (proc / '123').mkdir(parents=True)
-        (proc / '123/comm').write_text('waybar\n')
+        (proc / '123/comm').write_text('Hyprland\n')
         (proc / 'gone').mkdir()
         observed, incomplete = doctor.observe_processes(proc)
-        self.assertEqual(observed, {'waybar'})
+        self.assertEqual(observed, {'Hyprland'})
         self.assertFalse(incomplete)
         with patch('doctor.os.getuid', return_value=-1):
             self.assertEqual(doctor.observe_processes(proc), (set(), False))
