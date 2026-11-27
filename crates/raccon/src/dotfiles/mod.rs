@@ -4,4 +4,3 @@ pub mod doctor;
 pub mod installer;
 pub mod receipt;
 pub mod updater;
-pub mod wayfire;

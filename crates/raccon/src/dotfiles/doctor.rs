@@ -131,8 +131,8 @@ pub fn diagnose(home: &Path) -> Vec<DiagnosticCheck> {
 
     // Process checks
     let (procs, _) = observe_processes();
-    for proc_name in ["wayfire", "waybar"] {
-        if receipt.modules.iter().any(|m| m == proc_name) {
+    for (module, proc_name) in [("hyprland", "Hyprland")] {
+        if receipt.modules.iter().any(|m| m == module) {
             let running = procs.contains(proc_name);
             checks.push(DiagnosticCheck {
                 category: "Runtime".into(),
@@ -146,12 +146,31 @@ pub fn diagnose(home: &Path) -> Vec<DiagnosticCheck> {
 
     // Executables checks
     let exec_map: &[(&str, &[&str])] = &[
-        ("wayfire", &["wayfire"]),
-        ("waybar", &["waybar"]),
-        ("desktop", &["eww"]),
+        ("hyprland", &["Hyprland", "hyprctl"]),
+        ("quickshell", &["qs"]),
         ("nvim", &["nvim"]),
         ("kitty", &["kitty"]),
     ];
+
+    if receipt.modules.iter().any(|m| m == "quickshell") {
+        let shell = home.join(".config/quickshell/raccon/shell.qml");
+        let ok = shell.is_file();
+        checks.push(DiagnosticCheck {
+            category: "Quickshell".into(),
+            name: "shell.qml".into(),
+            status: if ok { "ok".into() } else { "fail".into() },
+            detail: if ok {
+                "Found ~/.config/quickshell/raccon/shell.qml".into()
+            } else {
+                "Missing ~/.config/quickshell/raccon/shell.qml".into()
+            },
+            hint: if ok {
+                String::new()
+            } else {
+                "Install the quickshell module.".into()
+            },
+        });
+    }
 
     for (module, bins) in exec_map {
         if receipt.modules.iter().any(|m| m == *module) {

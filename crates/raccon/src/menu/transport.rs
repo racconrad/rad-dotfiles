@@ -13,7 +13,6 @@ pub const PAGES: &[(&str, &str)] = &[
     ("calendar", "7"),
     ("shortcuts", "8"),
     ("timer", "9"),
-    ("layout", "10"),
 ];
 
 pub fn page_index(name: &str) -> Option<&'static str> {

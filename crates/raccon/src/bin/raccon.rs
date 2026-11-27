@@ -7,7 +7,6 @@ use raccon::dotfiles::catalog::Catalog;
 use raccon::dotfiles::doctor::diagnose;
 use raccon::dotfiles::installer::{apply_plan, build_plan};
 use raccon::dotfiles::updater::update_modules;
-use raccon::dotfiles::wayfire::sync_wayfire;
 use raccon::util::paths;
 
 #[derive(Parser)]
@@ -91,15 +90,6 @@ enum Commands {
         /// Comma-separated list of modules to capture
         #[arg(long)]
         modules: Option<String>,
-    },
-    /// Synchronize Wayfire configuration layers (raccon.ini + user.ini -> wayfire.ini)
-    Wayfire {
-        /// Synchronize layers now
-        #[arg(long)]
-        sync: bool,
-        /// Path to config directory (defaults to $XDG_CONFIG_HOME or ~/.config)
-        #[arg(long)]
-        config_dir: Option<PathBuf>,
     },
 }
 
@@ -199,23 +189,17 @@ fn main() {
                 let _ = std::process::Command::new("wallpaper-grid").args(&args).spawn();
             }
         }
-        Commands::Ui { target } => match target.as_str() {
-            "timer" | "countdown" => {
-                let _ = raccon::countdown::cli::run(vec!["ui".to_string()]);
+        Commands::Ui { target } => {
+            use raccon::menu::runtime::{open_menu, widget};
+            let result = match target.as_str() {
+                "timer" | "countdown" => open_menu(Some("timer")),
+                name => widget("toggle", name),
+            };
+            if let Err(error) = result {
+                eprintln!("raccon ui: {error}");
+                process::exit(1);
             }
-            "music" => {
-                let _ = std::process::Command::new("raccon-music").spawn();
-            }
-            "wallpaper" => {
-                let _ = std::process::Command::new("raccon-float").arg("wallpaper").spawn();
-            }
-            "session" => {
-                let _ = std::process::Command::new("raccon-float").arg("session").spawn();
-            }
-            _ => {
-                let _ = raccon::menu::cli::run(vec![]);
-            }
-        },
+        }
         Commands::Install {
             target_home,
             dry_run,
@@ -308,8 +292,7 @@ fn main() {
             let target_modules: Vec<String> = match modules {
                 Some(mods) => mods.split(',').map(|s| s.trim().to_string()).collect(),
                 None => vec![
-                    "wayfire".into(),
-                    "waybar".into(),
+                    "hyprland".into(),
                     "desktop".into(),
                     "power".into(),
                     "themes".into(),
@@ -329,26 +312,6 @@ fn main() {
                     eprintln!("raccon capture: {}", err);
                     process::exit(1);
                 }
-            }
-        }
-        Commands::Wayfire { sync, config_dir } => {
-            let cfg = config_dir.unwrap_or_else(|| paths::home_dir().join(".config"));
-            if sync {
-                match sync_wayfire(&cfg) {
-                    Ok(changed) => {
-                        if changed {
-                            println!("Wayfire layers synchronized: updated ~/.config/wayfire.ini");
-                        } else {
-                            println!("Wayfire layers are already up to date.");
-                        }
-                    }
-                    Err(err) => {
-                        eprintln!("raccon wayfire: {}", err);
-                        process::exit(1);
-                    }
-                }
-            } else {
-                println!("Usage: raccon wayfire --sync");
             }
         }
     }

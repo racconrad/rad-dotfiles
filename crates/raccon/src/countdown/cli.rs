@@ -1,6 +1,5 @@
 use crate::countdown::controller;
-use crate::menu::transport;
-use crate::util::paths;
+use crate::menu::runtime;
 
 pub fn run(args: Vec<String>) -> Result<(), String> {
     if args.is_empty() {
@@ -22,7 +21,9 @@ pub fn run(args: Vec<String>) -> Result<(), String> {
             Ok(())
         }
         "start" => {
-            let spec = args.get(1).ok_or("Missing time specification. Example: countdown start 25m")?;
+            let spec = args
+                .get(1)
+                .ok_or("Missing time specification. Example: countdown start 25m")?;
             let label = args.get(2).map(|s| s.as_str()).unwrap_or("");
             let dur = controller::start(spec, label)?;
             println!("Countdown started: {}s (target: {})", dur, spec);
@@ -47,24 +48,9 @@ pub fn run(args: Vec<String>) -> Result<(), String> {
             println!("Countdown stopped.");
             Ok(())
         }
-        "open" => {
-            controller::open_ui();
-            Ok(())
-        }
-        "dock" => {
-            controller::dock_ui();
-            Ok(())
-        }
-        "ui" => {
-            let runtime = paths::runtime_dir();
-            if !transport::send("show 9", &runtime) && !transport::send("tab 9", &runtime) {
-                let _ = std::process::Command::new("desktop-menu")
-                    .args(["tab", "timer"])
-                    .status()
-                    .or_else(|_| std::process::Command::new("raccon").args(["menu", "tab", "timer"]).status());
-            }
-            Ok(())
-        }
+        "open" => controller::open_ui(),
+        "dock" => controller::dock_ui(),
+        "ui" => runtime::open_menu(Some("timer")),
         "status" => {
             let json_flag = args.iter().any(|a| a == "--json");
             let status = controller::read_status();
@@ -81,13 +67,15 @@ pub fn run(args: Vec<String>) -> Result<(), String> {
         "-h" | "--help" | "help" => {
             println!("Raccon Countdown Timer CLI\n");
             println!("Usage:");
-            println!("  countdown start <spec> [label]   Start a timer (e.g., 25m, 1h30m, 45s, 18:30, 5pm)");
+            println!(
+                "  countdown start <spec> [label]   Start a timer (e.g., 25m, 1h30m, 45s, 18:30, 5pm)"
+            );
             println!("  countdown pause                  Pause active countdown");
             println!("  countdown resume                 Resume paused countdown");
             println!("  countdown toggle                 Toggle between pause and resume");
             println!("  countdown stop                   Stop timer and close UI");
             println!("  countdown status [--json]        Show timer status");
-            println!("  countdown --listen               Stream status lines for Eww");
+            println!("  countdown --listen               Stream timer status as JSON");
             Ok(())
         }
         _ => Err(format!("Unknown countdown command: {}", args[0])),

@@ -114,7 +114,7 @@ mod tests {
             },
         );
         modules.insert(
-            "wayfire".to_string(),
+            "hyprland".to_string(),
             ModuleInfo {
                 label: None,
                 requires: vec!["terminal".to_string()],
@@ -132,16 +132,16 @@ mod tests {
         );
 
         let catalog = Catalog {
-            defaults: vec!["wayfire".to_string()],
+            defaults: vec!["hyprland".to_string()],
             choices,
             modules,
         };
 
         let user_choices = catalog.default_choices();
         let resolved = catalog
-            .resolve_modules(&["wayfire".to_string()], &user_choices)
+            .resolve_modules(&["hyprland".to_string()], &user_choices)
             .unwrap();
 
-        assert_eq!(resolved, vec!["base", "kitty", "wayfire"]);
+        assert_eq!(resolved, vec!["base", "kitty", "hyprland"]);
     }
 }
