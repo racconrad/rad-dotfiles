@@ -1,4 +1,6 @@
-# tinyWidgets
+# tinyWidgets (legacy Eww)
+
+Desktop overlays (Raccon Menu, floating music/wallpaper/session cards, and countdown) now run on **Quickshell** (`modules/quickshell`, `qs -c raccon`). **tinyWidgets** remains available as an optional legacy Eww widget bundle.
 
 Enable **tinyWidgets** on the Features page to open its own page. Get the source from [racconrad/tinyWidgets](https://github.com/racconrad/tinyWidgets); it defaults to `~/projects/tinyWidgets` and is never downloaded automatically.
 

@@ -23,13 +23,11 @@ already overrides Theme/Current, only that key is updated. Existing files are
 saved under `/var/backups/raccon-sddm-*` with a restore script. No display manager
 or user session is restarted, and no autologin or authentication policy is changed.
 
-The palette is a snapshot: run `--apply` again after changing desktop style to
-update SDDM, or press **Apply to SDDM** in the desktop style selector. Apply the
-selected style to the desktop first to enable this button. It prepares the active
+The palette is a snapshot: run `--apply` again after changing wallpapers to
+update SDDM, or execute `desktop-style sddm`. It prepares the active
 appearance without privileges, opens the desktop's polkit authentication dialog,
-and returns to the selector with the result. Canceling authentication leaves SDDM
-unchanged. It never restarts the session. `desktop-style sddm` is the equivalent
-installed command; failures and backup/restore details are recorded in
+and records result details. Canceling authentication leaves SDDM
+unchanged. It never restarts the session. Failures and backup/restore details are recorded in
 `~/.local/state/desktop-style/sddm.log`. A greeter cannot read private user state before login. The default
 background is solid; `--background wallpaper` optionally packages a still image.
 Requires SDDM's Qt 6 greeter, Qt Quick Controls and fontconfig.
@@ -40,8 +38,7 @@ models and simulated authentication. It checks focus and Tab navigation,
 double-submit prevention, selected-session forwarding, failure recovery, menus,
 power confirmation and captures PNGs in `/tmp`. This also requires QtTest.
 The packaged theme in `modules/desktop-styles/files/.local/share/raccon/sddm/raccon`
-includes `preview.png`, which illustrates Retro with test account data. The
-selector uses these installed assets and does not require a repository checkout.
+includes `preview.png`. Installed commands use these assets and do not require a repository checkout.
 
 SDDM API and safe theme testing follow the [official theming documentation](https://github.com/sddm/sddm/blob/develop/docs/THEMING.md).
 Action icons come from Adwaita, licensed under LGPL-3.0-or-later or CC-BY-SA-3.0.

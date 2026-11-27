@@ -3,7 +3,7 @@
 ## Requirements
 
 - Linux, **Python 3.11+**, a UTF-8 terminal and a writable user HOME.
-- **Wayland and Wayfire 0.11** for the desktop modules and tinyWidgets.
+- **Wayland and Hyprland** for the desktop modules and tinyWidgets.
 - **Arch / CachyOS, pacman and sudo** for automatic dependency installation. On other distributions, install the apps yourself and apply configuration only.
 - Internet access when downloading packages, plugins or extensions.
 
@@ -13,7 +13,8 @@ The installer does not change the display manager, enable system services or cha
 
 | Profile | Contents |
 | --- | --- |
-| `profiles/raccoon-desktop.json` | Full Wayfire desktop, tools, personal tinyWidgets layout, wallpaper colors and AI skills |
+| `profiles/hyprland-desktop.json` | Full Hyprland desktop with Quickshell overlays, `hypr-canvas` setup and wallpaper colors |
+| `profiles/raccoon-desktop.json` | Full Hyprland desktop, tools, personal tinyWidgets layout, wallpaper colors and AI skills |
 | `profiles/light-desktop.json` | The desktop with compact widgets, quiet theme and no transitions |
 | `profiles/terminal-only.json` | Terminal, shell and CLI tools |
 | `profiles/default.json` | Base desktop; no package installation, tinyWidgets optional |
@@ -26,7 +27,7 @@ Press **`r`** in the installer to load a profile, then review it before installi
 
 | Key | Page / action |
 | --- | --- |
-| `f` | Features: Wayfire, dock, panels, power, themes, wallpapers, audio, tinyWidgets, styles |
+| `f` | Features: Hyprland, dock, panels, Quickshell, power, themes, wallpapers, audio, tinyWidgets (legacy Eww), styles |
 | `a` | Apps: terminal, shell, launcher, notifications, locker, browser, editors, tools, AI |
 | `l` | Alternative app for each role |
 | `t` | [tinyWidgets](widgets.md) options |

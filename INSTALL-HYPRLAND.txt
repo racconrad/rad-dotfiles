@@ -1,6 +1,6 @@
 Raccon Dots for Hyprland - install commands
-Arch / CachyOS, Hyprland 0.57 (Lua config). Run in order. Nothing here removes Wayfire:
-pick the "Hyprland" session at the SDDM login, or "Wayfire" to go back.
+Arch / CachyOS, Hyprland 0.57 (Lua config). Run in order. Wayfire has been retired on this branch
+(the `rad-dots-wayfire-old` branch preserves the previous Wayfire setup).
 
 1. Get the branch
    git clone https://github.com/racconrad/rad-dotfiles.git raccon-dots
@@ -9,7 +9,7 @@ pick the "Hyprland" session at the SDDM login, or "Wayfire" to go back.
 
 2. System packages (needs sudo)
    sudo pacman -S --needed hyprland hyprpm hypridle hyprlock xdg-desktop-portal-hyprland \
-        xdg-desktop-portal-gtk hyprpolkitagent xorg-xwayland git cmake meson cpio pkgconf gcc cargo
+        xdg-desktop-portal-gtk hyprpolkitagent xorg-xwayland quickshell git cmake meson cpio pkgconf gcc cargo
 
 3. Preview, then install the profile (dotfiles, ~/.config/hypr, apps, hypr-canvas build)
    ./install.sh --profile profiles/hyprland-desktop.json --check
@@ -23,6 +23,8 @@ pick the "Hyprland" session at the SDDM login, or "Wayfire" to go back.
 
 4. Check the configuration before logging in
    Hyprland --verify-config -c ~/.config/hypr/hyprland.lua      # must print: config ok
+   # Hyprland autostart runs `qs -c raccon --no-duplicate` for the Quickshell overlays
+   # (menu, music, wallpaper/session cards, and countdown).
 
 5. Log out and choose the "Hyprland" session in SDDM.
 
@@ -37,5 +39,5 @@ pick the "Hyprland" session at the SDDM login, or "Wayfire" to go back.
    hypr-canvas look right
 
 Rollback
-   Log in with the "Wayfire" session. ~/.config/wayfire.ini is not touched.
+   Switch to the `rad-dots-wayfire-old` branch if you need the legacy Wayfire setup.
    Installer backups: ./install.sh --restore ~/.local/state/raccon-dots/backups/TIMESTAMP-ID --yes

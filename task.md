@@ -5,26 +5,23 @@ Branch `raccon-dots` (default), rebased on `rad-dots-wayfire-old` (the former `m
 ## Done
 - [x] `modules/hyprland`: modular Lua config in `~/.config/hypr` (one file per concern)
 - [x] `crates/hypr-canvas`: Rust canvas daemon, `extras/install-hypr-canvas.sh`, setup action `hypr-canvas`
-- [x] `profiles/hyprland-desktop.json`; `hyprland` replaces `wayfire` in the default modules
-- [x] `INSTALL-HYPRLAND.txt`
-- [x] Installer tests: 447 pass
+- [x] `modules/wayfire` retired and removed; `rad-dots-wayfire-old` preserves the Wayfire setup
+- [x] `modules.json` and `profiles/*.json`: `hyprland` replaces `wayfire` across profiles and dependencies
+- [x] `scripts/` (`install.py`, `doctor.py`, `capture.py`, `module_update.py`): Wayfire logic removed; `snap_build.py` and `wayfire_layers.py` deleted
+- [x] `tests/`: Wayfire-only tests removed and remaining tests updated for Hyprland
+- [x] `docs/*.md`, `README.md`, and `INSTALL-HYPRLAND.txt` updated for Hyprland
+- [x] `desktop-styles`: borders and styles moved to `hypr/conf/window-style.lua` (`hyprland-theme-apply`)
+- [x] `display-mode`: ported to `hyprctl` / monitor rules in `modules/hyprland/files/.local/bin/display-mode` (Super+P)
+- [x] `wallpaper-restore`: Wayfire calls removed
+- [x] `crates/raccon`: menu shortcuts, working mode, and Quickshell IPC bridge (`menu/qs.rs`) updated for Hyprland
+- [x] `modules/quickshell`: all Eww widgets ported to Quickshell QML (`qs -c raccon`, `LazyLoader` IPC, `matugen` `quickshell-colors.json`)
+- [x] Eww widget configs, GTK/C helpers, and dead `raccon_menu`/`raccon_countdown` Python removed; `tinywidgets` kept as optional legacy Eww
+- [x] `scripts/`, `tests/`, and docs aligned with Quickshell and `crates/raccon`
 
-## Port from Wayfire (modules still tied to it)
-- [ ] `desktop-styles` requires `wayfire`: move borders and styles to `hypr/conf/look.lua`, then drop it from the requirement and add it to the profile
-- [ ] `display-mode` (7 Wayfire calls): port to `hyprctl`/monitor rules; bound to Super+P
-- [ ] `wallpaper-restore` (1 Wayfire call)
-- [ ] `wf-tile`, `wf-focus-fx`, `raccon-wayfire-config.service`, `canvas-session`: replace or retire
-- [ ] `modules/wayfire/plugins/snap-tiling`: no Hyprland equivalent; decide between layouts and drop
-- [ ] `crates/raccon`: 7 sources mention Wayfire (menu shortcuts, working mode)
-- [ ] Tests: about 20 `tests/test_wf_*`, `test_wayfire_*`, `test_snap_*` need Hyprland counterparts or removal
-- [ ] `docs/*.md` and README still describe Wayfire
-
-## Plugins and features
-- [ ] `hyprpm`: enable `hyprexpo` (overview) and add its bind, plus `hyprpm reload` in autostart
-- [ ] Wayfire-only effects without an equivalent: cube, wobbly, zoom, minimap, MRU, pin
-
-## Validate in a real session
-- [ ] Autostart: waybar, swaync, swayosd, awww, cliphist, hypridle, raccon-* services
+## Remaining: plugins and real-session validation
+- [x] `hyprpm reload -n` in autostart; run `hyprpm enable hyprexpo` and add its bind manually (needs network and confirmation)
+- [ ] Autostart: swaync, swayosd, awww, cliphist, hypridle, `qs -c raccon --no-duplicate`, desktop-power
+- [ ] Quickshell overlays (`menu`, `music`, `wallpaper`, `session`, `countdown`) in a real Hyprland session
 - [ ] Keyboard and mouse binds of `hypr-canvas` (only the commands were tested, in a nested Hyprland)
 - [ ] CPU and fans under load, compared with Wayfire
 

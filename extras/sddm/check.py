@@ -26,7 +26,7 @@ MOCKS = r'''
     }
     property ListModel sessionModel: ListModel {
         property int lastIndex: 0
-        ListElement { name: "Wayfire" }
+        ListElement { name: "Hyprland" }
         ListElement { name: "GNOME" }
     }
     property ListModel userModel: ListModel {

@@ -2,32 +2,23 @@
 
 ## Styles
 
-Run `desktop-style` (or open **Estilo del escritorio**) to preview and apply Default, Transparent, Classic, Mono, Retro or Night. A style changes Waybar, Rofi, Raccon Menu, window borders and Matugen app themes together. Colors follow your wallpaper; Night keeps a fixed palette. **Restaurar original** restores the previous look. Some apps need reopening.
+The desktop uses the fixed **Collage** style: sharp Vocaloid/UTAU paper-cutout layers and bold ink slices. Surfaces, Rofi, Raccon Menu, window borders and Matugen app themes adapt together to the active wallpaper colors. Run `desktop-style apply` or change wallpapers to update colors.
 
-## Raccon Menu
+## Raccon Menu and Quickshell overlays
 
-Opens from the bar or with <kbd>Super</kbd>: app search, power modes, sound, Wi-Fi, Bluetooth, calendar and shortcuts. See the [Raccon Menu README](../modules/desktop/files/.config/raccon-menu/README.md).
+Raccon Menu, the floating music/wallpaper/session cards, and the countdown chip run in a single resident Quickshell instance (`qs -c raccon`, defined in [`shell.qml`](../modules/quickshell/files/.config/quickshell/raccon/shell.qml)). Launchers (`desktop-menu`, `raccon-float`, `raccon-music`, `countdown`) drive `qs -c raccon ipc` through the Rust `raccon` binary.
+
+Raccon Menu opens from the bar or with <kbd>Super</kbd>: app search, power modes, sound, Wi-Fi, Bluetooth, calendar, timer, and shortcuts.
 
 ## Power modes
 
-With the `power` module, click the battery in Waybar to cycle Auto → Ahorro → Balanced → Complete → Working, or run `desktop-power set MODE`.
+With the `power` module, use the Raccon Menu power page to cycle Auto → Ahorro → Balanced → Complete → Working, or run `desktop-power set MODE`.
 
 **Working** keeps widgets visible, turns off animations and animated wallpapers, and prevents idle suspend and auto-lock, so long-running agents keep going. Manual lock, manual suspend and lid close still work. `desktop-power set auto` goes back to automatic rules.
 
-## Tiling
+## Window management
 
-| Keys | Action |
-| --- | --- |
-| Super+I | Direction for the next window |
-| Super+D | Move window into a new split |
-| Super+R | Resize with arrows (Enter/Esc to finish) |
-| Super+G | Cycle 50/60/70% split |
-| Super+Ctrl+Z | Undo layout (Shift: redo) |
-| Super+Ctrl+S / L | Save / load the workspace layout |
-| Super+Ctrl+G | Toggle smart gaps |
-| Super+F6/F7/F8 | Scratchpads (Shift: assign, Ctrl: release) |
-
-`wf-tile status` checks the service; `wf-tile restart` reloads it. Full list: [wayfire-keys.md](../modules/wayfire/files/.config/wayfire-keys.md).
+Hyprland configuration is split into modular Lua files under `~/.config/hypr/` (one file per concern). Use `hypr-canvas` (`--setup hypr-canvas`) for the infinite canvas daemon.
 
 ## Zsh prompt
 
@@ -46,4 +37,4 @@ To use it in an existing Oh My Zsh setup, copy [`raccon.zsh-theme`](../modules/z
 
 - **SDDM theme:** `./extras/install-sddm.sh --preview`, then `--apply` (sudo, saves a backup). See [extras/sddm](../extras/sddm/README.md).
 - **Boot splash:** Setup page, see [install](install.md#setup-actions).
-- **Polkit dialogs:** install `mate-polkit`; `desktop-polkit` starts it with the session theme.
+- **Polkit dialogs:** `hyprpolkitagent` is included with the `hyprland` module.
